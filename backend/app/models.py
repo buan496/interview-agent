@@ -174,3 +174,24 @@ class UserTagStat(Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     avg_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=0)
 
+
+class QuestionSubmission(Base):
+    __tablename__ = "question_submissions"
+    __table_args__ = (Index("idx_submission_status_created", "status", "created_at"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    submitter_name: Mapped[str | None] = mapped_column(String(80))
+    company_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    position_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    body: Mapped[str | None] = mapped_column(Text)
+    answer_key: Mapped[str] = mapped_column(Text, nullable=False)
+    difficulty: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=3)
+    qtype: Mapped[str] = mapped_column(String(20), nullable=False)
+    source_type: Mapped[str] = mapped_column(String(20), nullable=False, default="ugc")
+    tags: Mapped[list[dict[str, Any]]] = mapped_column(jsonb_type, default=list)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending_review")
+    review_note: Mapped[str | None] = mapped_column(Text)
+    created_question_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("questions.id"))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    reviewed_at: Mapped[datetime | None]

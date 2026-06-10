@@ -109,7 +109,7 @@ export default function PracticePage() {
             </select>
           </label>
 
-          <Button className="mt-2" onClick={() => startSession.mutate()} disabled={startSession.isPending}>
+          <Button className="mt-2" onClick={() => startSession.mutate(undefined)} disabled={startSession.isPending}>
             <Search className="h-4 w-4" />
             开始单题
           </Button>

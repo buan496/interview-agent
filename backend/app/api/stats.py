@@ -9,8 +9,8 @@ from sqlalchemy.orm import selectinload
 
 from app.api.sessions import _demo_user
 from app.db import get_db
-from app.models import Question, QuestionTag, Tag, UserTagStat, WrongBook
-from app.schemas import RadarItemOut, TagOut, WrongBookOut
+from app.models import Question, QuestionTag, Session, Tag, UserTagStat, WrongBook
+from app.schemas import RadarItemOut, ReportListItemOut, TagOut, WrongBookOut
 
 
 router = APIRouter(prefix="/me", tags=["stats"])
@@ -55,3 +55,26 @@ async def radar(db: AsyncSession = Depends(get_db)) -> list[RadarItemOut]:
     ).all()
     return [RadarItemOut(tag=tag.name, avg_score=stat.avg_score, attempts=stat.attempts) for stat, tag in rows]
 
+
+@router.get("/reports", response_model=list[ReportListItemOut])
+async def reports(db: AsyncSession = Depends(get_db)) -> list[ReportListItemOut]:
+    user = await _demo_user(db)
+    rows = (
+        await db.execute(
+            select(Session)
+            .where(Session.user_id == user.id, Session.status == "finished")
+            .order_by(Session.started_at.desc())
+            .limit(50)
+        )
+    ).scalars().all()
+    return [
+        ReportListItemOut(
+            session_id=item.id,
+            mode=item.mode,
+            status=item.status,
+            overall_score=int((item.report or {}).get("overall_score", 0)),
+            started_at=item.started_at,
+            ended_at=item.ended_at,
+        )
+        for item in rows
+    ]

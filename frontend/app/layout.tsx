@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpenCheck, Gauge, Settings2 } from "lucide-react";
+import { BookOpenCheck, Gauge, MessageSquarePlus, Settings2, Timer } from "lucide-react";
 
 import { Providers } from "@/components/providers";
 import "./globals.css";
@@ -12,7 +12,9 @@ export const metadata: Metadata = {
 
 const navItems = [
   { href: "/practice", label: "练习", icon: BookOpenCheck },
+  { href: "/mock", label: "模拟", icon: Timer },
   { href: "/wrong-book", label: "错题本", icon: Gauge },
+  { href: "/contribute", label: "投稿", icon: MessageSquarePlus },
   { href: "/admin", label: "审核", icon: Settings2 }
 ];
 
@@ -52,4 +54,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-

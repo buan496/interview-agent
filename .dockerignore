@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+
+frontend/node_modules
+frontend/.next
+frontend/coverage
+
+DESIGN.md
+interview-agent-design.md

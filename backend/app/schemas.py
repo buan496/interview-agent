@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal
 
@@ -58,6 +58,7 @@ class QuestionListOut(BaseModel):
 
 class CreateSessionRequest(BaseModel):
     mode: Literal["single", "mock"] = "single"
+    question_id: int | None = None
     company_id: int | None = None
     position_id: int | None = None
     tag_ids: list[int] = Field(default_factory=list)
@@ -108,6 +109,39 @@ class SessionDetailOut(BaseModel):
     questions: list[SessionQuestionOut]
 
 
+class ReportQuestionOut(BaseModel):
+    sq_id: int
+    title: str
+    qtype: str
+    difficulty: int
+    score: int
+    mastery: str
+    feedback: str
+    ideal_answer: str
+    tags: list[TagOut] = Field(default_factory=list)
+
+
+class SessionReportOut(BaseModel):
+    session_id: int
+    mode: str
+    status: str
+    overall_score: int
+    summary: str
+    started_at: datetime
+    ended_at: datetime | None = None
+    radar: list["RadarItemOut"] = Field(default_factory=list)
+    questions: list[ReportQuestionOut] = Field(default_factory=list)
+
+
+class ReportListItemOut(BaseModel):
+    session_id: int
+    mode: str
+    status: str
+    overall_score: int
+    started_at: datetime
+    ended_at: datetime | None = None
+
+
 class WrongBookOut(BaseModel):
     question_id: int
     title: str
@@ -122,3 +156,51 @@ class RadarItemOut(BaseModel):
     avg_score: Decimal
     attempts: int
 
+
+class SubmissionCreate(BaseModel):
+    submitter_name: str | None = Field(default=None, max_length=80)
+    company_name: str = Field(min_length=2, max_length=100)
+    position_name: str = Field(min_length=2, max_length=50)
+    title: str = Field(min_length=6, max_length=300)
+    body: str | None = Field(default=None, max_length=4000)
+    answer_key: str = Field(min_length=20, max_length=8000)
+    difficulty: int = Field(default=3, ge=1, le=5)
+    qtype: Literal["behavioral", "knowledge", "coding", "system_design"]
+    tags: list[str] = Field(default_factory=list, max_length=10)
+
+
+class SubmissionOut(BaseModel):
+    id: int
+    submitter_name: str | None = None
+    company_name: str
+    position_name: str
+    title: str
+    body: str | None = None
+    answer_key: str
+    difficulty: int
+    qtype: str
+    source_type: str
+    tags: list[dict[str, Any]] = Field(default_factory=list)
+    status: str
+    review_note: str | None = None
+    created_question_id: int | None = None
+    created_at: datetime
+    reviewed_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReviewSubmissionRequest(BaseModel):
+    action: Literal["approve", "reject"]
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class GenerateFromJdRequest(BaseModel):
+    jd_text: str = Field(min_length=30, max_length=20000)
+    company: str = Field(min_length=2, max_length=100)
+    position: str = Field(min_length=2, max_length=50)
+    count: int = Field(default=5, ge=1, le=10)
+
+
+class GeneratedSubmissionOut(BaseModel):
+    items: list[SubmissionOut]

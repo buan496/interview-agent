@@ -1,8 +1,8 @@
 FROM node:20-alpine AS deps
 
 WORKDIR /app/frontend
-COPY frontend/package.json ./
-RUN npm install
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
 
 FROM node:20-alpine AS builder
 
@@ -25,4 +25,3 @@ COPY --from=builder /app/frontend/node_modules ./node_modules
 
 EXPOSE 3000
 CMD ["npm", "run", "start", "--", "-p", "3000"]
-

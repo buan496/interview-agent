@@ -48,6 +48,12 @@ export type CreateSessionResponse = {
   };
 };
 
+export type RadarItem = {
+  tag: string;
+  avg_score: number;
+  attempts: number;
+};
+
 export type Message = {
   id: number;
   role: "interviewer" | "candidate";
@@ -80,6 +86,46 @@ export type SseDonePayload = {
   action: string;
   sq_state: "FOLLOWUP" | "DONE";
   verdict?: Verdict | null;
-  next_question?: unknown;
+  next_question?: CreateSessionResponse["first_question"] | null;
 };
 
+export type SessionReport = {
+  session_id: number;
+  mode: string;
+  status: string;
+  overall_score: number;
+  summary: string;
+  started_at: string;
+  ended_at?: string | null;
+  radar: RadarItem[];
+  questions: Array<{
+    sq_id: number;
+    title: string;
+    qtype: string;
+    difficulty: number;
+    score: number;
+    mastery: string;
+    feedback: string;
+    ideal_answer: string;
+    tags: Tag[];
+  }>;
+};
+
+export type Submission = {
+  id: number;
+  submitter_name?: string | null;
+  company_name: string;
+  position_name: string;
+  title: string;
+  body?: string | null;
+  answer_key: string;
+  difficulty: number;
+  qtype: string;
+  source_type: string;
+  tags: Array<{ name: string; category?: string | null }>;
+  status: string;
+  review_note?: string | null;
+  created_question_id?: number | null;
+  created_at: string;
+  reviewed_at?: string | null;
+};

@@ -2,9 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { RotateCcw } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 import { Badge, Button, Panel } from "@/components/ui";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, createSession } from "@/lib/api";
 
 type WrongBookItem = {
   question_id: number;
@@ -22,7 +24,12 @@ async function getWrongBook() {
 }
 
 export default function WrongBookPage() {
+  const router = useRouter();
   const query = useQuery({ queryKey: ["wrong-book"], queryFn: getWrongBook });
+  const retry = useMutation({
+    mutationFn: (questionId: number) => createSession({ mode: "single", question_id: questionId }),
+    onSuccess: (data) => router.push(`/session/${data.session_id}`)
+  });
   return (
     <main className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
       <div className="mb-4 flex items-center justify-between">
@@ -42,7 +49,7 @@ export default function WrongBookPage() {
                 <Badge key={tag.id}>{tag.name}</Badge>
               ))}
             </div>
-            <Button className="mt-4" variant="secondary">
+            <Button className="mt-4" variant="secondary" onClick={() => retry.mutate(item.question_id)} disabled={retry.isPending}>
               <RotateCcw className="h-4 w-4" />
               重练
             </Button>
@@ -53,4 +60,3 @@ export default function WrongBookPage() {
     </main>
   );
 }
-

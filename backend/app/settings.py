@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = Field(default=45.0, validation_alias="LLM_TIMEOUT_SECONDS")
 
     embedding_model: str = Field(default="BAAI/bge-large-zh-v1.5", validation_alias="EMBEDDING_MODEL")
+    whisper_api_key: str = Field(default="", validation_alias="WHISPER_API_KEY")
+    whisper_base_url: str = Field(default="https://api.openai.com/v1", validation_alias="WHISPER_BASE_URL")
+    whisper_model: str = Field(default="whisper-1", validation_alias="WHISPER_MODEL")
+    sms_provider_key: str = Field(default="", validation_alias="SMS_PROVIDER_KEY")
     jwt_secret: str = Field(default="local-dev-only-change-me", validation_alias="JWT_SECRET")
     cors_origins: str = Field(default="http://localhost:3000", validation_alias="CORS_ORIGINS")
 
