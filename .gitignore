@@ -1,0 +1,23 @@
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+node_modules/
+.next/
+dist/
+coverage/
+
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Internal planning documents are intentionally excluded from the public snapshot.
+DESIGN.md
+interview-agent-design.md
