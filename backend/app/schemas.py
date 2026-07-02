@@ -46,6 +46,7 @@ class QuestionOut(BaseModel):
     difficulty: int
     qtype: str
     source_type: str
+    source_note: str | None = None
     company: CompanyOut | None = None
     position: PositionOut | None = None
     tags: list[TagOut] = Field(default_factory=list)

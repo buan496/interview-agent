@@ -31,6 +31,7 @@ export type Question = {
   difficulty: number;
   qtype: string;
   source_type: string;
+  source_note?: string | null;
   company?: Company | null;
   position?: Position | null;
   tags: Tag[];

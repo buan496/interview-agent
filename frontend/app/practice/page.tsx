@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowRight, Filter, RotateCcw, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink, Filter, RotateCcw, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button, Panel, Badge } from "@/components/ui";
@@ -16,22 +16,24 @@ export default function PracticePage() {
   const [positionId, setPositionId] = useState("");
   const [tagId, setTagId] = useState("");
   const [difficulty, setDifficulty] = useState("");
+  const [page, setPage] = useState(1);
 
   const metadata = useQuery({ queryKey: ["metadata"], queryFn: getMetadata });
   const params = useMemo(() => {
-    const value = new URLSearchParams({ page_size: "12" });
+    const value = new URLSearchParams({ page: String(page), page_size: "12" });
     if (companyId) value.set("company_id", companyId);
     if (positionId) value.set("position_id", positionId);
     if (tagId) value.append("tag_ids", tagId);
     if (difficulty) value.set("difficulty", difficulty);
     return value;
-  }, [companyId, positionId, tagId, difficulty]);
+  }, [companyId, positionId, tagId, difficulty, page]);
 
   const questions = useQuery({ queryKey: ["questions", params.toString()], queryFn: () => getQuestions(params) });
   const startSession = useMutation({
-    mutationFn: (override?: { company_id?: number; position_id?: number }) =>
+    mutationFn: (override?: { question_id?: number; company_id?: number; position_id?: number }) =>
       createSession({
         mode: "single",
+        question_id: override?.question_id,
         company_id: override?.company_id ?? (companyId ? Number(companyId) : undefined),
         position_id: override?.position_id ?? (positionId ? Number(positionId) : undefined),
         tag_ids: tagId ? [Number(tagId)] : [],
@@ -45,7 +47,10 @@ export default function PracticePage() {
     setPositionId("");
     setTagId("");
     setDifficulty("");
+    setPage(1);
   };
+
+  const totalPages = Math.max(1, Math.ceil((questions.data?.total ?? 0) / 12));
 
   return (
     <main className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[320px_1fr]">
@@ -63,7 +68,7 @@ export default function PracticePage() {
         <div className="grid gap-3">
           <label className="grid gap-1 text-sm">
             <span className="text-muted">公司</span>
-            <select className="h-10 rounded border border-line bg-white px-3" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+            <select className="h-10 rounded border border-line bg-white px-3" value={companyId} onChange={(e) => { setCompanyId(e.target.value); setPage(1); }}>
               <option value="">全部</option>
               {metadata.data?.companies.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -75,7 +80,7 @@ export default function PracticePage() {
 
           <label className="grid gap-1 text-sm">
             <span className="text-muted">岗位</span>
-            <select className="h-10 rounded border border-line bg-white px-3" value={positionId} onChange={(e) => setPositionId(e.target.value)}>
+            <select className="h-10 rounded border border-line bg-white px-3" value={positionId} onChange={(e) => { setPositionId(e.target.value); setPage(1); }}>
               <option value="">全部</option>
               {metadata.data?.positions.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -87,7 +92,7 @@ export default function PracticePage() {
 
           <label className="grid gap-1 text-sm">
             <span className="text-muted">标签</span>
-            <select className="h-10 rounded border border-line bg-white px-3" value={tagId} onChange={(e) => setTagId(e.target.value)}>
+            <select className="h-10 rounded border border-line bg-white px-3" value={tagId} onChange={(e) => { setTagId(e.target.value); setPage(1); }}>
               <option value="">全部</option>
               {metadata.data?.tags.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -99,7 +104,7 @@ export default function PracticePage() {
 
           <label className="grid gap-1 text-sm">
             <span className="text-muted">难度</span>
-            <select className="h-10 rounded border border-line bg-white px-3" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+            <select className="h-10 rounded border border-line bg-white px-3" value={difficulty} onChange={(e) => { setDifficulty(e.target.value); setPage(1); }}>
               <option value="">全部</option>
               {difficultyOptions.map((item) => (
                 <option key={item} value={item}>
@@ -138,22 +143,50 @@ export default function PracticePage() {
                   <Badge key={tag.id}>{tag.name}</Badge>
                 ))}
               </div>
+              {item.source_note?.startsWith("http") ? (
+                <a
+                  className="mt-3 inline-flex items-center gap-1 text-xs text-brand hover:underline"
+                  href={item.source_note}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  公开题库来源
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              ) : null}
               <Button
                 variant="secondary"
                 className="mt-auto w-full"
                 onClick={() => {
                   startSession.mutate({
+                    question_id: item.id,
                     company_id: item.company?.id ?? undefined,
                     position_id: item.position?.id ?? undefined
                   });
                 }}
               >
-                练这类题
+                练习这道题
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Panel>
           ))}
         </div>
+
+        {questions.data && questions.data.total > 12 ? (
+          <div className="flex items-center justify-center gap-3">
+            <Button variant="secondary" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1}>
+              <ArrowLeft className="h-4 w-4" />
+              上一页
+            </Button>
+            <span className="text-sm text-muted">
+              第 {page} / {totalPages} 页
+            </span>
+            <Button variant="secondary" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages}>
+              下一页
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : null}
 
         {!questions.isLoading && questions.data?.items.length === 0 ? (
           <Panel className="p-8 text-center text-sm text-muted">暂无匹配题目</Panel>

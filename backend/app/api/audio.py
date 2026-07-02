@@ -17,8 +17,8 @@ async def transcribe_audio(file: UploadFile = File(...)) -> dict[str, str]:
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Audio file is empty")
-    if len(content) > 25 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Audio file exceeds 25 MB")
+    if len(content) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Audio file exceeds 50 MB")
 
     async with httpx.AsyncClient(timeout=90) as client:
         response = await client.post(
@@ -28,6 +28,10 @@ async def transcribe_audio(file: UploadFile = File(...)) -> dict[str, str]:
             files={"file": (file.filename or "answer.webm", content, file.content_type or "audio/webm")},
         )
     if response.is_error:
-        raise HTTPException(status_code=502, detail="Speech transcription provider failed")
+        trace_id = response.headers.get("x-siliconcloud-trace-id")
+        detail = f"Speech transcription provider failed ({response.status_code})"
+        if trace_id:
+            detail = f"{detail}, trace_id={trace_id}"
+        raise HTTPException(status_code=502, detail=detail)
     payload = response.json()
     return {"text": str(payload.get("text") or "").strip()}

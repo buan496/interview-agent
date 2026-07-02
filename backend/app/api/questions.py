@@ -21,6 +21,7 @@ def _question_out(question: Question) -> QuestionOut:
         difficulty=question.difficulty,
         qtype=question.qtype,
         source_type=question.source_type,
+        source_note=question.source_note,
         company=question.company,
         position=question.position,
         tags=[TagOut.model_validate(link.tag) for link in question.tag_links],
@@ -100,4 +101,3 @@ async def get_question(question_id: int, db: AsyncSession = Depends(get_db)) -> 
     if not question or question.status != "active":
         raise HTTPException(status_code=404, detail="Question not found")
     return _question_out(question)
-

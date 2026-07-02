@@ -21,12 +21,14 @@ docker compose -p interview-agent up --build
 打开:
 
 - 前端: http://localhost:3000
-- 后端健康检查: http://localhost:8000/health
-- API 文档: http://localhost:8000/docs
+- 后端健康检查: `http://localhost:${API_PORT}/health`
+- API 文档: `http://localhost:${API_PORT}/docs`
 
 没有配置 `DEEPSEEK_API_KEY` 时，追问引擎会使用本地 fallback 逻辑，便于先跑通产品闭环。接入真实模型时，在 `.env` 中填入 `DEEPSEEK_API_KEY`。
 
-没有配置短信服务时，登录接口会返回开发验证码 `000000`。没有配置 `WHISPER_API_KEY` 时，文字作答不受影响，语音转写接口会返回 `503`。
+没有配置短信服务时，登录接口会返回开发验证码 `000000`。语音转写默认使用硅基流动的
+`FunAudioLLM/SenseVoiceSmall` 模型；没有配置 `WHISPER_API_KEY` 时，文字作答不受影响，
+语音转写接口会返回 `503`。
 
 ## 本地后端校验
 
@@ -70,4 +72,11 @@ frontend/lib           API 与 SSE 客户端
 
 ## 内容规模
 
-仓库内置 15 道经过整理的启动样本。产品设计目标的 500 道种子题属于内容生产与人工质检工作，可通过后台 JD 生成、UGC 投稿和审核流程持续扩充；不建议用未经审核的批量生成内容直接填充生产题库。
+仓库内置 15 道启动样本和 54 道可追溯公开题目，共 69 道。公开题来自 MIT 或
+CC BY 4.0 许可的面试准备项目，来源及改编说明见 `QUESTION_SOURCES.md`。DeepSeek
+只用于追问和评分，不用于生成这批题目。
+
+## 许可证
+
+项目代码采用 MIT License。题库中从第三方公开项目整理或改编的内容遵循
+`QUESTION_SOURCES.md` 中列出的原始许可证和署名要求。
