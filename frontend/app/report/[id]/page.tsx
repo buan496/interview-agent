@@ -25,7 +25,7 @@ export default function ReportPage() {
   }
 
   if (!report.data) {
-    return <main className="p-6 text-sm text-muted">Report is not ready yet.</main>;
+    return <main className="p-6 text-sm text-muted">报告还没有准备好。</main>;
   }
 
   const data = report.data;
@@ -37,21 +37,21 @@ export default function ReportPage() {
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-3xl">
-          <Badge>{data.mode === "mock" ? "Mock interview" : "Single-question practice"}</Badge>
-          <h1 className="mt-3 text-2xl font-semibold">Review workbench</h1>
+          <Badge>{data.mode === "mock" ? "模拟面试" : "单题训练"}</Badge>
+          <h1 className="mt-3 text-2xl font-semibold">复盘工作台</h1>
           <p className="mt-2 text-sm leading-6 text-muted">{data.summary}</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
             <div className="text-4xl font-semibold text-brand">{data.overall_score}</div>
-            <div className="text-xs text-muted">Overall score</div>
+            <div className="text-xs text-muted">总分</div>
           </div>
           <Link
             className="inline-flex h-10 items-center justify-center gap-2 rounded bg-brand px-4 text-sm font-medium text-white hover:bg-[#17675c]"
             href="/practice"
           >
             <ArrowRight className="h-4 w-4" />
-            Next practice
+            去今日训练
           </Link>
         </div>
       </header>
@@ -60,10 +60,10 @@ export default function ReportPage() {
         <Panel className="p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold">Replay focus</h2>
-              <p className="mt-1 text-xs text-muted">The next practice should start from these gaps.</p>
+              <h2 className="text-sm font-semibold">下一轮优先补齐</h2>
+              <p className="mt-1 text-xs text-muted">今日训练会优先从这些薄弱点继续推进。</p>
             </div>
-            <Badge>{focusItems.length} actions</Badge>
+            <Badge>{focusItems.length} 项行动</Badge>
           </div>
           <div className="mt-4 grid gap-3">
             {focusItems.length > 0 ? (
@@ -71,7 +71,7 @@ export default function ReportPage() {
                 <div key={`${item.questionTitle}-${item.text}`} className="grid gap-2 rounded border border-line bg-panel p-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge className={cn(item.kind === "gap" && "border-[#d69e2e] text-[#7a4f01]", item.kind === "action" && "border-brand text-brand")}>
-                      {item.kind === "gap" ? "Gap" : "Action"}
+                      {item.kind === "gap" ? "缺口" : "行动"}
                     </Badge>
                     <span className="text-xs text-muted">{item.questionTitle}</span>
                   </div>
@@ -79,24 +79,24 @@ export default function ReportPage() {
                 </div>
               ))
             ) : (
-              <p className="rounded border border-line bg-panel p-3 text-sm text-muted">No structured gaps were found in this report.</p>
+              <p className="rounded border border-line bg-panel p-3 text-sm text-muted">本次报告没有发现明确薄弱点，可以继续做一组模拟面试校准能力画像。</p>
             )}
           </div>
         </Panel>
 
         <Panel className="p-4">
-          <h2 className="text-sm font-semibold">Session summary</h2>
+          <h2 className="text-sm font-semibold">本轮概览</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-            <Metric label="Questions" value={data.questions.length.toString()} icon={ClipboardList} />
-            <Metric label="Strongest" value={strongest ? `${strongest.score}` : "-"} detail={strongest?.title} icon={CheckCircle2} />
-            <Metric label="Weakest" value={weakest ? `${weakest.score}` : "-"} detail={weakest?.title} icon={TriangleAlert} />
+            <Metric label="题目数" value={data.questions.length.toString()} icon={ClipboardList} />
+            <Metric label="最高分" value={strongest ? `${strongest.score}` : "-"} detail={strongest?.title} icon={CheckCircle2} />
+            <Metric label="最低分" value={weakest ? `${weakest.score}` : "-"} detail={weakest?.title} icon={TriangleAlert} />
           </div>
         </Panel>
       </section>
 
       <section className="mt-5 grid gap-4 lg:grid-cols-2">
         <Panel className="h-80 p-4">
-          <h2 className="text-sm font-semibold">Ability radar</h2>
+          <h2 className="text-sm font-semibold">能力雷达</h2>
           <ResponsiveContainer width="100%" height="90%">
             <RadarChart data={data.radar}>
               <PolarGrid />
@@ -107,7 +107,7 @@ export default function ReportPage() {
           </ResponsiveContainer>
         </Panel>
         <Panel className="h-80 p-4">
-          <h2 className="text-sm font-semibold">Question scores</h2>
+          <h2 className="text-sm font-semibold">单题得分</h2>
           <ResponsiveContainer width="100%" height="90%">
             <BarChart data={data.questions.map((item, index) => ({ ...item, label: `Q${index + 1}` }))}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -135,9 +135,9 @@ function QuestionReview({ item, index }: { item: ReportQuestion; index: number }
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge>Q{index + 1}</Badge>
-          <Badge>{item.qtype}</Badge>
+          <Badge>{qtypeLabel(item.qtype)}</Badge>
           <Badge className={scoreBadgeClass(item.score)}>{item.score}</Badge>
-          <Badge>{item.mastery}</Badge>
+          <Badge>{masteryLabel(item.mastery)}</Badge>
         </div>
         <div className="flex flex-wrap gap-1">
           {item.tags.map((tag) => (
@@ -150,16 +150,16 @@ function QuestionReview({ item, index }: { item: ReportQuestion; index: number }
       <p className="mt-3 text-sm leading-6 text-muted">{item.feedback}</p>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <DiagnosticList title="Strengths" icon={CheckCircle2} items={item.strengths} empty="No explicit strength captured." />
-        <DiagnosticList title="Missing points" icon={Target} items={item.missing_points} empty="No missing point captured." tone="warning" />
-        <DiagnosticList title="Expression issues" icon={TriangleAlert} items={item.expression_issues} empty="No expression issue captured." tone="warning" />
-        <DiagnosticList title="Action items" icon={ClipboardList} items={item.action_items} empty="No action item generated." />
+        <DiagnosticList title="做得好的点" icon={CheckCircle2} items={item.strengths} empty="本题暂未提取明确优势。" />
+        <DiagnosticList title="缺失要点" icon={Target} items={item.missing_points} empty="本题暂未提取缺失要点。" tone="warning" />
+        <DiagnosticList title="表达问题" icon={TriangleAlert} items={item.expression_issues} empty="本题暂未提取表达问题。" tone="warning" />
+        <DiagnosticList title="下一步动作" icon={ClipboardList} items={item.action_items} empty="本题暂未生成行动项。" />
       </div>
 
       <details className="mt-4 rounded border border-line bg-panel p-3 text-sm">
         <summary className="cursor-pointer font-medium">
           <BookOpen className="mr-2 inline h-4 w-4 align-[-3px]" />
-          Reference answer
+          参考答案
         </summary>
         <p className="mt-2 whitespace-pre-wrap leading-6 text-muted">{item.ideal_answer}</p>
       </details>
@@ -230,6 +230,25 @@ function buildFocusItems(data: SessionReport) {
     ...question.missing_points.slice(0, 2).map((text) => ({ kind: "gap" as const, text, questionTitle: question.title })),
     ...question.action_items.slice(0, 2).map((text) => ({ kind: "action" as const, text, questionTitle: question.title })),
   ]);
+}
+
+function qtypeLabel(value: string) {
+  const labels: Record<string, string> = {
+    knowledge: "知识题",
+    coding: "编码题",
+    system_design: "系统设计",
+    behavioral: "行为题",
+  };
+  return labels[value] ?? value;
+}
+
+function masteryLabel(value: string) {
+  const labels: Record<string, string> = {
+    pass: "通过",
+    weak: "薄弱",
+    fail: "未通过",
+  };
+  return labels[value] ?? value;
 }
 
 function scoreBadgeClass(score: number) {
