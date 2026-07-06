@@ -14,7 +14,7 @@ from app.api.auth import get_current_user
 from app.core.interviewer import ConversationMessage, InterviewerEngine, InterviewQuestion
 from app.core.scheduler import target_question_count, target_type_counts
 from app.db import SessionLocal, get_db
-from app.models import Message, Question, QuestionTag, Session, SessionQuestion, User, UserTagStat, WrongBook
+from app.models import EvaluationResult, Message, Question, QuestionTag, Session, SessionQuestion, User, UserTagStat, WrongBook
 from app.schemas import (
     AnswerRequest,
     CreateSessionOut,
@@ -36,6 +36,7 @@ ACTIVE_SESSION_STATUSES = {"created", "ongoing", "paused"}
 ANSWERABLE_SESSION_STATUSES = {"ongoing"}
 TERMINAL_SESSION_STATUSES = {"finished", "expired", "cancelled"}
 DEFAULT_MAX_FOLLOWUPS = 3
+PROMPT_VERSION = "interviewer-v1"
 
 
 def _sse(event: str, data: dict) -> str:
@@ -241,6 +242,7 @@ async def get_session(
                 .selectinload(Question.tag_links)
                 .selectinload(QuestionTag.tag),
                 selectinload(Session.questions).selectinload(SessionQuestion.messages),
+                selectinload(Session.questions).selectinload(SessionQuestion.evaluation_results),
             )
         )
     ).scalar_one_or_none()
@@ -305,15 +307,70 @@ async def _update_retention_tables(db: AsyncSession, session: Session, sq: Sessi
             db.add(UserTagStat(user_id=session.user_id, tag_id=link.tag_id, attempts=1, avg_score=score))
 
 
+def _latest_evaluation(sq: SessionQuestion) -> EvaluationResult | None:
+    evaluations = list(getattr(sq, "evaluation_results", []) or [])
+    if not evaluations:
+        return None
+    return sorted(evaluations, key=lambda item: (item.created_at is not None, item.created_at, item.id or 0))[-1]
+
+
+def _action_items_from_points(missing_points: list[str]) -> list[str]:
+    return [f"Review and restate: {point}" for point in missing_points[:5]]
+
+
+def _evaluation_result_row(session: Session, sq: SessionQuestion, result, model_name: str) -> EvaluationResult:
+    assert result.verdict is not None
+    missing_points = list(result.missing_points or [])
+    return EvaluationResult(
+        user_id=session.user_id,
+        session_id=session.id,
+        sq_id=sq.id,
+        question_id=sq.question_id,
+        score=result.verdict.score,
+        mastery=result.verdict.mastery,
+        verdict=result.verdict.feedback,
+        strengths=list(result.correct_points or []),
+        missing_points=missing_points,
+        expression_issues=list(result.wrong_points or []),
+        followup_failures=[],
+        action_items=_action_items_from_points(missing_points),
+        recommended_questions=[],
+        raw_model_output=result.as_dict(),
+        model_name=model_name,
+        prompt_version=PROMPT_VERSION,
+    )
+
+
 def _verdict_payload(sq: SessionQuestion) -> dict:
+    evaluation = _latest_evaluation(sq)
+    if evaluation:
+        raw_verdict = evaluation.raw_model_output.get("verdict") if isinstance(evaluation.raw_model_output, dict) else {}
+        raw_verdict = raw_verdict if isinstance(raw_verdict, dict) else {}
+        return {
+            "feedback": evaluation.verdict,
+            "ideal_answer": raw_verdict.get("ideal_answer", sq.question.answer_key),
+            "strengths": evaluation.strengths,
+            "missing_points": evaluation.missing_points,
+            "expression_issues": evaluation.expression_issues,
+            "action_items": evaluation.action_items,
+            "recommended_questions": evaluation.recommended_questions,
+        }
+
     verdict_message = next(
         (message for message in reversed(sorted(sq.messages, key=lambda item: item.id)) if message.msg_type == "verdict"),
         None,
     )
     verdict = (verdict_message.eval_json or {}).get("verdict", {}) if verdict_message else {}
+    eval_json = (verdict_message.eval_json or {}) if verdict_message else {}
+    missing_points = list(eval_json.get("missing_points") or [])
     return {
         "feedback": verdict.get("feedback", "本题已完成评估。"),
         "ideal_answer": verdict.get("ideal_answer", sq.question.answer_key),
+        "strengths": list(eval_json.get("correct_points") or []),
+        "missing_points": missing_points,
+        "expression_issues": list(eval_json.get("wrong_points") or []),
+        "action_items": _action_items_from_points(missing_points),
+        "recommended_questions": [],
     }
 
 
@@ -337,6 +394,11 @@ def _build_report(session: Session) -> dict:
                 "mastery": sq.mastery or "fail",
                 "feedback": details["feedback"],
                 "ideal_answer": details["ideal_answer"],
+                "strengths": details["strengths"],
+                "missing_points": details["missing_points"],
+                "expression_issues": details["expression_issues"],
+                "action_items": details["action_items"],
+                "recommended_questions": details["recommended_questions"],
                 "tags": tags,
             }
         )
@@ -384,6 +446,7 @@ async def get_report(
                 .selectinload(Question.tag_links)
                 .selectinload(QuestionTag.tag),
                 selectinload(Session.questions).selectinload(SessionQuestion.messages),
+                selectinload(Session.questions).selectinload(SessionQuestion.evaluation_results),
             )
         )
     ).scalar_one_or_none()
@@ -459,6 +522,8 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
             sq.verdict = result.verdict.as_dict()
             sq.scored_at = now
             sq.finished_at = now
+            model_name = str(getattr(engine.llm, "model", "local-fallback"))
+            db.add(_evaluation_result_row(sq.session, sq, result, model_name))
             await _update_retention_tables(db, sq.session, sq, result.verdict.score, result.verdict.mastery)
             next_sq = next(
                 (
@@ -507,6 +572,7 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
                         .selectinload(Question.tag_links)
                         .selectinload(QuestionTag.tag),
                         selectinload(Session.questions).selectinload(SessionQuestion.messages),
+                        selectinload(Session.questions).selectinload(SessionQuestion.evaluation_results),
                     )
                     .execution_options(populate_existing=True)
                 )

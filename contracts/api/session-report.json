@@ -23,6 +23,11 @@
       "mastery": "weak",
       "feedback": "Mentioned memory access and simple data structures.",
       "ideal_answer": "Cover memory access, single-threaded event loop, IO multiplexing, and optimized data structures.",
+      "strengths": ["Mentioned memory access"],
+      "missing_points": ["IO multiplexing", "single-threaded event loop"],
+      "expression_issues": ["Answer is too abstract"],
+      "action_items": ["Review and restate: IO multiplexing", "Review and restate: single-threaded event loop"],
+      "recommended_questions": [],
       "tags": [
         {
           "id": 7,
