@@ -10,6 +10,7 @@ WORKDIR /app/frontend
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 COPY --from=deps /app/frontend/node_modules ./node_modules
+COPY contracts /app/contracts
 COPY frontend .
 RUN npm run build
 

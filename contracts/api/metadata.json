@@ -1,0 +1,25 @@
+{
+  "companies": [
+    {
+      "id": 1,
+      "name": "General Co",
+      "name_en": "General Co",
+      "region": "CN",
+      "tier": 1,
+      "logo_url": null
+    }
+  ],
+  "positions": [
+    {
+      "id": 2,
+      "name": "AI Engineer"
+    }
+  ],
+  "tags": [
+    {
+      "id": 7,
+      "name": "Redis",
+      "category": "knowledge"
+    }
+  ]
+}

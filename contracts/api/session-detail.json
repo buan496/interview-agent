@@ -1,0 +1,49 @@
+{
+  "session_id": 42,
+  "mode": "single",
+  "status": "ongoing",
+  "server_now": "2026-07-06T00:00:00Z",
+  "started_at": "2026-07-06T00:00:00Z",
+  "deadline_at": "2026-07-06T00:20:00Z",
+  "remaining_seconds": 1200,
+  "current_question_index": 1,
+  "total_questions": 1,
+  "max_followups": 3,
+  "current_followups": 0,
+  "end_reason": null,
+  "questions": [
+    {
+      "sq_id": 1,
+      "question": {
+        "sq_id": 1,
+        "title": "Why is Redis fast?",
+        "body": null,
+        "difficulty": 3,
+        "qtype": "knowledge",
+        "tags": [
+          {
+            "id": 7,
+            "name": "Redis",
+            "category": "knowledge"
+          }
+        ]
+      },
+      "status": "answering",
+      "started_at": "2026-07-06T00:00:00Z",
+      "submitted_at": null,
+      "scored_at": null,
+      "followup_count": 0,
+      "final_score": null,
+      "mastery": null,
+      "messages": [
+        {
+          "id": 1,
+          "role": "interviewer",
+          "content": "Why is Redis fast?",
+          "msg_type": "question",
+          "eval_json": null
+        }
+      ]
+    }
+  ]
+}

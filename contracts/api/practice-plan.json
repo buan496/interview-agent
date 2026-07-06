@@ -1,0 +1,46 @@
+{
+  "id": 1,
+  "date": "2026-07-06",
+  "recommended_tasks": [
+    {
+      "id": "resume-session-42",
+      "type": "resume_session",
+      "title": "Resume unfinished session",
+      "reason": "You have an in-progress single-question session.",
+      "outcome": "Finish the already-started training before starting a new one.",
+      "action_label": "Continue training",
+      "entrypoint": "open_page",
+      "payload": {
+        "session_id": 42,
+        "href": "/session/42"
+      }
+    },
+    {
+      "id": "weak-tag-training",
+      "type": "weak_tag_training",
+      "title": "Weak tag focus",
+      "reason": "Redis is currently averaging 52 and should be reinforced.",
+      "outcome": "Run single-question practice to refresh the ability radar.",
+      "action_label": "Start focus",
+      "entrypoint": "create_session",
+      "payload": {
+        "mode": "single",
+        "tag_ids": [7]
+      }
+    }
+  ],
+  "weak_tags": [
+    {
+      "tag_id": 7,
+      "tag": "Redis",
+      "category": "knowledge",
+      "avg_score": 52,
+      "attempts": 2
+    }
+  ],
+  "target_abilities": ["Redis"],
+  "generated_reason": "Generated from unfinished sessions, wrong answers, and weak tags.",
+  "completed": false,
+  "created_at": "2026-07-06T00:00:00Z",
+  "updated_at": "2026-07-06T00:00:00Z"
+}

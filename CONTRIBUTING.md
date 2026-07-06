@@ -10,8 +10,9 @@ Every change must start from that document:
 3. Do not add features that do not serve the interview training loop.
 4. Do not introduce user-private data without binding it to `current_user.id`.
 5. Do not bypass backend authorization or the frontend API client.
-6. Add or update tests for changed behavior.
-7. Record local verification in the PR.
+6. Update `contracts/api` samples whenever request or response shapes change.
+7. Add or update tests for changed behavior.
+8. Record local verification in the PR.
 
 Before pushing a PR, run the local quality gate when practical:
 

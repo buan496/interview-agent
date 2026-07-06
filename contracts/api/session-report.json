@@ -1,0 +1,35 @@
+{
+  "session_id": 42,
+  "mode": "single",
+  "status": "finished",
+  "overall_score": 72,
+  "summary": "Good structure, but missing event-loop and memory-model details.",
+  "started_at": "2026-07-06T00:00:00Z",
+  "ended_at": "2026-07-06T00:18:00Z",
+  "radar": [
+    {
+      "tag": "Redis",
+      "avg_score": 72,
+      "attempts": 1
+    }
+  ],
+  "questions": [
+    {
+      "sq_id": 1,
+      "title": "Why is Redis fast?",
+      "qtype": "knowledge",
+      "difficulty": 3,
+      "score": 72,
+      "mastery": "weak",
+      "feedback": "Mentioned memory access and simple data structures.",
+      "ideal_answer": "Cover memory access, single-threaded event loop, IO multiplexing, and optimized data structures.",
+      "tags": [
+        {
+          "id": 7,
+          "name": "Redis",
+          "category": "knowledge"
+        }
+      ]
+    }
+  ]
+}

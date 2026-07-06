@@ -15,6 +15,7 @@
 - [ ] Backend lint passes
 - [ ] Database migrations pass
 - [ ] Backend unit tests pass
+- [ ] API contracts are updated when request/response shapes change
 - [ ] Frontend lint passes
 - [ ] Frontend typecheck passes
 - [ ] Frontend production build passes
