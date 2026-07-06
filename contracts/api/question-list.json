@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "id": 100,
+      "title": "Why is Redis fast?",
+      "body": null,
+      "difficulty": 3,
+      "qtype": "knowledge",
+      "source_type": "seed",
+      "source_note": null,
+      "company": null,
+      "position": null,
+      "tags": [
+        {
+          "id": 7,
+          "name": "Redis",
+          "category": "knowledge"
+        }
+      ]
+    }
+  ],
+  "total": 1
+}

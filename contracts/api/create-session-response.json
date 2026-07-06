@@ -1,0 +1,21 @@
+{
+  "session_id": 42,
+  "status": "ongoing",
+  "server_now": "2026-07-06T00:00:00Z",
+  "deadline_at": "2026-07-06T00:20:00Z",
+  "remaining_seconds": 1200,
+  "first_question": {
+    "sq_id": 1,
+    "title": "Why is Redis fast?",
+    "body": null,
+    "difficulty": 3,
+    "qtype": "knowledge",
+    "tags": [
+      {
+        "id": 7,
+        "name": "Redis",
+        "category": "knowledge"
+      }
+    ]
+  }
+}
