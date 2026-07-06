@@ -39,6 +39,7 @@ services:
       WHISPER_MODEL: ${WHISPER_MODEL:-FunAudioLLM/SenseVoiceSmall}
       SMS_PROVIDER_KEY: ${SMS_PROVIDER_KEY:-}
       JWT_SECRET: ${JWT_SECRET:-local-dev-only-change-me}
+      ADMIN_PHONES: ${ADMIN_PHONES:-}
       CORS_ORIGINS: http://localhost:3000
     depends_on:
       postgres:

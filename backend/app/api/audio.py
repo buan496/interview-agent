@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import httpx
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
+from app.api.auth import get_current_user
+from app.models import User
 from app.settings import get_settings
 
 
@@ -10,7 +12,10 @@ router = APIRouter(prefix="/audio", tags=["audio"])
 
 
 @router.post("/transcribe")
-async def transcribe_audio(file: UploadFile = File(...)) -> dict[str, str]:
+async def transcribe_audio(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, str]:
     settings = get_settings()
     if not settings.whisper_api_key:
         raise HTTPException(status_code=503, detail="WHISPER_API_KEY is not configured")

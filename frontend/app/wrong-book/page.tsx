@@ -6,22 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
 import { Badge, Button, Panel } from "@/components/ui";
-import { API_BASE, createSession } from "@/lib/api";
-
-type WrongBookItem = {
-  question_id: number;
-  title: string;
-  last_score?: number | null;
-  fail_count: number;
-  next_review?: string | null;
-  tags: Array<{ id: number; name: string }>;
-};
-
-async function getWrongBook() {
-  const response = await fetch(`${API_BASE}/me/wrong-book`);
-  if (!response.ok) throw new Error(await response.text());
-  return response.json() as Promise<WrongBookItem[]>;
-}
+import { createSession, getWrongBook } from "@/lib/api";
 
 export default function WrongBookPage() {
   const router = useRouter();

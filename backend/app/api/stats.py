@@ -7,9 +7,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.sessions import _demo_user
+from app.api.auth import get_current_user
 from app.db import get_db
-from app.models import Question, QuestionTag, Session, Tag, UserTagStat, WrongBook
+from app.models import Question, QuestionTag, Session, Tag, User, UserTagStat, WrongBook
 from app.schemas import RadarItemOut, ReportListItemOut, TagOut, WrongBookOut
 
 
@@ -17,12 +17,15 @@ router = APIRouter(prefix="/me", tags=["stats"])
 
 
 @router.get("/wrong-book", response_model=list[WrongBookOut])
-async def wrong_book(due: str | None = None, db: AsyncSession = Depends(get_db)) -> list[WrongBookOut]:
-    user = await _demo_user(db)
+async def wrong_book(
+    due: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[WrongBookOut]:
     stmt = (
         select(WrongBook, Question)
         .join(Question, Question.id == WrongBook.question_id)
-        .where(WrongBook.user_id == user.id)
+        .where(WrongBook.user_id == current_user.id)
         .options(selectinload(Question.tag_links).selectinload(QuestionTag.tag))
         .order_by(WrongBook.next_review.asc().nullslast())
     )
@@ -43,13 +46,15 @@ async def wrong_book(due: str | None = None, db: AsyncSession = Depends(get_db))
 
 
 @router.get("/radar", response_model=list[RadarItemOut])
-async def radar(db: AsyncSession = Depends(get_db)) -> list[RadarItemOut]:
-    user = await _demo_user(db)
+async def radar(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[RadarItemOut]:
     rows = (
         await db.execute(
             select(UserTagStat, Tag)
             .join(Tag, Tag.id == UserTagStat.tag_id)
-            .where(UserTagStat.user_id == user.id)
+            .where(UserTagStat.user_id == current_user.id)
             .order_by(Tag.category, Tag.name)
         )
     ).all()
@@ -57,12 +62,14 @@ async def radar(db: AsyncSession = Depends(get_db)) -> list[RadarItemOut]:
 
 
 @router.get("/reports", response_model=list[ReportListItemOut])
-async def reports(db: AsyncSession = Depends(get_db)) -> list[ReportListItemOut]:
-    user = await _demo_user(db)
+async def reports(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[ReportListItemOut]:
     rows = (
         await db.execute(
             select(Session)
-            .where(Session.user_id == user.id, Session.status == "finished")
+            .where(Session.user_id == current_user.id, Session.status == "finished")
             .order_by(Session.started_at.desc())
             .limit(50)
         )
