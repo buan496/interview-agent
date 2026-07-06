@@ -11,6 +11,8 @@
 frontend/node_modules
 frontend/.next
 frontend/coverage
+frontend/playwright-report
+frontend/test-results
 
 DESIGN.md
 interview-agent-design.md

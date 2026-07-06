@@ -18,6 +18,7 @@
 - [ ] Frontend lint passes
 - [ ] Frontend typecheck passes
 - [ ] Frontend production build passes
+- [ ] Frontend e2e tests pass
 - [ ] Docker Compose config validates
 - [ ] Docker image build verifies
 - [ ] Local `scripts/ci-local.ps1` passes, or any skipped step is explained

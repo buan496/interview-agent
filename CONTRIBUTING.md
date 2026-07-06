@@ -19,8 +19,16 @@ Before pushing a PR, run the local quality gate when practical:
 .\scripts\ci-local.ps1
 ```
 
-Use `-SkipDocker` or `-SkipSecretScan` only when the required local runtime is
-not available, and note the skipped step in the PR.
+Use `-SkipDocker`, `-SkipE2E`, or `-SkipSecretScan` only when the required local
+runtime is not available, and note the skipped step in the PR.
+
+If Playwright browsers are not installed locally, run this once before the full
+quality gate:
+
+```powershell
+cd frontend
+npx playwright install chromium
+```
 
 Default PR sequence:
 
