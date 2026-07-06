@@ -133,21 +133,27 @@ async def _evaluation_followup_task(db: AsyncSession, user_id: int) -> dict[str,
         )
     ).all()
     for evaluation, question in rows:
-        missing_points = list(evaluation.missing_points or [])
-        action_items = list(evaluation.action_items or [])
-        if evaluation.score >= 80 and not missing_points and not action_items:
-            continue
-        focus = (action_items or missing_points or [evaluation.verdict])[0]
-        return _task(
-            f"evaluation-followup-{evaluation.id}",
-            "single_question",
-            "Report follow-up retry",
-            f"Latest report feedback: {focus}",
-            "Retry the same question so the feedback turns into updated ability data.",
-            "Retry from report",
-            {"mode": "single", "question_id": question.id},
-        )
+        task = _evaluation_task_from_result(evaluation, question)
+        if task:
+            return task
     return None
+
+
+def _evaluation_task_from_result(evaluation: EvaluationResult, question: Question) -> dict[str, Any] | None:
+    missing_points = list(evaluation.missing_points or [])
+    action_items = list(evaluation.action_items or [])
+    if evaluation.score >= 80 and not missing_points and not action_items:
+        return None
+    focus = (action_items or missing_points or [evaluation.verdict])[0]
+    return _task(
+        f"evaluation-followup-{evaluation.id}",
+        "single_question",
+        "Report follow-up retry",
+        f"Latest report feedback: {focus}",
+        "Retry the same question so the feedback turns into updated ability data.",
+        "Retry from report",
+        {"mode": "single", "question_id": question.id},
+    )
 
 
 def _resume_session_task(session: Session) -> dict[str, Any]:

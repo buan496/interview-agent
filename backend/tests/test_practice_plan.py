@@ -3,8 +3,16 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 import unittest
 
-from app.api.practice_plan import _compose_tasks, _generated_reason, _plan_out, _resume_session_task, _weak_tag_task, _with_resume_task
-from app.models import PracticePlan, Session, User
+from app.api.practice_plan import (
+    _compose_tasks,
+    _evaluation_task_from_result,
+    _generated_reason,
+    _plan_out,
+    _resume_session_task,
+    _weak_tag_task,
+    _with_resume_task,
+)
+from app.models import EvaluationResult, PracticePlan, Question, Session, User
 
 
 class PracticePlanBuilderTest(unittest.TestCase):
@@ -52,6 +60,71 @@ class PracticePlanBuilderTest(unittest.TestCase):
 
         self.assertEqual([item["id"] for item in tasks[:2]], ["evaluation-followup-5", "mock-interview"])
         self.assertEqual(tasks[0]["payload"], {"mode": "single", "question_id": 9})
+
+    def test_evaluation_result_maps_to_same_question_retry_task(self) -> None:
+        evaluation = EvaluationResult(
+            id=5,
+            user_id=1,
+            session_id=42,
+            sq_id=1,
+            question_id=100,
+            score=72,
+            mastery="weak",
+            verdict="Missing event loop details.",
+            strengths=["Clear structure"],
+            missing_points=["single-threaded event loop"],
+            expression_issues=[],
+            followup_failures=[],
+            action_items=["Review IO multiplexing"],
+            recommended_questions=[],
+            raw_model_output={},
+        )
+        question = Question(
+            id=100,
+            title="Why is Redis fast?",
+            answer_key="Cover memory, event loop, IO multiplexing, and data structures.",
+            difficulty=3,
+            qtype="knowledge",
+            source_type="seed",
+        )
+
+        task = _evaluation_task_from_result(evaluation, question)
+
+        self.assertIsNotNone(task)
+        assert task is not None
+        self.assertEqual(task["id"], "evaluation-followup-5")
+        self.assertEqual(task["type"], "single_question")
+        self.assertEqual(task["reason"], "Latest report feedback: Review IO multiplexing")
+        self.assertEqual(task["payload"], {"mode": "single", "question_id": 100})
+
+    def test_evaluation_result_skips_clean_passing_result(self) -> None:
+        evaluation = EvaluationResult(
+            id=6,
+            user_id=1,
+            session_id=42,
+            sq_id=1,
+            question_id=100,
+            score=88,
+            mastery="pass",
+            verdict="Strong answer.",
+            strengths=["Complete coverage"],
+            missing_points=[],
+            expression_issues=[],
+            followup_failures=[],
+            action_items=[],
+            recommended_questions=[],
+            raw_model_output={},
+        )
+        question = Question(
+            id=100,
+            title="Why is Redis fast?",
+            answer_key="Cover memory, event loop, IO multiplexing, and data structures.",
+            difficulty=3,
+            qtype="knowledge",
+            source_type="seed",
+        )
+
+        self.assertIsNone(_evaluation_task_from_result(evaluation, question))
 
     def test_compose_tasks_deduplicates_report_followup_against_wrong_book(self) -> None:
         user = User(id=1)

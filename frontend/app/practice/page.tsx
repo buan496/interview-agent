@@ -61,15 +61,17 @@ export default function PracticePage() {
 
   const questions = useQuery({ queryKey: ["questions", params.toString()], queryFn: () => getQuestions(params) });
   const startSession = useMutation({
-    mutationFn: (override?: StartOverride) =>
-      createSession({
+    mutationFn: (override?: StartOverride) => {
+      const fromPlanOrQuestion = override !== undefined;
+      return createSession({
         mode: override?.mode ?? "single",
         question_id: override?.question_id,
-        company_id: override?.company_id ?? (companyId ? Number(companyId) : undefined),
-        position_id: override?.position_id ?? (positionId ? Number(positionId) : undefined),
-        tag_ids: override?.tag_ids ?? (tagId ? [Number(tagId)] : []),
-        difficulty: override?.difficulty ?? (difficulty ? Number(difficulty) : undefined),
-      }),
+        company_id: fromPlanOrQuestion ? override.company_id : companyId ? Number(companyId) : undefined,
+        position_id: fromPlanOrQuestion ? override.position_id : positionId ? Number(positionId) : undefined,
+        tag_ids: fromPlanOrQuestion ? override.tag_ids : tagId ? [Number(tagId)] : [],
+        difficulty: fromPlanOrQuestion ? override.difficulty : difficulty ? Number(difficulty) : undefined,
+      });
+    },
     onSuccess: (data) => router.push(`/session/${data.session_id}`),
   });
 
