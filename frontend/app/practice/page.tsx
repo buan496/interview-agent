@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpenCheck,
+  ChevronRight,
   Clock3,
   ExternalLink,
   Filter,
@@ -13,11 +14,12 @@ import {
   Loader2,
   RotateCcw,
   Search,
+  Sparkles,
   Target,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { Badge, Button, Panel } from "@/components/ui";
+import { AppButton, AppCard, Badge, BrandLogo, PageShell, cn } from "@/components/ui";
 import { getTodayPracticePlan } from "@/lib/practice-plan-api";
 import { getMetadata, getQuestions } from "@/lib/question-api";
 import { createSession } from "@/lib/session-api";
@@ -86,6 +88,9 @@ export default function PracticePage() {
   const totalPages = Math.max(1, Math.ceil((questions.data?.total ?? 0) / 12));
   const weakRadar = useMemo(() => [...(radar.data ?? [])].sort((a, b) => Number(a.avg_score) - Number(b.avg_score))[0], [radar.data]);
   const latestReport = reports.data?.[0];
+  const primaryTask = practicePlan.data?.recommended_tasks[0];
+  const targetAbilities = practicePlan.data?.target_abilities ?? [];
+  const weakTags = practicePlan.data?.weak_tags ?? [];
 
   function startPlanTask(task: PracticePlanTask) {
     if (task.entrypoint === "open_page" && task.payload.href) {
@@ -102,182 +107,301 @@ export default function PracticePage() {
     });
   }
 
-  return (
-    <main className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6">
-      <section className="grid gap-4 lg:grid-cols-[1fr_360px]">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className="border-brand/30 bg-[#edf7f4] text-brand">今日训练台</Badge>
-            <Badge>训练闭环入口</Badge>
-          </div>
-          <h1 className="mt-3 text-2xl font-semibold text-ink">今天先完成一组有目标的面试训练</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            {practicePlan.data?.generated_reason ?? "系统会根据错题、薄弱标签和最近训练记录给出优先任务。题库仍然可用，但它是辅助入口，不再要求你自己乱找题。"}
-          </p>
-        </div>
+  function startTodayTraining() {
+    if (primaryTask) {
+      startPlanTask(primaryTask);
+      return;
+    }
+    startSession.mutate(undefined);
+  }
 
-        <Panel className="p-4">
+  return (
+    <PageShell className="grid gap-8 pb-12">
+      <section className="grid gap-6 lg:grid-cols-[1fr_380px] lg:items-stretch">
+        <AppCard className="relative overflow-hidden p-6 sm:p-8 lg:p-10">
+          <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-brandSoft to-transparent" />
+          <div className="relative">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <BrandLogo variant="mark" className="h-11 w-11 rounded-2xl border border-line bg-white p-1.5 shadow-soft" priority />
+                <div>
+                  <p className="text-sm font-semibold text-brand">今日训练</p>
+                  <p className="text-xs text-muted">Agent 工程师面试训练闭环</p>
+                </div>
+              </div>
+              <Badge className="border-brand/20 bg-brandSoft text-brand">蓝白训练台</Badge>
+            </div>
+
+            <div className="mt-10 max-w-3xl">
+              <h1 className="text-3xl font-semibold leading-tight text-ink sm:text-4xl lg:text-5xl">
+                今天，从一次高质量模拟面试开始
+              </h1>
+              <p className="mt-5 max-w-2xl text-base leading-8 text-muted">
+                系统会记录你的回答、追问表现、薄弱知识点和复盘报告，帮助你围绕 Agent 工程师岗位完成今日训练闭环。
+              </p>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <AppButton size="lg" onClick={startTodayTraining} disabled={startSession.isPending || practicePlan.isLoading}>
+                {startSession.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                开始今日训练
+              </AppButton>
+              <AppButton
+                size="lg"
+                variant="secondary"
+                onClick={() => (latestReport ? router.push(`/report/${latestReport.session_id}`) : router.push("/wrong-book"))}
+              >
+                查看最近报告
+                <ChevronRight className="h-4 w-4" />
+              </AppButton>
+            </div>
+
+            <div className="mt-9 grid gap-3 sm:grid-cols-3">
+              <HeroNote title="真实 Session" description="从题目进入受控面试流程" />
+              <HeroNote title="结构化复盘" description="把表现沉淀为能力报告" />
+              <HeroNote title="下一轮计划" description="按薄弱点继续推进训练" />
+            </div>
+          </div>
+        </AppCard>
+
+        <AppCard className="p-6">
           <div className="flex items-center gap-2 text-sm font-semibold text-ink">
             <Gauge className="h-4 w-4 text-brand" />
-            训练概览
+            今日概览
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-            <Metric value={`${wrongBook.data?.length ?? 0}`} label="错题" />
-            <Metric value={weakRadar ? `${Number(weakRadar.avg_score).toFixed(0)}` : "--"} label="最低标签分" />
-            <Metric value={`${reports.data?.length ?? 0}`} label="报告" />
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <Metric value={`${practicePlan.data?.recommended_tasks.length ?? 0}`} label="今日训练" helper="推荐任务" />
+            <Metric value={latestReport ? `${latestReport.overall_score}` : "--"} label="最近得分" helper="报告分数" />
+            <Metric value={weakRadar ? weakRadar.tag : "--"} label="薄弱知识点" helper={weakRadar ? `${Number(weakRadar.avg_score).toFixed(0)} 分` : "等待训练"} />
+            <Metric value={`${wrongBook.data?.length ?? 0}`} label="错题沉淀" helper="待复盘" />
           </div>
-          {latestReport ? (
-            <p className="mt-3 text-sm leading-6 text-muted">
-              最近一次{latestReport.mode === "mock" ? "模拟面试" : "单题训练"}得分 {latestReport.overall_score}，建议继续补齐薄弱标签。
+          <div className="mt-5 rounded-2xl border border-line bg-brandMist p-4">
+            <p className="text-sm font-medium text-ink">下一步建议</p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              {practicePlan.data?.generated_reason ?? "完成一次训练后，系统会结合错题、薄弱标签和最近报告给出更明确的优先任务。"}
             </p>
-          ) : (
-            <p className="mt-3 text-sm leading-6 text-muted">完成第一轮训练后，这里会显示最近报告和能力变化。</p>
-          )}
-        </Panel>
+          </div>
+        </AppCard>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {practicePlan.data?.recommended_tasks.map((task) => (
           <TrainingTask key={task.id} task={task} onStart={() => startPlanTask(task)} disabled={startSession.isPending} />
         ))}
         {practicePlan.isLoading ? (
-          <Panel className="grid min-h-[210px] place-items-center p-4 text-sm text-muted">
+          <AppCard className="grid min-h-[220px] place-items-center p-5 text-sm text-muted">
             <Loader2 className="h-5 w-5 animate-spin text-brand" />
-          </Panel>
+          </AppCard>
         ) : null}
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-[320px_1fr]">
-        <Panel className="h-fit p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Filter className="h-4 w-4 text-brand" />
-              题库辅助筛选
+      <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid gap-5">
+          <AppCard className="p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-brand">推荐训练</p>
+                <h2 className="mt-2 text-2xl font-semibold text-ink">今天该练什么</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+                  优先完成系统推荐任务；题库筛选仍保留为辅助入口，用于按公司、岗位、标签和难度发起专项练习。
+                </p>
+              </div>
+              <AppButton variant="secondary" onClick={() => startSession.mutate(undefined)} disabled={startSession.isPending}>
+                {startSession.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                按筛选开始
+              </AppButton>
             </div>
-            <Button variant="ghost" className="h-8 px-2" onClick={reset} title="重置筛选">
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-          </div>
 
-          <div className="grid gap-3">
-            <SelectField label="公司" value={companyId} onChange={setCompanyId} onResetPage={() => setPage(1)}>
-              <option value="">全部公司</option>
-              {metadata.data?.companies.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField label="岗位" value={positionId} onChange={setPositionId} onResetPage={() => setPage(1)}>
-              <option value="">全部岗位</option>
-              {metadata.data?.positions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField label="标签" value={tagId} onChange={setTagId} onResetPage={() => setPage(1)}>
-              <option value="">全部标签</option>
-              {metadata.data?.tags.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField label="难度" value={difficulty} onChange={setDifficulty} onResetPage={() => setPage(1)}>
-              <option value="">全部难度</option>
-              {difficultyOptions.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </SelectField>
-
-            <Button className="mt-2" onClick={() => startSession.mutate(undefined)} disabled={startSession.isPending}>
-              {startSession.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              按筛选开始训练
-            </Button>
-          </div>
-        </Panel>
-
-        <section className="grid gap-4">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold text-ink">题库辅助入口</h2>
-              <p className="mt-1 text-sm text-muted">共 {questions.data?.total ?? 0} 题，选题后会进入受控 Session。</p>
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {questions.data?.items.map((item) => (
-              <Panel key={item.id} className="flex min-h-[230px] flex-col p-4">
-                <div className="mb-3 flex flex-wrap gap-2">
-                  <Badge>{item.company?.name ?? "通用"}</Badge>
-                  <Badge>{item.position?.name ?? "岗位通用"}</Badge>
-                  <Badge className="border-[#f0d2c6] bg-[#fff6f2] text-accent">难度 {item.difficulty}</Badge>
+            <div className="mt-6 grid gap-4 lg:grid-cols-[280px_1fr]">
+              <div className="rounded-3xl border border-line bg-white/80 p-4">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Filter className="h-4 w-4 text-brand" />
+                    题库辅助筛选
+                  </div>
+                  <AppButton variant="ghost" className="h-9 px-2" onClick={reset} title="重置筛选">
+                    <RotateCcw className="h-4 w-4" />
+                  </AppButton>
                 </div>
-                <h3 className="line-clamp-3 text-base font-semibold leading-6 text-ink">{item.title}</h3>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {item.tags.slice(0, 4).map((tag) => (
-                    <Badge key={tag.id}>{tag.name}</Badge>
+
+                <div className="grid gap-3">
+                  <SelectField label="公司" value={companyId} onChange={setCompanyId} onResetPage={() => setPage(1)}>
+                    <option value="">全部公司</option>
+                    {metadata.data?.companies.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </SelectField>
+
+                  <SelectField label="岗位" value={positionId} onChange={setPositionId} onResetPage={() => setPage(1)}>
+                    <option value="">全部岗位</option>
+                    {metadata.data?.positions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </SelectField>
+
+                  <SelectField label="标签" value={tagId} onChange={setTagId} onResetPage={() => setPage(1)}>
+                    <option value="">全部标签</option>
+                    {metadata.data?.tags.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </SelectField>
+
+                  <SelectField label="难度" value={difficulty} onChange={setDifficulty} onResetPage={() => setPage(1)}>
+                    <option value="">全部难度</option>
+                    {difficultyOptions.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </SelectField>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-ink">题库辅助入口</h3>
+                    <p className="mt-1 text-sm text-muted">共 {questions.data?.total ?? 0} 题，选题后进入受控 Session。</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  {questions.data?.items.map((item) => (
+                    <AppCard key={item.id} className="flex min-h-[238px] flex-col rounded-3xl p-4 shadow-soft">
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        <Badge>{item.company?.name ?? "通用"}</Badge>
+                        <Badge>{item.position?.name ?? "岗位通用"}</Badge>
+                        <Badge className="border-brand/20 bg-brandSoft text-brand">难度 {item.difficulty}</Badge>
+                      </div>
+                      <h4 className="line-clamp-3 text-base font-semibold leading-6 text-ink">{item.title}</h4>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {item.tags.slice(0, 4).map((tag) => (
+                          <Badge key={tag.id}>{tag.name}</Badge>
+                        ))}
+                      </div>
+                      {item.source_note?.startsWith("http") ? (
+                        <a className="mt-3 inline-flex items-center gap-1 text-xs text-brand hover:underline" href={item.source_note} target="_blank" rel="noreferrer">
+                          公开题源
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      ) : null}
+                      <AppButton
+                        variant="secondary"
+                        className="mt-auto w-full"
+                        onClick={() => {
+                          startSession.mutate({
+                            question_id: item.id,
+                            company_id: item.company?.id ?? undefined,
+                            position_id: item.position?.id ?? undefined,
+                          });
+                        }}
+                        disabled={startSession.isPending}
+                      >
+                        训练这道题
+                        <ArrowRight className="h-4 w-4" />
+                      </AppButton>
+                    </AppCard>
                   ))}
                 </div>
-                {item.source_note?.startsWith("http") ? (
-                  <a className="mt-3 inline-flex items-center gap-1 text-xs text-brand hover:underline" href={item.source_note} target="_blank" rel="noreferrer">
-                    公开题源
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
+
+                {questions.data && questions.data.total > 12 ? (
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <AppButton variant="secondary" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1}>
+                      <ArrowLeft className="h-4 w-4" />
+                      上一页
+                    </AppButton>
+                    <span className="text-sm text-muted">
+                      第 {page} / {totalPages} 页
+                    </span>
+                    <AppButton variant="secondary" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages}>
+                      下一页
+                      <ArrowRight className="h-4 w-4" />
+                    </AppButton>
+                  </div>
                 ) : null}
-                <Button
-                  variant="secondary"
-                  className="mt-auto w-full"
-                  onClick={() => {
-                    startSession.mutate({
-                      question_id: item.id,
-                      company_id: item.company?.id ?? undefined,
-                      position_id: item.position?.id ?? undefined,
-                    });
-                  }}
-                  disabled={startSession.isPending}
-                >
-                  训练这道题
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Panel>
-            ))}
-          </div>
 
-          {questions.data && questions.data.total > 12 ? (
-            <div className="flex items-center justify-center gap-3">
-              <Button variant="secondary" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1}>
-                <ArrowLeft className="h-4 w-4" />
-                上一页
-              </Button>
-              <span className="text-sm text-muted">
-                第 {page} / {totalPages} 页
-              </span>
-              <Button variant="secondary" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages}>
-                下一页
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+                {!questions.isLoading && questions.data?.items.length === 0 ? (
+                  <AppCard className="p-8 text-center text-sm text-muted">暂无匹配题目，请放宽筛选条件。</AppCard>
+                ) : null}
+              </div>
             </div>
-          ) : null}
+          </AppCard>
+        </div>
 
-          {!questions.isLoading && questions.data?.items.length === 0 ? <Panel className="p-8 text-center text-sm text-muted">暂无匹配题目，请放宽筛选条件。</Panel> : null}
-        </section>
+        <aside className="grid h-fit gap-5">
+          <AppCard id="ability-diagnosis" className="p-5">
+            <p className="text-sm font-semibold text-brand">最近薄弱点</p>
+            <h2 className="mt-2 text-xl font-semibold text-ink">能力诊断</h2>
+            <div className="mt-4 grid gap-3">
+              {weakTags.slice(0, 3).map((item) => (
+                <div key={item.tag_id} className="rounded-2xl border border-line bg-white p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-ink">{item.tag}</span>
+                    <span className="text-sm font-semibold text-brand">{Number(item.avg_score).toFixed(0)}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted">已训练 {item.attempts} 次</p>
+                </div>
+              ))}
+              {weakTags.length === 0 ? <p className="text-sm leading-6 text-muted">完成训练后，这里会展示最近薄弱知识点。</p> : null}
+            </div>
+          </AppCard>
+
+          <AppCard className="p-5">
+            <p className="text-sm font-semibold text-brand">最近复盘</p>
+            <h2 className="mt-2 text-xl font-semibold text-ink">训练后的下一步</h2>
+            <div className="mt-4 grid gap-3">
+              <ReviewAction
+                title="最近报告"
+                description={latestReport ? `最近得分 ${latestReport.overall_score}` : "完成训练后生成报告"}
+                onClick={() => (latestReport ? router.push(`/report/${latestReport.session_id}`) : router.push("/practice"))}
+              />
+              <ReviewAction title="错题本" description={`${wrongBook.data?.length ?? 0} 道题待沉淀`} onClick={() => router.push("/wrong-book")} />
+              <ReviewAction
+                title="能力诊断"
+                description={weakRadar ? `${weakRadar.tag} 当前最低` : "等待更多训练数据"}
+                onClick={() => document.getElementById("ability-diagnosis")?.scrollIntoView({ behavior: "smooth" })}
+              />
+            </div>
+          </AppCard>
+
+          <AppCard className="p-5">
+            <p className="text-sm font-semibold text-brand">推荐知识点</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {targetAbilities.slice(0, 8).map((item) => (
+                <Badge key={item} className="border-brand/20 bg-brandSoft text-brand">
+                  {item}
+                </Badge>
+              ))}
+              {targetAbilities.length === 0 ? <span className="text-sm text-muted">暂无推荐知识点，先完成一次训练。</span> : null}
+            </div>
+          </AppCard>
+        </aside>
       </section>
-    </main>
+    </PageShell>
   );
 }
 
-function Metric({ value, label }: { value: string; label: string }) {
+function HeroNote({ title, description }: { title: string; description: string }) {
   return (
-    <div>
-      <div className="text-lg font-semibold text-ink">{value}</div>
-      <div className="mt-1 text-xs text-muted">{label}</div>
+    <div className="rounded-2xl border border-line bg-white/80 p-4">
+      <p className="text-sm font-semibold text-ink">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-muted">{description}</p>
+    </div>
+  );
+}
+
+function Metric({ value, label, helper }: { value: string; label: string; helper: string }) {
+  return (
+    <div className="rounded-2xl border border-line bg-white p-4">
+      <div className="truncate text-xl font-semibold text-ink">{value}</div>
+      <div className="mt-1 text-sm font-medium text-ink">{label}</div>
+      <div className="mt-1 text-xs text-muted">{helper}</div>
     </div>
   );
 }
@@ -294,18 +418,36 @@ function TrainingTask({
   const Icon = taskIcon(task.type);
 
   return (
-    <Panel className="flex min-h-[210px] flex-col p-4">
+    <AppCard className="flex min-h-[230px] flex-col p-5">
       <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <Icon className="h-4 w-4 text-brand" />
+        <span className="grid h-9 w-9 place-items-center rounded-2xl bg-brandSoft text-brand">
+          <Icon className="h-4 w-4" />
+        </span>
         {task.title}
       </div>
-      <p className="mt-3 text-sm leading-6 text-muted">{task.reason}</p>
-      <p className="mt-2 text-sm leading-6 text-ink">{task.outcome}</p>
-      <Button className="mt-auto" onClick={onStart} disabled={disabled}>
+      <p className="mt-4 text-sm leading-6 text-muted">{task.reason}</p>
+      <p className="mt-3 text-sm leading-6 text-ink">{task.outcome}</p>
+      <AppButton className="mt-auto" onClick={onStart} disabled={disabled}>
         {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
         {task.action_label}
-      </Button>
-    </Panel>
+      </AppButton>
+    </AppCard>
+  );
+}
+
+function ReviewAction({ title, description, onClick }: { title: string; description: string; onClick: () => void }) {
+  return (
+    <button
+      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-line bg-white p-4 text-left transition hover:border-brand/30 hover:bg-brandMist"
+      onClick={onClick}
+      type="button"
+    >
+      <span>
+        <span className="block text-sm font-semibold text-ink">{title}</span>
+        <span className="mt-1 block text-xs text-muted">{description}</span>
+      </span>
+      <ChevronRight className="h-4 w-4 text-muted transition group-hover:text-brand" />
+    </button>
   );
 }
 
@@ -331,10 +473,13 @@ function SelectField({
   children: React.ReactNode;
 }) {
   return (
-    <label className="grid gap-1 text-sm">
-      <span className="text-muted">{label}</span>
+    <label className="grid gap-2 text-sm">
+      <span className="font-medium text-ink">{label}</span>
       <select
-        className="h-10 rounded border border-line bg-white px-3"
+        className={cn(
+          "h-11 rounded-control border border-line bg-white px-3 text-sm text-ink transition",
+          "focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10"
+        )}
         value={value}
         onChange={(event) => {
           onChange(event.target.value);
