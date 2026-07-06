@@ -18,7 +18,26 @@ test("global navigation links practice, wrong-book, and mock routes", async ({ p
 
   await nav.getByRole("link", { name: "模拟面试" }).click();
   await expect(page).toHaveURL(/\/mock$/);
-  await expect(page.getByRole("button", { name: "开始模拟面试" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始模拟面试" }).first()).toBeVisible();
+});
+
+test("mock interview creates a mock session with selected filters", async ({ page }) => {
+  await mockBaseApis(page);
+  let requestBody: unknown;
+
+  await page.route("**/api/sessions", async (route) => {
+    requestBody = route.request().postDataJSON();
+    await fulfillCreateSession(route, 66);
+  });
+  await page.route("**/api/sessions/66", async (route) => route.fulfill({ json: sessionDetail(66) }));
+
+  await page.goto("/mock");
+  await page.getByLabel("目标公司").selectOption("1");
+  await page.getByLabel("目标岗位").selectOption("2");
+  await page.getByRole("button", { name: "开始模拟面试" }).first().click();
+
+  await expect.poll(() => requestBody).toEqual({ mode: "mock", company_id: 1, position_id: 2 });
+  await expect(page).toHaveURL(/\/session\/66$/);
 });
 
 test("wrong-book can return to today training through page action", async ({ page }) => {
