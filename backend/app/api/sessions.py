@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.api.auth import get_current_user
 from app.core.interviewer import ConversationMessage, InterviewerEngine, InterviewQuestion
 from app.core.scheduler import target_question_count, target_type_counts
 from app.db import SessionLocal, get_db
@@ -34,16 +35,6 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-
-async def _demo_user(db: AsyncSession) -> User:
-    user = (await db.execute(select(User).where(User.phone == "demo"))).scalar_one_or_none()
-    if user:
-        return user
-    user = User(phone="demo", nickname="练习用户")
-    db.add(user)
-    await db.flush()
-    return user
 
 
 def _tags(question: Question) -> list[TagOut]:
@@ -123,7 +114,11 @@ async def _select_mock_questions(db: AsyncSession, request: CreateSessionRequest
 
 
 @router.post("", response_model=CreateSessionOut)
-async def create_session(request: CreateSessionRequest, db: AsyncSession = Depends(get_db)) -> CreateSessionOut:
+async def create_session(
+    request: CreateSessionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CreateSessionOut:
     questions = (
         await _select_mock_questions(db, request)
         if request.mode == "mock"
@@ -132,9 +127,8 @@ async def create_session(request: CreateSessionRequest, db: AsyncSession = Depen
     if not questions:
         raise HTTPException(status_code=404, detail="No active question matched filters")
 
-    user = await _demo_user(db)
     session = Session(
-        user_id=user.id,
+        user_id=current_user.id,
         mode=request.mode,
         company_id=request.company_id or questions[0].company_id,
         position_id=request.position_id or questions[0].position_id,
@@ -158,18 +152,24 @@ async def create_session(request: CreateSessionRequest, db: AsyncSession = Depen
 
 
 @router.get("/{session_id}", response_model=SessionDetailOut)
-async def get_session(session_id: int, db: AsyncSession = Depends(get_db)) -> SessionDetailOut:
-    session = await db.get(
-        Session,
-        session_id,
-        options=[
-            selectinload(Session.questions)
-            .selectinload(SessionQuestion.question)
-            .selectinload(Question.tag_links)
-            .selectinload(QuestionTag.tag),
-            selectinload(Session.questions).selectinload(SessionQuestion.messages),
-        ],
-    )
+async def get_session(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SessionDetailOut:
+    session = (
+        await db.execute(
+            select(Session)
+            .where(Session.id == session_id, Session.user_id == current_user.id)
+            .options(
+                selectinload(Session.questions)
+                .selectinload(SessionQuestion.question)
+                .selectinload(Question.tag_links)
+                .selectinload(QuestionTag.tag),
+                selectinload(Session.questions).selectinload(SessionQuestion.messages),
+            )
+        )
+    ).scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     questions = []
@@ -273,18 +273,24 @@ def _report_out(session: Session) -> SessionReportOut:
 
 
 @router.get("/{session_id}/report", response_model=SessionReportOut)
-async def get_report(session_id: int, db: AsyncSession = Depends(get_db)) -> SessionReportOut:
-    session = await db.get(
-        Session,
-        session_id,
-        options=[
-            selectinload(Session.questions)
-            .selectinload(SessionQuestion.question)
-            .selectinload(Question.tag_links)
-            .selectinload(QuestionTag.tag),
-            selectinload(Session.questions).selectinload(SessionQuestion.messages),
-        ],
-    )
+async def get_report(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SessionReportOut:
+    session = (
+        await db.execute(
+            select(Session)
+            .where(Session.id == session_id, Session.user_id == current_user.id)
+            .options(
+                selectinload(Session.questions)
+                .selectinload(SessionQuestion.question)
+                .selectinload(Question.tag_links)
+                .selectinload(QuestionTag.tag),
+                selectinload(Session.questions).selectinload(SessionQuestion.messages),
+            )
+        )
+    ).scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     if session.status != "finished":
@@ -292,7 +298,7 @@ async def get_report(session_id: int, db: AsyncSession = Depends(get_db)) -> Ses
     return _report_out(session)
 
 
-async def _answer_stream(session_id: int, request: AnswerRequest) -> AsyncIterator[str]:
+async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) -> AsyncIterator[str]:
     yield _sse("eval_start", {"sq_id": request.sq_id})
     async with SessionLocal() as db:
         sq = await db.get(
@@ -308,7 +314,7 @@ async def _answer_stream(session_id: int, request: AnswerRequest) -> AsyncIterat
                 selectinload(SessionQuestion.session).selectinload(Session.questions),
             ],
         )
-        if not sq or sq.session_id != session_id:
+        if not sq or sq.session_id != session_id or sq.session.user_id != user_id:
             yield _sse("error", {"message": "Session question not found"})
             return
         if sq.finished_at:
@@ -373,7 +379,7 @@ async def _answer_stream(session_id: int, request: AnswerRequest) -> AsyncIterat
             refreshed = (
                 await db.execute(
                     select(Session)
-                    .where(Session.id == sq.session.id)
+                    .where(Session.id == sq.session.id, Session.user_id == user_id)
                     .options(
                         selectinload(Session.questions)
                         .selectinload(SessionQuestion.question)
@@ -400,5 +406,21 @@ async def _answer_stream(session_id: int, request: AnswerRequest) -> AsyncIterat
 
 
 @router.post("/{session_id}/answer")
-async def answer(session_id: int, request: AnswerRequest) -> StreamingResponse:
-    return StreamingResponse(_answer_stream(session_id, request), media_type="text/event-stream")
+async def answer(
+    session_id: int,
+    request: AnswerRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> StreamingResponse:
+    sq_id = await db.scalar(
+        select(SessionQuestion.id)
+        .join(Session, Session.id == SessionQuestion.session_id)
+        .where(
+            Session.id == session_id,
+            Session.user_id == current_user.id,
+            SessionQuestion.id == request.sq_id,
+        )
+    )
+    if sq_id is None:
+        raise HTTPException(status_code=404, detail="Session question not found")
+    return StreamingResponse(_answer_stream(session_id, current_user.id, request), media_type="text/event-stream")

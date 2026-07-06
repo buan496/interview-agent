@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     whisper_model: str = Field(default="FunAudioLLM/SenseVoiceSmall", validation_alias="WHISPER_MODEL")
     sms_provider_key: str = Field(default="", validation_alias="SMS_PROVIDER_KEY")
     jwt_secret: str = Field(default="local-dev-only-change-me", validation_alias="JWT_SECRET")
+    admin_phones: str = Field(default="", validation_alias="ADMIN_PHONES")
     cors_origins: str = Field(default="http://localhost:3000", validation_alias="CORS_ORIGINS")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -34,6 +35,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def admin_phone_set(self) -> set[str]:
+        return {phone.strip() for phone in self.admin_phones.split(",") if phone.strip()}
 
 
 @lru_cache

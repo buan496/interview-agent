@@ -6,9 +6,13 @@ import hmac
 import json
 import time
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db import get_db
+from app.models import User
 from app.settings import get_settings
 
 
@@ -48,6 +52,40 @@ def _decode(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
 
+def _bearer_token(authorization: str | None) -> str:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing bearer token")
+    return authorization.split(" ", 1)[1]
+
+
+async def _get_or_create_user(db: AsyncSession, phone: str) -> User:
+    user = (await db.execute(select(User).where(User.phone == phone))).scalar_one_or_none()
+    if user:
+        return user
+    user = User(phone=phone, nickname=f"用户{phone[-4:]}")
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+async def get_current_user(
+    authorization: str | None = Header(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    payload = _decode(_bearer_token(authorization))
+    phone = str(payload.get("sub") or "")
+    if not phone:
+        raise HTTPException(status_code=401, detail="Invalid token subject")
+    return await _get_or_create_user(db, phone)
+
+
+async def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.phone not in get_settings().admin_phone_set:
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    return current_user
+
+
 @router.post("/request-code")
 async def request_code(request: RequestCodeRequest) -> dict[str, str | int]:
     settings = get_settings()
@@ -58,17 +96,15 @@ async def request_code(request: RequestCodeRequest) -> dict[str, str | int]:
 
 
 @router.post("/login")
-async def login(request: LoginRequest) -> dict[str, str | int]:
+async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)) -> dict[str, str | int]:
     if request.code != "000000":
         raise HTTPException(status_code=401, detail="Invalid verification code")
+    await _get_or_create_user(db, request.phone)
     expires_in = 24 * 60 * 60
     token = _encode({"sub": request.phone, "exp": int(time.time()) + expires_in})
     return {"access_token": token, "token_type": "bearer", "expires_in": expires_in}
 
 
 @router.get("/me")
-async def me(authorization: str | None = Header(default=None)) -> dict[str, str]:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="Missing bearer token")
-    payload = _decode(authorization.split(" ", 1)[1])
-    return {"phone": str(payload["sub"])}
+async def me(current_user: User = Depends(get_current_user)) -> dict[str, str]:
+    return {"phone": str(current_user.phone)}

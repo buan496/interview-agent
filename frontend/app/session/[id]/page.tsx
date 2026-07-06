@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { Badge, Button, Panel } from "@/components/ui";
-import { API_BASE, getSession } from "@/lib/api";
+import { API_BASE, authHeader, getSession } from "@/lib/api";
 import { readSse } from "@/lib/sse";
 import type { Message, SseDonePayload, Verdict } from "@/lib/types";
 
@@ -49,7 +49,7 @@ export default function SessionPage() {
     try {
       const response = await fetch(`${API_BASE}/sessions/${params.id}/answer`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader() },
         body: JSON.stringify({ sq_id: current.sq_id, content })
       });
       if (!response.ok) throw new Error(await response.text());
@@ -94,7 +94,7 @@ export default function SessionPage() {
         form.append("file", blob, "answer.webm");
         setTranscribing(true);
         try {
-          const response = await fetch(`${API_BASE}/audio/transcribe`, { method: "POST", body: form });
+          const response = await fetch(`${API_BASE}/audio/transcribe`, { method: "POST", headers: authHeader(), body: form });
           if (!response.ok) {
             const payload = await response.json().catch(() => null) as { detail?: string } | null;
             throw new Error(payload?.detail || "语音转写失败");

@@ -2,13 +2,17 @@ import type { CreateSessionResponse, Metadata, Question, SessionDetail, SessionR
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export function authHeader(): Record<string, string> {
   const token = typeof window === "undefined" ? null : window.localStorage.getItem("access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...authHeader(),
       ...(init?.headers ?? {})
     },
     cache: "no-store"
@@ -62,6 +66,19 @@ export function getSession(sessionId: string) {
 
 export function getReport(sessionId: string) {
   return request<SessionReport>(`/sessions/${sessionId}/report`);
+}
+
+export function getWrongBook() {
+  return request<
+    Array<{
+      question_id: number;
+      title: string;
+      last_score?: number | null;
+      fail_count: number;
+      next_review?: string | null;
+      tags: Array<{ id: number; name: string }>;
+    }>
+  >("/me/wrong-book");
 }
 
 export function createSubmission(payload: {
