@@ -126,6 +126,11 @@ export type SessionReport = {
     mastery: string;
     feedback: string;
     ideal_answer: string;
+    strengths: string[];
+    missing_points: string[];
+    expression_issues: string[];
+    action_items: string[];
+    recommended_questions: Array<Record<string, unknown>>;
     tags: Tag[];
   }>;
 };

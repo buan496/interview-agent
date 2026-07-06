@@ -137,6 +137,11 @@ class ReportQuestionOut(BaseModel):
     mastery: str
     feedback: str
     ideal_answer: str
+    strengths: list[str] = Field(default_factory=list)
+    missing_points: list[str] = Field(default_factory=list)
+    expression_issues: list[str] = Field(default_factory=list)
+    action_items: list[str] = Field(default_factory=list)
+    recommended_questions: list[dict[str, Any]] = Field(default_factory=list)
     tags: list[TagOut] = Field(default_factory=list)
 
 

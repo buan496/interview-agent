@@ -82,6 +82,7 @@ class Question(Base):
     position: Mapped[Position | None] = relationship(back_populates="questions")
     tag_links: Mapped[list[QuestionTag]] = relationship(back_populates="question", cascade="all, delete-orphan")
     session_questions: Mapped[list[SessionQuestion]] = relationship(back_populates="question")
+    evaluation_results: Mapped[list[EvaluationResult]] = relationship(back_populates="question")
 
 
 class QuestionTag(Base):
@@ -107,6 +108,7 @@ class User(Base):
 
     sessions: Mapped[list[Session]] = relationship(back_populates="user")
     practice_plans: Mapped[list[PracticePlan]] = relationship(back_populates="user")
+    evaluation_results: Mapped[list[EvaluationResult]] = relationship(back_populates="user")
 
 
 class Session(Base):
@@ -134,6 +136,7 @@ class Session(Base):
 
     user: Mapped[User] = relationship(back_populates="sessions")
     questions: Mapped[list[SessionQuestion]] = relationship(back_populates="session", cascade="all, delete-orphan")
+    evaluation_results: Mapped[list[EvaluationResult]] = relationship(back_populates="session", cascade="all, delete-orphan")
 
 
 class SessionQuestion(Base):
@@ -157,6 +160,39 @@ class SessionQuestion(Base):
     session: Mapped[Session] = relationship(back_populates="questions")
     question: Mapped[Question] = relationship(back_populates="session_questions")
     messages: Mapped[list[Message]] = relationship(back_populates="session_question", cascade="all, delete-orphan")
+    evaluation_results: Mapped[list[EvaluationResult]] = relationship(back_populates="session_question", cascade="all, delete-orphan")
+
+
+class EvaluationResult(Base):
+    __tablename__ = "evaluation_results"
+    __table_args__ = (
+        Index("idx_eval_user_created", "user_id", "created_at"),
+        Index("idx_eval_session_question", "session_id", "sq_id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    session_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("sessions.id"), nullable=False)
+    sq_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("session_questions.id"), nullable=False)
+    question_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("questions.id"), nullable=False)
+    score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    mastery: Mapped[str] = mapped_column(String(10), nullable=False)
+    verdict: Mapped[str] = mapped_column(Text, nullable=False)
+    strengths: Mapped[list[str]] = mapped_column(jsonb_type, default=list)
+    missing_points: Mapped[list[str]] = mapped_column(jsonb_type, default=list)
+    expression_issues: Mapped[list[str]] = mapped_column(jsonb_type, default=list)
+    followup_failures: Mapped[list[str]] = mapped_column(jsonb_type, default=list)
+    action_items: Mapped[list[str]] = mapped_column(jsonb_type, default=list)
+    recommended_questions: Mapped[list[dict[str, Any]]] = mapped_column(jsonb_type, default=list)
+    raw_model_output: Mapped[dict[str, Any]] = mapped_column(jsonb_type, default=dict)
+    model_name: Mapped[str] = mapped_column(String(80), nullable=False, default="local-fallback")
+    prompt_version: Mapped[str] = mapped_column(String(40), nullable=False, default="interviewer-v1")
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    user: Mapped[User] = relationship(back_populates="evaluation_results")
+    session: Mapped[Session] = relationship(back_populates="evaluation_results")
+    session_question: Mapped[SessionQuestion] = relationship(back_populates="evaluation_results")
+    question: Mapped[Question] = relationship(back_populates="evaluation_results")
 
 
 class Message(Base):
