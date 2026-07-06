@@ -165,6 +165,7 @@ class PracticePlanTaskOut(BaseModel):
     id: str
     type: Literal[
         "wrong_book_review",
+        "resume_session",
         "weak_tag_training",
         "mock_interview",
         "single_question",

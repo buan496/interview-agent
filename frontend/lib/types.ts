@@ -143,6 +143,7 @@ export type PracticePlanTask = {
   id: string;
   type:
     | "wrong_book_review"
+    | "resume_session"
     | "weak_tag_training"
     | "mock_interview"
     | "single_question"
@@ -161,6 +162,7 @@ export type PracticePlanTask = {
     tag_ids?: number[] | null;
     difficulty?: number | null;
     href?: string;
+    session_id?: number | null;
   };
 };
 
