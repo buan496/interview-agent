@@ -285,7 +285,15 @@ async def get_session(
     )
 
 
-async def _update_retention_tables(db: AsyncSession, session: Session, sq: SessionQuestion, score: int, mastery: str) -> None:
+async def _update_retention_tables(
+    db: AsyncSession,
+    session: Session,
+    sq: SessionQuestion,
+    score: int,
+    mastery: str,
+    today: date | None = None,
+) -> None:
+    review_start = today or date.today()
     question = sq.question
     if mastery in {"weak", "fail"}:
         wrong = await db.get(WrongBook, {"user_id": session.user_id, "question_id": question.id})
@@ -296,7 +304,7 @@ async def _update_retention_tables(db: AsyncSession, session: Session, sq: Sessi
             wrong = WrongBook(user_id=session.user_id, question_id=question.id, last_score=score, fail_count=1)
             db.add(wrong)
         intervals = [1, 3, 7, 15]
-        wrong.next_review = date.today() + timedelta(days=intervals[min(wrong.fail_count - 1, len(intervals) - 1)])
+        wrong.next_review = review_start + timedelta(days=intervals[min(wrong.fail_count - 1, len(intervals) - 1)])
 
     for link in question.tag_links:
         stat = await db.get(UserTagStat, {"user_id": session.user_id, "tag_id": link.tag_id})
