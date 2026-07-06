@@ -130,6 +130,15 @@ export type SessionReport = {
   }>;
 };
 
+export type ReportListItem = {
+  session_id: number;
+  mode: string;
+  status: string;
+  overall_score: number;
+  started_at: string;
+  ended_at?: string | null;
+};
+
 export type WrongBookItem = {
   question_id: number;
   title: string;
