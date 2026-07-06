@@ -33,15 +33,17 @@ async function mockReportApis(page: Page) {
   await page.route("**/api/sessions/42/report", async (route) => route.fulfill({ json: report }));
 }
 
-test("shows structured report review workbench", async ({ page }) => {
+test("shows localized structured report review workbench", async ({ page }) => {
   await mockReportApis(page);
 
   await page.goto("/report/42");
 
-  await expect(page.getByRole("heading", { name: "Review workbench" })).toBeVisible();
-  await expect(page.getByText("Replay focus")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "复盘工作台" })).toBeVisible();
+  await expect(page.getByText("下一轮优先补齐")).toBeVisible();
   await expect(page.getByText("IO multiplexing").first()).toBeVisible();
   await expect(page.getByText("Review and restate: IO multiplexing").first()).toBeVisible();
   await expect(page.getByText("Answer is too abstract")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Next practice" })).toHaveAttribute("href", "/practice");
+  await expect(page.getByText("知识题")).toBeVisible();
+  await expect(page.getByText("薄弱", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "去今日训练" })).toHaveAttribute("href", "/practice");
 });
