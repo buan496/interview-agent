@@ -39,6 +39,10 @@ export type Question = {
 
 export type CreateSessionResponse = {
   session_id: number;
+  status: string;
+  server_now: string;
+  deadline_at?: string | null;
+  remaining_seconds?: number | null;
   first_question: {
     sq_id: number;
     title: string;
@@ -67,9 +71,23 @@ export type SessionDetail = {
   session_id: number;
   mode: string;
   status: string;
+  server_now: string;
+  started_at?: string | null;
+  deadline_at?: string | null;
+  remaining_seconds?: number | null;
+  current_question_index: number;
+  total_questions: number;
+  max_followups: number;
+  current_followups: number;
+  end_reason?: string | null;
   questions: Array<{
     sq_id: number;
     question: CreateSessionResponse["first_question"];
+    status: string;
+    started_at?: string | null;
+    submitted_at?: string | null;
+    scored_at?: string | null;
+    followup_count: number;
     final_score?: number | null;
     mastery?: string | null;
     messages: Message[];

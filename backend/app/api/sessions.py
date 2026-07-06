@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -32,9 +32,61 @@ from app.schemas import (
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
+ACTIVE_SESSION_STATUSES = {"created", "ongoing", "paused"}
+ANSWERABLE_SESSION_STATUSES = {"ongoing"}
+TERMINAL_SESSION_STATUSES = {"finished", "expired", "cancelled"}
+DEFAULT_MAX_FOLLOWUPS = 3
+
 
 def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _session_duration(mode: str) -> timedelta:
+    return timedelta(minutes=45 if mode == "mock" else 20)
+
+
+def _remaining_seconds(session: Session, now: datetime | None = None) -> int | None:
+    deadline = _as_utc(session.deadline_at)
+    if deadline is None:
+        return None
+    current = now or _now()
+    return max(0, int((deadline - current).total_seconds()))
+
+
+def _expire_if_needed(session: Session, now: datetime | None = None) -> bool:
+    current = now or _now()
+    deadline = _as_utc(session.deadline_at)
+    if session.status in TERMINAL_SESSION_STATUSES or deadline is None or current <= deadline:
+        return False
+    session.status = "expired"
+    session.expired_at = current
+    session.ended_at = current
+    session.end_reason = "timeout"
+    for sq in session.questions:
+        if sq.status in {"pending", "answering"}:
+            sq.status = "timeout"
+    return True
+
+
+def _assert_answerable(session: Session, now: datetime | None = None) -> None:
+    _expire_if_needed(session, now)
+    if session.status == "expired":
+        raise HTTPException(status_code=409, detail="Session expired")
+    if session.status not in ANSWERABLE_SESSION_STATUSES:
+        raise HTTPException(status_code=409, detail=f"Session is not answerable: {session.status}")
 
 
 def _tags(question: Question) -> list[TagOut]:
@@ -127,18 +179,33 @@ async def create_session(
     if not questions:
         raise HTTPException(status_code=404, detail="No active question matched filters")
 
+    now = _now()
     session = Session(
         user_id=current_user.id,
         mode=request.mode,
         company_id=request.company_id or questions[0].company_id,
         position_id=request.position_id or questions[0].position_id,
+        status="ongoing",
+        started_at=now,
+        deadline_at=now + _session_duration(request.mode),
+        current_question_id=questions[0].id,
+        current_question_index=1,
+        total_questions=len(questions),
+        max_followups=DEFAULT_MAX_FOLLOWUPS,
+        current_followups=0,
     )
     db.add(session)
     await db.flush()
 
     first_sq: SessionQuestion | None = None
     for order_no, question in enumerate(questions, start=1):
-        sq = SessionQuestion(session_id=session.id, question_id=question.id, order_no=order_no)
+        sq = SessionQuestion(
+            session_id=session.id,
+            question_id=question.id,
+            order_no=order_no,
+            status="answering" if order_no == 1 else "pending",
+            started_at=now if order_no == 1 else None,
+        )
         db.add(sq)
         question.ask_count += 1
         await db.flush()
@@ -148,7 +215,14 @@ async def create_session(
     assert first_sq is not None
     db.add(Message(sq_id=first_sq.id, role="interviewer", content=questions[0].title, msg_type="question"))
     await db.commit()
-    return CreateSessionOut(session_id=session.id, first_question=_first_question(questions[0], first_sq.id))
+    return CreateSessionOut(
+        session_id=session.id,
+        first_question=_first_question(questions[0], first_sq.id),
+        status=session.status,
+        server_now=now,
+        deadline_at=session.deadline_at,
+        remaining_seconds=_remaining_seconds(session, now),
+    )
 
 
 @router.get("/{session_id}", response_model=SessionDetailOut)
@@ -172,6 +246,9 @@ async def get_session(
     ).scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    now = _now()
+    if _expire_if_needed(session, now):
+        await db.commit()
     questions = []
     for sq in sorted(session.questions, key=lambda item: item.order_no):
         messages = sorted(sq.messages, key=lambda item: item.id)
@@ -179,12 +256,31 @@ async def get_session(
             SessionQuestionOut(
                 sq_id=sq.id,
                 question=_first_question(sq.question, sq.id),
+                status=sq.status,
+                started_at=sq.started_at,
+                submitted_at=sq.submitted_at,
+                scored_at=sq.scored_at,
+                followup_count=sq.followup_count,
                 final_score=sq.final_score,
                 mastery=sq.mastery,
                 messages=[MessageOut.model_validate(message) for message in messages],
             )
         )
-    return SessionDetailOut(session_id=session.id, mode=session.mode, status=session.status, questions=questions)
+    return SessionDetailOut(
+        session_id=session.id,
+        mode=session.mode,
+        status=session.status,
+        server_now=now,
+        started_at=session.started_at,
+        deadline_at=session.deadline_at,
+        remaining_seconds=_remaining_seconds(session, now),
+        current_question_index=session.current_question_index,
+        total_questions=session.total_questions,
+        max_followups=session.max_followups,
+        current_followups=session.current_followups,
+        end_reason=session.end_reason,
+        questions=questions,
+    )
 
 
 async def _update_retention_tables(db: AsyncSession, session: Session, sq: SessionQuestion, score: int, mastery: str) -> None:
@@ -317,10 +413,22 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
         if not sq or sq.session_id != session_id or sq.session.user_id != user_id:
             yield _sse("error", {"message": "Session question not found"})
             return
-        if sq.finished_at:
+        try:
+            _assert_answerable(sq.session)
+        except HTTPException as exc:
+            await db.commit()
+            yield _sse("error", {"message": str(exc.detail)})
+            return
+        if sq.status in {"scored", "skipped", "timeout"} or sq.finished_at:
             yield _sse("error", {"message": "Question is already finished"})
             return
+        if sq.status != "answering":
+            yield _sse("error", {"message": "Question is not active"})
+            return
 
+        now = _now()
+        sq.answer_text = request.content
+        sq.submitted_at = now
         db.add(Message(sq_id=sq.id, role="candidate", content=request.content, msg_type="answer"))
         await db.flush()
         history_rows = (await db.execute(select(Message).where(Message.sq_id == sq.id).order_by(Message.id))).scalars().all()
@@ -344,15 +452,19 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
         if result.action == "verdict" and result.verdict:
             content = result.verdict.feedback
             msg_type = "verdict"
+            now = _now()
+            sq.status = "scored"
             sq.final_score = result.verdict.score
             sq.mastery = result.verdict.mastery
-            sq.finished_at = func.now()
+            sq.verdict = result.verdict.as_dict()
+            sq.scored_at = now
+            sq.finished_at = now
             await _update_retention_tables(db, sq.session, sq, result.verdict.score, result.verdict.mastery)
             next_sq = next(
                 (
                     item
                     for item in sorted(sq.session.questions, key=lambda value: value.order_no)
-                    if item.order_no > sq.order_no and item.finished_at is None
+                    if item.order_no > sq.order_no and item.status in {"pending", "answering"}
                 ),
                 None,
             )
@@ -364,14 +476,23 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
                     options=[selectinload(Question.tag_links).selectinload(QuestionTag.tag)],
                 )
                 assert next_question is not None
+                next_sq.status = "answering"
+                next_sq.started_at = now
+                sq.session.current_question_id = next_question.id
+                sq.session.current_question_index = next_sq.order_no
+                sq.session.current_followups = 0
                 db.add(Message(sq_id=next_sq.id, role="interviewer", content=next_question.title, msg_type="question"))
                 next_question_payload = _first_question(next_question, next_sq.id).model_dump()
             else:
                 sq.session.status = "finished"
-                sq.session.ended_at = func.now()
+                sq.session.finished_at = now
+                sq.session.ended_at = now
+                sq.session.end_reason = "completed"
         else:
             content = result.followup
             msg_type = "hint" if result.action == "followup_hint" else "followup"
+            sq.followup_count += 1
+            sq.session.current_followups = sq.followup_count
 
         db.add(Message(sq_id=sq.id, role="interviewer", content=content, msg_type=msg_type, eval_json=result.as_dict()))
         if result.action == "verdict" and (sq.session.mode != "mock" or not next_sq):
@@ -412,15 +533,29 @@ async def answer(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
-    sq_id = await db.scalar(
-        select(SessionQuestion.id)
-        .join(Session, Session.id == SessionQuestion.session_id)
-        .where(
-            Session.id == session_id,
-            Session.user_id == current_user.id,
-            SessionQuestion.id == request.sq_id,
+    row = (
+        await db.execute(
+            select(Session, SessionQuestion)
+            .join(SessionQuestion, SessionQuestion.session_id == Session.id)
+            .where(
+                Session.id == session_id,
+                Session.user_id == current_user.id,
+                SessionQuestion.id == request.sq_id,
+            )
+            .options(selectinload(Session.questions))
         )
     )
-    if sq_id is None:
+    result = row.first()
+    if result is None:
         raise HTTPException(status_code=404, detail="Session question not found")
+    session, sq = result
+    try:
+        _assert_answerable(session)
+    except HTTPException:
+        await db.commit()
+        raise
+    if sq.status in {"scored", "skipped", "timeout"} or sq.finished_at:
+        raise HTTPException(status_code=409, detail="Question is already finished")
+    if sq.status != "answering":
+        raise HTTPException(status_code=409, detail="Question is not active")
     return StreamingResponse(_answer_stream(session_id, current_user.id, request), media_type="text/event-stream")

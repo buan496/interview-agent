@@ -78,6 +78,10 @@ class FirstQuestionOut(BaseModel):
 class CreateSessionOut(BaseModel):
     session_id: int
     first_question: FirstQuestionOut
+    status: str
+    server_now: datetime
+    deadline_at: datetime | None = None
+    remaining_seconds: int | None = None
 
 
 class AnswerRequest(BaseModel):
@@ -98,6 +102,11 @@ class MessageOut(BaseModel):
 class SessionQuestionOut(BaseModel):
     sq_id: int
     question: FirstQuestionOut
+    status: str
+    started_at: datetime | None = None
+    submitted_at: datetime | None = None
+    scored_at: datetime | None = None
+    followup_count: int = 0
     final_score: int | None = None
     mastery: str | None = None
     messages: list[MessageOut]
@@ -107,6 +116,15 @@ class SessionDetailOut(BaseModel):
     session_id: int
     mode: str
     status: str
+    server_now: datetime
+    started_at: datetime | None = None
+    deadline_at: datetime | None = None
+    remaining_seconds: int | None = None
+    current_question_index: int = 1
+    total_questions: int = 1
+    max_followups: int = 3
+    current_followups: int = 0
+    end_reason: str | None = None
     questions: list[SessionQuestionOut]
 
 
