@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
@@ -19,6 +19,10 @@ router = APIRouter(prefix="/me/practice-plan", tags=["practice-plan"])
 
 def _score_value(value: Decimal | float | int | None) -> float:
     return float(value or 0)
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def _task(
@@ -118,6 +122,44 @@ def _weak_tag_task(weak_tags: list[dict[str, Any]]) -> dict[str, Any] | None:
     )
 
 
+def _resume_session_task(session: Session) -> dict[str, Any]:
+    mode = "模拟面试" if session.mode == "mock" else "单题训练"
+    progress = f"第 {session.current_question_index}/{session.total_questions} 题"
+    return _task(
+        f"resume-session-{session.id}",
+        "resume_session",
+        "继续未完成会话",
+        f"你有一个{mode}还在进行中，当前进度 {progress}。",
+        "先完成已经开始的训练，避免能力数据断裂。",
+        "继续训练",
+        {"session_id": session.id, "href": f"/session/{session.id}"},
+        entrypoint="open_page",
+    )
+
+
+async def _latest_active_session(db: AsyncSession, user_id: int, now: datetime | None = None) -> Session | None:
+    current = now or _now()
+    return (
+        await db.execute(
+            select(Session)
+            .where(
+                Session.user_id == user_id,
+                Session.status.in_(["created", "ongoing", "paused"]),
+                or_(Session.deadline_at.is_(None), Session.deadline_at > current),
+            )
+            .order_by(Session.started_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+
+def _with_resume_task(tasks: list[dict[str, Any]], resume_task: dict[str, Any] | None) -> list[dict[str, Any]]:
+    without_resume = [item for item in tasks if item.get("type") != "resume_session"]
+    if not resume_task:
+        return without_resume
+    return [resume_task, *without_resume]
+
+
 def _default_tasks(current_user: User) -> list[dict[str, Any]]:
     return [
         _task(
@@ -149,14 +191,19 @@ def _default_tasks(current_user: User) -> list[dict[str, Any]]:
     ]
 
 
-def _compose_tasks(current_user: User, wrong_task: dict[str, Any] | None, weak_task: dict[str, Any] | None) -> list[dict[str, Any]]:
+def _compose_tasks(
+    current_user: User,
+    wrong_task: dict[str, Any] | None,
+    weak_task: dict[str, Any] | None,
+    resume_task: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     tasks = []
     if wrong_task:
         tasks.append(wrong_task)
     if weak_task:
         tasks.append(weak_task)
     tasks.extend(_default_tasks(current_user))
-    return tasks
+    return _with_resume_task(tasks, resume_task)
 
 
 def _generated_reason(wrong_task: dict[str, Any] | None, weak_task: dict[str, Any] | None, recent_reason: str | None) -> str:
@@ -186,11 +233,12 @@ async def _recent_report_reason(db: AsyncSession, user_id: int) -> str | None:
 
 async def _build_plan(db: AsyncSession, current_user: User, plan_date: date) -> PracticePlan:
     weak_tags = await _weak_tags(db, current_user.id)
-    tasks: list[dict[str, Any]] = []
 
+    resume_session = await _latest_active_session(db, current_user.id)
+    resume_task = _resume_session_task(resume_session) if resume_session else None
     wrong_task = await _wrong_book_task(db, current_user.id)
     weak_task = _weak_tag_task(weak_tags)
-    tasks = _compose_tasks(current_user, wrong_task, weak_task)
+    tasks = _compose_tasks(current_user, wrong_task, weak_task, resume_task)
 
     recent_reason = await _recent_report_reason(db, current_user.id)
 
@@ -209,6 +257,17 @@ async def _build_plan(db: AsyncSession, current_user: User, plan_date: date) -> 
     return plan
 
 
+async def _sync_resume_task(db: AsyncSession, plan: PracticePlan, current_user: User) -> PracticePlan:
+    resume_session = await _latest_active_session(db, current_user.id)
+    resume_task = _resume_session_task(resume_session) if resume_session else None
+    next_tasks = _with_resume_task(plan.recommended_tasks, resume_task)
+    if next_tasks != plan.recommended_tasks:
+        plan.recommended_tasks = next_tasks
+        await db.commit()
+        await db.refresh(plan)
+    return plan
+
+
 @router.get("/today", response_model=PracticePlanOut)
 async def today_practice_plan(
     db: AsyncSession = Depends(get_db),
@@ -220,6 +279,8 @@ async def today_practice_plan(
     ).scalar_one_or_none()
     if not plan:
         plan = await _build_plan(db, current_user, today)
+    else:
+        plan = await _sync_resume_task(db, plan, current_user)
     return _plan_out(plan)
 
 

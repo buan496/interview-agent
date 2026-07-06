@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpenCheck,
+  Clock3,
   ExternalLink,
   Filter,
   Gauge,
@@ -307,6 +308,7 @@ function TrainingTask({
 }
 
 function taskIcon(type: PracticePlanTask["type"]) {
+  if (type === "resume_session") return Clock3;
   if (type === "wrong_book_review") return BookOpenCheck;
   if (type === "weak_tag_training") return Target;
   if (type === "mock_interview") return Gauge;

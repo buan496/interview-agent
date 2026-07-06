@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 import unittest
 
-from app.api.practice_plan import _compose_tasks, _generated_reason, _plan_out, _weak_tag_task
-from app.models import PracticePlan, User
+from app.api.practice_plan import _compose_tasks, _generated_reason, _plan_out, _resume_session_task, _weak_tag_task, _with_resume_task
+from app.models import PracticePlan, Session, User
 
 
 class PracticePlanBuilderTest(unittest.TestCase):
@@ -34,6 +34,42 @@ class PracticePlanBuilderTest(unittest.TestCase):
         self.assertEqual([item["type"] for item in tasks], ["wrong_book_review", "mock_interview", "single_question"])
         self.assertEqual(tasks[1]["payload"]["mode"], "mock")
         self.assertEqual(tasks[1]["payload"]["company_id"], 2)
+
+    def test_resume_session_task_opens_existing_session(self) -> None:
+        session = Session(id=8, user_id=1, mode="mock", status="ongoing", current_question_index=2, total_questions=6)
+
+        task = _resume_session_task(session)
+
+        self.assertEqual(task["type"], "resume_session")
+        self.assertEqual(task["entrypoint"], "open_page")
+        self.assertEqual(task["payload"], {"session_id": 8, "href": "/session/8"})
+
+    def test_resume_session_task_is_first_and_replaced(self) -> None:
+        old_resume = {
+            "id": "resume-session-1",
+            "type": "resume_session",
+            "title": "旧会话",
+            "reason": "old",
+            "outcome": "old",
+            "action_label": "继续",
+            "entrypoint": "open_page",
+            "payload": {"session_id": 1, "href": "/session/1"},
+        }
+        single = {
+            "id": "single-question",
+            "type": "single_question",
+            "title": "单题快练",
+            "reason": "建立训练数据",
+            "outcome": "更新画像",
+            "action_label": "开始单题",
+            "entrypoint": "create_session",
+            "payload": {"mode": "single"},
+        }
+        new_resume = _resume_session_task(Session(id=2, user_id=1, mode="single", status="ongoing", current_question_index=1, total_questions=1))
+
+        tasks = _with_resume_task([old_resume, single], new_resume)
+
+        self.assertEqual([item["id"] for item in tasks], ["resume-session-2", "single-question"])
 
     def test_generated_reason_explains_cold_start(self) -> None:
         reason = _generated_reason(None, None, None)
