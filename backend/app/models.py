@@ -116,10 +116,20 @@ class Session(Base):
     mode: Mapped[str] = mapped_column(String(15), nullable=False)
     company_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("companies.id"))
     position_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("positions.id"))
-    status: Mapped[str] = mapped_column(String(15), default="ongoing")
+    status: Mapped[str] = mapped_column(String(15), default="created")
     report: Mapped[dict[str, Any] | None] = mapped_column(jsonb_type)
     started_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    deadline_at: Mapped[datetime | None]
+    finished_at: Mapped[datetime | None]
+    expired_at: Mapped[datetime | None]
     ended_at: Mapped[datetime | None]
+    current_question_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("questions.id"))
+    current_question_index: Mapped[int] = mapped_column(SmallInteger, default=1)
+    total_questions: Mapped[int] = mapped_column(SmallInteger, default=1)
+    max_followups: Mapped[int] = mapped_column(SmallInteger, default=3)
+    current_followups: Mapped[int] = mapped_column(SmallInteger, default=0)
+    end_reason: Mapped[str | None] = mapped_column(String(30))
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
     user: Mapped[User] = relationship(back_populates="sessions")
     questions: Mapped[list[SessionQuestion]] = relationship(back_populates="session", cascade="all, delete-orphan")
@@ -132,6 +142,13 @@ class SessionQuestion(Base):
     session_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("sessions.id"), nullable=False)
     question_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("questions.id"), nullable=False)
     order_no: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    status: Mapped[str] = mapped_column(String(15), default="pending")
+    started_at: Mapped[datetime | None]
+    submitted_at: Mapped[datetime | None]
+    scored_at: Mapped[datetime | None]
+    answer_text: Mapped[str | None] = mapped_column(Text)
+    verdict: Mapped[dict[str, Any] | None] = mapped_column(jsonb_type)
+    followup_count: Mapped[int] = mapped_column(SmallInteger, default=0)
     final_score: Mapped[int | None] = mapped_column(SmallInteger)
     mastery: Mapped[str | None] = mapped_column(String(10))
     finished_at: Mapped[datetime | None]

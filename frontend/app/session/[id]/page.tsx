@@ -31,16 +31,23 @@ export default function SessionPage() {
   const currentIndex = current ? questions.findIndex((item) => item.sq_id === current.sq_id) : -1;
   const messages = useMemo<Message[]>(() => current?.messages ?? [], [current]);
   const isFinished = session.data?.status === "finished";
+  const isTerminal = ["finished", "expired", "cancelled"].includes(session.data?.status ?? "");
 
   useEffect(() => {
-    if (session.data?.mode !== "mock" || isFinished) return;
+    if (typeof session.data?.remaining_seconds === "number") {
+      setSecondsLeft(session.data.remaining_seconds);
+    }
+  }, [session.data?.remaining_seconds]);
+
+  useEffect(() => {
+    if (session.data?.mode !== "mock" || isTerminal) return;
     const timer = window.setInterval(() => setSecondsLeft((value) => Math.max(0, value - 1)), 1000);
     return () => window.clearInterval(timer);
-  }, [session.data?.mode, isFinished]);
+  }, [session.data?.mode, isTerminal]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!current || !answer.trim() || pending || isFinished) return;
+    if (!current || !answer.trim() || pending || isTerminal) return;
     setPending(true);
     setStreamingText("");
     setVerdict(null);
@@ -151,14 +158,14 @@ export default function SessionPage() {
         </div>
 
         <form onSubmit={submit} className="border-t border-line bg-white p-4">
-          <textarea className="min-h-28 w-full resize-none rounded border border-line bg-white p-3 text-sm leading-6" value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="输入你的回答，或点击麦克风进行语音转写" disabled={pending || isFinished} />
+          <textarea className="min-h-28 w-full resize-none rounded border border-line bg-white p-3 text-sm leading-6" value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="输入你的回答，或点击麦克风进行语音转写" disabled={pending || isTerminal} />
           {audioError ? <p className="mt-2 text-xs text-accent">{audioError}</p> : null}
           <div className="mt-3 flex items-center justify-between gap-3">
-            <Button type="button" variant="secondary" onClick={toggleRecording} disabled={pending || transcribing || isFinished}>
+            <Button type="button" variant="secondary" onClick={toggleRecording} disabled={pending || transcribing || isTerminal}>
               {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               {transcribing ? "转写中" : recording ? "停止录音" : "语音作答"}
             </Button>
-            <Button type="submit" disabled={pending || !answer.trim() || isFinished}>
+            <Button type="submit" disabled={pending || !answer.trim() || isTerminal}>
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}提交
             </Button>
           </div>
