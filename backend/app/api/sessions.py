@@ -14,7 +14,7 @@ from app.api.auth import get_current_user
 from app.core.interviewer import ConversationMessage, InterviewerEngine, InterviewQuestion
 from app.core.scheduler import target_question_count, target_type_counts
 from app.db import SessionLocal, get_db
-from app.models import Message, Question, QuestionTag, Session, SessionQuestion, Tag, User, UserTagStat, WrongBook
+from app.models import Message, Question, QuestionTag, Session, SessionQuestion, User, UserTagStat, WrongBook
 from app.schemas import (
     AnswerRequest,
     CreateSessionOut,

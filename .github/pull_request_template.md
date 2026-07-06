@@ -11,10 +11,14 @@
 
 ## Verification
 
+- [ ] Secret scan passes
+- [ ] Backend lint passes
 - [ ] Backend unit tests pass
+- [ ] Frontend lint passes
 - [ ] Frontend typecheck passes
 - [ ] Frontend production build passes
 - [ ] Docker Compose config validates
+- [ ] Docker image build verifies
 - [ ] Changes satisfy the related design acceptance criteria
 
 ## Risk
