@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2, Sparkles, X } from "lucide-react";
 
 import { Badge, Button, Panel } from "@/components/ui";
-import { generateFromJd, getSubmissions, reviewSubmission } from "@/lib/api";
+import { generateFromJd, getSubmissions, reviewSubmission } from "@/lib/admin-api";
 
 export default function AdminPage() {
   const queryClient = useQueryClient();

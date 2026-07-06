@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 
 import { Button, Panel } from "@/components/ui";
-import { createSubmission } from "@/lib/api";
+import { createSubmission } from "@/lib/submission-api";
 
 const initialForm = {
   submitter_name: "",

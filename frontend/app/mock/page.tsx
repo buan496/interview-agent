@@ -6,7 +6,8 @@ import { Loader2, Play, Timer } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button, Panel } from "@/components/ui";
-import { createSession, getMetadata } from "@/lib/api";
+import { getMetadata } from "@/lib/question-api";
+import { createSession } from "@/lib/session-api";
 
 export default function MockPage() {
   const router = useRouter();

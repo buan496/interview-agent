@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { Badge, Button, Panel } from "@/components/ui";
-import { API_BASE, authHeader, getSession } from "@/lib/api";
+import { getSession, submitAnswer, transcribeAudio } from "@/lib/session-api";
 import { readSse } from "@/lib/sse";
 import type { Message, SseDonePayload, Verdict } from "@/lib/types";
 
@@ -47,12 +47,7 @@ export default function SessionPage() {
     const content = answer.trim();
     setAnswer("");
     try {
-      const response = await fetch(`${API_BASE}/sessions/${params.id}/answer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader() },
-        body: JSON.stringify({ sq_id: current.sq_id, content })
-      });
-      if (!response.ok) throw new Error(await response.text());
+      const response = await submitAnswer(params.id, { sq_id: current.sq_id, content });
       await readSse(response, (item) => {
         if (item.event === "token") {
           const payload = JSON.parse(item.data) as { text: string };
@@ -90,16 +85,9 @@ export default function SessionPage() {
       recorder.onstop = async () => {
         stream.getTracks().forEach((track) => track.stop());
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
-        const form = new FormData();
-        form.append("file", blob, "answer.webm");
         setTranscribing(true);
         try {
-          const response = await fetch(`${API_BASE}/audio/transcribe`, { method: "POST", headers: authHeader(), body: form });
-          if (!response.ok) {
-            const payload = await response.json().catch(() => null) as { detail?: string } | null;
-            throw new Error(payload?.detail || "语音转写失败");
-          }
-          const payload = await response.json() as { text: string };
+          const payload = await transcribeAudio(blob);
           setAnswer((value) => `${value}${value ? "\n" : ""}${payload.text}`);
         } catch (error) {
           setAudioError(error instanceof Error ? error.message : "语音转写失败");

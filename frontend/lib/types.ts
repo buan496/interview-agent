@@ -112,6 +112,15 @@ export type SessionReport = {
   }>;
 };
 
+export type WrongBookItem = {
+  question_id: number;
+  title: string;
+  last_score?: number | null;
+  fail_count: number;
+  next_review?: string | null;
+  tags: Array<{ id: number; name: string }>;
+};
+
 export type Submission = {
   id: number;
   submitter_name?: string | null;
