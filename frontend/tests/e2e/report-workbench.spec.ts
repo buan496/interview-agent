@@ -38,12 +38,14 @@ test("shows localized structured report review workbench", async ({ page }) => {
 
   await page.goto("/report/42");
 
-  await expect(page.getByRole("heading", { name: "复盘工作台" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "本轮面试报告" })).toBeVisible();
   await expect(page.getByText("下一轮优先补齐")).toBeVisible();
+  await expect(page.getByText("能力诊断")).toBeVisible();
+  await expect(page.getByText("题目复盘")).toBeVisible();
   await expect(page.getByText("IO multiplexing").first()).toBeVisible();
   await expect(page.getByText("Review and restate: IO multiplexing").first()).toBeVisible();
   await expect(page.getByText("Answer is too abstract")).toBeVisible();
   await expect(page.getByText("知识题")).toBeVisible();
-  await expect(page.getByText("薄弱", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "去今日训练" })).toHaveAttribute("href", "/practice");
+  await expect(page.getByText("薄弱", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "去今日训练" }).first()).toHaveAttribute("href", "/practice");
 });
