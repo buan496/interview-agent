@@ -6,7 +6,8 @@ import { ArrowLeft, ArrowRight, ExternalLink, Filter, RotateCcw, Search } from "
 import { useRouter } from "next/navigation";
 
 import { Button, Panel, Badge } from "@/components/ui";
-import { createSession, getMetadata, getQuestions } from "@/lib/api";
+import { getMetadata, getQuestions } from "@/lib/question-api";
+import { createSession } from "@/lib/session-api";
 
 const difficultyOptions = [1, 2, 3, 4, 5];
 

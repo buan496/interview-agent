@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { Bar, BarChart, CartesianGrid, PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { Badge, Panel } from "@/components/ui";
-import { getReport } from "@/lib/api";
+import { getReport } from "@/lib/report-api";
 
 export default function ReportPage() {
   const params = useParams<{ id: string }>();

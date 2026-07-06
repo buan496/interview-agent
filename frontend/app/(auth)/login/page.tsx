@@ -6,7 +6,7 @@ import { Loader2, LogIn, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button, Panel } from "@/components/ui";
-import { login, requestLoginCode } from "@/lib/api";
+import { login, requestLoginCode } from "@/lib/auth-api";
 
 export default function LoginPage() {
   const router = useRouter();

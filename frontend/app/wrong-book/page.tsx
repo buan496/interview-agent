@@ -6,7 +6,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
 import { Badge, Button, Panel } from "@/components/ui";
-import { createSession, getWrongBook } from "@/lib/api";
+import { createSession } from "@/lib/session-api";
+import { getWrongBook } from "@/lib/wrong-book-api";
 
 export default function WrongBookPage() {
   const router = useRouter();
