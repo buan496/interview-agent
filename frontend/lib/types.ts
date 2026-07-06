@@ -139,6 +139,49 @@ export type ReportListItem = {
   ended_at?: string | null;
 };
 
+export type PracticePlanTask = {
+  id: string;
+  type:
+    | "wrong_book_review"
+    | "weak_tag_training"
+    | "mock_interview"
+    | "single_question"
+    | "project_expression"
+    | "system_design";
+  title: string;
+  reason: string;
+  outcome: string;
+  action_label: string;
+  entrypoint: "create_session" | "open_page";
+  payload: {
+    mode?: "single" | "mock";
+    question_id?: number | null;
+    company_id?: number | null;
+    position_id?: number | null;
+    tag_ids?: number[] | null;
+    difficulty?: number | null;
+    href?: string;
+  };
+};
+
+export type PracticePlan = {
+  id: number;
+  date: string;
+  recommended_tasks: PracticePlanTask[];
+  weak_tags: Array<{
+    tag_id: number;
+    tag: string;
+    category?: string | null;
+    avg_score: number;
+    attempts: number;
+  }>;
+  target_abilities: string[];
+  generated_reason: string;
+  completed: boolean;
+  created_at: string;
+  updated_at?: string | null;
+};
+
 export type WrongBookItem = {
   question_id: number;
   title: string;
