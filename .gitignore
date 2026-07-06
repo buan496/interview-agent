@@ -13,6 +13,8 @@ node_modules/
 *.tsbuildinfo
 dist/
 coverage/
+frontend/playwright-report/
+frontend/test-results/
 
 .idea/
 .vscode/

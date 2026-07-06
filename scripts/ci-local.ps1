@@ -1,5 +1,6 @@
 param(
   [switch]$SkipDocker,
+  [switch]$SkipE2E,
   [switch]$SkipSecretScan
 )
 
@@ -70,6 +71,18 @@ Invoke-Step "Frontend build" {
     npm run build
   } finally {
     Pop-Location
+  }
+}
+
+if (-not $SkipE2E) {
+  Invoke-Step "Frontend e2e tests" {
+    Push-Location "$root\frontend"
+    try {
+      $env:NEXT_TELEMETRY_DISABLED = "1"
+      npm run test:e2e
+    } finally {
+      Pop-Location
+    }
   }
 }
 

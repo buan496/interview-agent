@@ -21,7 +21,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=builder /app/frontend/.next ./.next
 COPY --from=builder /app/frontend/public ./public
 COPY --from=builder /app/frontend/package.json ./package.json
+COPY --from=builder /app/frontend/package-lock.json ./package-lock.json
 COPY --from=builder /app/frontend/node_modules ./node_modules
+RUN npm prune --omit=dev
 
 EXPOSE 3000
 CMD ["npm", "run", "start", "--", "-p", "3000"]

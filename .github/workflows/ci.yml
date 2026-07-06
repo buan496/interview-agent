@@ -137,6 +137,14 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
         run: npm run build
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e tests
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run test:e2e
+
   compose:
     name: Compose Config
     runs-on: ubuntu-latest
