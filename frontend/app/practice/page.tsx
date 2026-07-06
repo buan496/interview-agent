@@ -13,20 +13,21 @@ import {
   RotateCcw,
   Search,
   Target,
-  Timer,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Badge, Button, Panel } from "@/components/ui";
+import { getTodayPracticePlan } from "@/lib/practice-plan-api";
 import { getMetadata, getQuestions } from "@/lib/question-api";
 import { createSession } from "@/lib/session-api";
 import { getRadar, getReports } from "@/lib/stats-api";
 import { getWrongBook } from "@/lib/wrong-book-api";
+import type { PracticePlanTask } from "@/lib/types";
 
 const difficultyOptions = [1, 2, 3, 4, 5];
 
 type StartOverride = {
+  mode?: "single" | "mock";
   question_id?: number;
   company_id?: number;
   position_id?: number;
@@ -46,6 +47,7 @@ export default function PracticePage() {
   const wrongBook = useQuery({ queryKey: ["wrong-book"], queryFn: getWrongBook });
   const radar = useQuery({ queryKey: ["radar"], queryFn: getRadar });
   const reports = useQuery({ queryKey: ["reports"], queryFn: getReports });
+  const practicePlan = useQuery({ queryKey: ["practice-plan", "today"], queryFn: getTodayPracticePlan });
 
   const params = useMemo(() => {
     const value = new URLSearchParams({ page: String(page), page_size: "12" });
@@ -60,7 +62,7 @@ export default function PracticePage() {
   const startSession = useMutation({
     mutationFn: (override?: StartOverride) =>
       createSession({
-        mode: "single",
+        mode: override?.mode ?? "single",
         question_id: override?.question_id,
         company_id: override?.company_id ?? (companyId ? Number(companyId) : undefined),
         position_id: override?.position_id ?? (positionId ? Number(positionId) : undefined),
@@ -80,9 +82,22 @@ export default function PracticePage() {
 
   const totalPages = Math.max(1, Math.ceil((questions.data?.total ?? 0) / 12));
   const weakRadar = useMemo(() => [...(radar.data ?? [])].sort((a, b) => Number(a.avg_score) - Number(b.avg_score))[0], [radar.data]);
-  const weakTag = useMemo(() => metadata.data?.tags.find((item) => item.name === weakRadar?.tag), [metadata.data?.tags, weakRadar?.tag]);
-  const firstWrong = wrongBook.data?.[0];
   const latestReport = reports.data?.[0];
+
+  function startPlanTask(task: PracticePlanTask) {
+    if (task.entrypoint === "open_page" && task.payload.href) {
+      router.push(task.payload.href);
+      return;
+    }
+    startSession.mutate({
+      question_id: task.payload.question_id ?? undefined,
+      mode: task.payload.mode,
+      company_id: task.payload.company_id ?? undefined,
+      position_id: task.payload.position_id ?? undefined,
+      tag_ids: task.payload.tag_ids ?? undefined,
+      difficulty: task.payload.difficulty ?? undefined,
+    });
+  }
 
   return (
     <main className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6">
@@ -94,7 +109,7 @@ export default function PracticePage() {
           </div>
           <h1 className="mt-3 text-2xl font-semibold text-ink">今天先完成一组有目标的面试训练</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            系统会根据错题、薄弱标签和最近训练记录给出优先任务。题库仍然可用，但它是辅助入口，不再要求你自己乱找题。
+            {practicePlan.data?.generated_reason ?? "系统会根据错题、薄弱标签和最近训练记录给出优先任务。题库仍然可用，但它是辅助入口，不再要求你自己乱找题。"}
           </p>
         </div>
 
@@ -119,41 +134,14 @@ export default function PracticePage() {
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <TrainingTask
-          icon={BookOpenCheck}
-          title="错题复习"
-          reason={firstWrong ? `上次 ${firstWrong.last_score ?? 0} 分，累计失误 ${firstWrong.fail_count} 次。` : "暂无错题，先完成一次单题训练来建立错题沉淀。"}
-          outcome="修复已暴露的知识缺口。"
-          actionLabel={firstWrong ? "重练错题" : "开始单题"}
-          onStart={() => startSession.mutate(firstWrong ? { question_id: firstWrong.question_id } : undefined)}
-          disabled={startSession.isPending}
-        />
-        <TrainingTask
-          icon={Target}
-          title="薄弱标签专项"
-          reason={weakRadar ? `${weakRadar.tag} 当前平均 ${Number(weakRadar.avg_score).toFixed(0)} 分，是优先补强项。` : "暂无能力画像，先按筛选条件抽一道题。"}
-          outcome="让下一次推荐更贴近真实短板。"
-          actionLabel="开始专项"
-          onStart={() => startSession.mutate(weakTag ? { tag_ids: [weakTag.id] } : undefined)}
-          disabled={startSession.isPending}
-        />
-        <TrainingTask
-          icon={Search}
-          title="筛选条件快练"
-          reason="使用左侧题库条件，快速进入一题真实 Session。"
-          outcome="适合补某家公司、岗位或难度。"
-          actionLabel="按条件开始"
-          onStart={() => startSession.mutate(undefined)}
-          disabled={startSession.isPending}
-        />
-        <TrainingTask
-          icon={Timer}
-          title="完整模拟面试"
-          reason="45 分钟，多题状态机，结束后生成结构化报告。"
-          outcome="检验连续作答和追问抗压能力。"
-          actionLabel="进入模拟"
-          href="/mock"
-        />
+        {practicePlan.data?.recommended_tasks.map((task) => (
+          <TrainingTask key={task.id} task={task} onStart={() => startPlanTask(task)} disabled={startSession.isPending} />
+        ))}
+        {practicePlan.isLoading ? (
+          <Panel className="grid min-h-[210px] place-items-center p-4 text-sm text-muted">
+            <Loader2 className="h-5 w-5 animate-spin text-brand" />
+          </Panel>
+        ) : null}
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[320px_1fr]">
@@ -292,51 +280,37 @@ function Metric({ value, label }: { value: string; label: string }) {
 }
 
 function TrainingTask({
-  icon: Icon,
-  title,
-  reason,
-  outcome,
-  actionLabel,
+  task,
   onStart,
   disabled,
-  href,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  reason: string;
-  outcome: string;
-  actionLabel: string;
-  onStart?: () => void;
+  task: PracticePlanTask;
+  onStart: () => void;
   disabled?: boolean;
-  href?: string;
 }) {
-  const content = (
-    <>
-      <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <Icon className="h-4 w-4 text-brand" />
-        {title}
-      </div>
-      <p className="mt-3 text-sm leading-6 text-muted">{reason}</p>
-      <p className="mt-2 text-sm leading-6 text-ink">{outcome}</p>
-    </>
-  );
+  const Icon = taskIcon(task.type);
 
   return (
     <Panel className="flex min-h-[210px] flex-col p-4">
-      {content}
-      {href ? (
-        <Link href={href} className="mt-auto inline-flex h-10 items-center justify-center gap-2 rounded bg-brand px-4 text-sm font-medium text-white hover:bg-[#17675c]">
-          {actionLabel}
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      ) : (
-        <Button className="mt-auto" onClick={onStart} disabled={disabled}>
-          {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-          {actionLabel}
-        </Button>
-      )}
+      <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <Icon className="h-4 w-4 text-brand" />
+        {task.title}
+      </div>
+      <p className="mt-3 text-sm leading-6 text-muted">{task.reason}</p>
+      <p className="mt-2 text-sm leading-6 text-ink">{task.outcome}</p>
+      <Button className="mt-auto" onClick={onStart} disabled={disabled}>
+        {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+        {task.action_label}
+      </Button>
     </Panel>
   );
+}
+
+function taskIcon(type: PracticePlanTask["type"]) {
+  if (type === "wrong_book_review") return BookOpenCheck;
+  if (type === "weak_tag_training") return Target;
+  if (type === "mock_interview") return Gauge;
+  return Search;
 }
 
 function SelectField({

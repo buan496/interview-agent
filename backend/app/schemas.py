@@ -161,6 +161,36 @@ class ReportListItemOut(BaseModel):
     ended_at: datetime | None = None
 
 
+class PracticePlanTaskOut(BaseModel):
+    id: str
+    type: Literal[
+        "wrong_book_review",
+        "weak_tag_training",
+        "mock_interview",
+        "single_question",
+        "project_expression",
+        "system_design",
+    ]
+    title: str
+    reason: str
+    outcome: str
+    action_label: str
+    entrypoint: Literal["create_session", "open_page"]
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class PracticePlanOut(BaseModel):
+    id: int
+    date: date
+    recommended_tasks: list[PracticePlanTaskOut]
+    weak_tags: list[dict[str, Any]] = Field(default_factory=list)
+    target_abilities: list[str] = Field(default_factory=list)
+    generated_reason: str
+    completed: bool
+    created_at: datetime
+    updated_at: datetime | None = None
+
+
 class WrongBookOut(BaseModel):
     question_id: int
     title: str

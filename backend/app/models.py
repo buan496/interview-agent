@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import BigInteger, Date, ForeignKey, Index, Integer, Numeric, SmallInteger, String, Text, func
+from sqlalchemy import BigInteger, Boolean, Date, ForeignKey, Index, Integer, Numeric, SmallInteger, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON, UserDefinedType
@@ -106,6 +106,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     sessions: Mapped[list[Session]] = relationship(back_populates="user")
+    practice_plans: Mapped[list[PracticePlan]] = relationship(back_populates="user")
 
 
 class Session(Base):
@@ -190,6 +191,27 @@ class UserTagStat(Base):
     tag_id: Mapped[int] = mapped_column(Integer, ForeignKey("tags.id"), primary_key=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     avg_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=0)
+
+
+class PracticePlan(Base):
+    __tablename__ = "practice_plans"
+    __table_args__ = (
+        Index("idx_practice_plan_user_date", "user_id", "plan_date", unique=True),
+        Index("idx_practice_plan_completed", "user_id", "completed"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    plan_date: Mapped[date] = mapped_column(Date, nullable=False)
+    recommended_tasks: Mapped[list[dict[str, Any]]] = mapped_column(jsonb_type, default=list)
+    weak_tags: Mapped[list[dict[str, Any]]] = mapped_column(jsonb_type, default=list)
+    target_abilities: Mapped[list[str]] = mapped_column(jsonb_type, default=list)
+    generated_reason: Mapped[str] = mapped_column(Text, nullable=False)
+    completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+    user: Mapped[User] = relationship(back_populates="practice_plans")
 
 
 class QuestionSubmission(Base):
