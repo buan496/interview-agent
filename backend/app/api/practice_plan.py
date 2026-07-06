@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
 from app.db import get_db
-from app.models import PracticePlan, Question, Session, Tag, User, UserTagStat, WrongBook
+from app.models import EvaluationResult, PracticePlan, Question, Session, Tag, User, UserTagStat, WrongBook
 from app.schemas import PracticePlanOut, PracticePlanTaskOut
 
 
@@ -122,6 +122,34 @@ def _weak_tag_task(weak_tags: list[dict[str, Any]]) -> dict[str, Any] | None:
     )
 
 
+async def _evaluation_followup_task(db: AsyncSession, user_id: int) -> dict[str, Any] | None:
+    rows = (
+        await db.execute(
+            select(EvaluationResult, Question)
+            .join(Question, Question.id == EvaluationResult.question_id)
+            .where(EvaluationResult.user_id == user_id)
+            .order_by(EvaluationResult.created_at.desc(), EvaluationResult.id.desc())
+            .limit(10)
+        )
+    ).all()
+    for evaluation, question in rows:
+        missing_points = list(evaluation.missing_points or [])
+        action_items = list(evaluation.action_items or [])
+        if evaluation.score >= 80 and not missing_points and not action_items:
+            continue
+        focus = (action_items or missing_points or [evaluation.verdict])[0]
+        return _task(
+            f"evaluation-followup-{evaluation.id}",
+            "single_question",
+            "Report follow-up retry",
+            f"Latest report feedback: {focus}",
+            "Retry the same question so the feedback turns into updated ability data.",
+            "Retry from report",
+            {"mode": "single", "question_id": question.id},
+        )
+    return None
+
+
 def _resume_session_task(session: Session) -> dict[str, Any]:
     mode = "模拟面试" if session.mode == "mock" else "单题训练"
     progress = f"第 {session.current_question_index}/{session.total_questions} 题"
@@ -196,21 +224,38 @@ def _compose_tasks(
     wrong_task: dict[str, Any] | None,
     weak_task: dict[str, Any] | None,
     resume_task: dict[str, Any] | None = None,
+    evaluation_task: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     tasks = []
     if wrong_task:
         tasks.append(wrong_task)
+    if evaluation_task and not _duplicates_question_task(tasks, evaluation_task):
+        tasks.append(evaluation_task)
     if weak_task:
         tasks.append(weak_task)
     tasks.extend(_default_tasks(current_user))
     return _with_resume_task(tasks, resume_task)
 
 
-def _generated_reason(wrong_task: dict[str, Any] | None, weak_task: dict[str, Any] | None, recent_reason: str | None) -> str:
+def _duplicates_question_task(existing_tasks: list[dict[str, Any]], candidate: dict[str, Any]) -> bool:
+    candidate_question_id = candidate.get("payload", {}).get("question_id")
+    if not candidate_question_id:
+        return False
+    return any(item.get("payload", {}).get("question_id") == candidate_question_id for item in existing_tasks)
+
+
+def _generated_reason(
+    wrong_task: dict[str, Any] | None,
+    weak_task: dict[str, Any] | None,
+    recent_reason: str | None,
+    evaluation_task: dict[str, Any] | None = None,
+) -> str:
     reason_parts = ["基于错题、薄弱标签和最近训练记录生成今日任务。"]
     if recent_reason:
         reason_parts.append(recent_reason)
-    if not wrong_task and not weak_task:
+    if evaluation_task:
+        reason_parts.append("Latest report action items are included as targeted retry tasks.")
+    if not wrong_task and not weak_task and not evaluation_task:
         reason_parts.append("当前历史数据不足，优先通过单题和模拟面试建立训练画像。")
     return " ".join(reason_parts)
 
@@ -238,7 +283,8 @@ async def _build_plan(db: AsyncSession, current_user: User, plan_date: date) -> 
     resume_task = _resume_session_task(resume_session) if resume_session else None
     wrong_task = await _wrong_book_task(db, current_user.id)
     weak_task = _weak_tag_task(weak_tags)
-    tasks = _compose_tasks(current_user, wrong_task, weak_task, resume_task)
+    evaluation_task = await _evaluation_followup_task(db, current_user.id)
+    tasks = _compose_tasks(current_user, wrong_task, weak_task, resume_task, evaluation_task)
 
     recent_reason = await _recent_report_reason(db, current_user.id)
 
@@ -248,7 +294,7 @@ async def _build_plan(db: AsyncSession, current_user: User, plan_date: date) -> 
         recommended_tasks=tasks,
         weak_tags=weak_tags,
         target_abilities=[item["tag"] for item in weak_tags] or ["结构化表达", "基础知识覆盖", "追问抗压"],
-        generated_reason=_generated_reason(wrong_task, weak_task, recent_reason),
+        generated_reason=_generated_reason(wrong_task, weak_task, recent_reason, evaluation_task),
         completed=False,
     )
     db.add(plan)

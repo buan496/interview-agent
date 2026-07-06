@@ -35,6 +35,51 @@ class PracticePlanBuilderTest(unittest.TestCase):
         self.assertEqual(tasks[1]["payload"]["mode"], "mock")
         self.assertEqual(tasks[1]["payload"]["company_id"], 2)
 
+    def test_compose_tasks_includes_report_followup_retry(self) -> None:
+        user = User(id=1, target_company_id=2, target_position_id=3)
+        evaluation_task = {
+            "id": "evaluation-followup-5",
+            "type": "single_question",
+            "title": "Report follow-up retry",
+            "reason": "Latest report feedback: IO multiplexing",
+            "outcome": "Retry the same question so the feedback turns into updated ability data.",
+            "action_label": "Retry from report",
+            "entrypoint": "create_session",
+            "payload": {"mode": "single", "question_id": 9},
+        }
+
+        tasks = _compose_tasks(user, None, None, evaluation_task=evaluation_task)
+
+        self.assertEqual([item["id"] for item in tasks[:2]], ["evaluation-followup-5", "mock-interview"])
+        self.assertEqual(tasks[0]["payload"], {"mode": "single", "question_id": 9})
+
+    def test_compose_tasks_deduplicates_report_followup_against_wrong_book(self) -> None:
+        user = User(id=1)
+        wrong_task = {
+            "id": "wrong-book-review",
+            "type": "wrong_book_review",
+            "title": "Wrong book review",
+            "reason": "Low score",
+            "outcome": "Retry exposed gap",
+            "action_label": "Retry",
+            "entrypoint": "create_session",
+            "payload": {"mode": "single", "question_id": 9},
+        }
+        evaluation_task = {
+            "id": "evaluation-followup-5",
+            "type": "single_question",
+            "title": "Report follow-up retry",
+            "reason": "Latest report feedback: IO multiplexing",
+            "outcome": "Retry the same question so the feedback turns into updated ability data.",
+            "action_label": "Retry from report",
+            "entrypoint": "create_session",
+            "payload": {"mode": "single", "question_id": 9},
+        }
+
+        tasks = _compose_tasks(user, wrong_task, None, evaluation_task=evaluation_task)
+
+        self.assertEqual([item["id"] for item in tasks[:2]], ["wrong-book-review", "mock-interview"])
+
     def test_resume_session_task_opens_existing_session(self) -> None:
         session = Session(id=8, user_id=1, mode="mock", status="ongoing", current_question_index=2, total_questions=6)
 
@@ -75,6 +120,23 @@ class PracticePlanBuilderTest(unittest.TestCase):
         reason = _generated_reason(None, None, None)
 
         self.assertIn("历史数据不足", reason)
+
+    def test_generated_reason_mentions_report_actions(self) -> None:
+        evaluation_task = {
+            "id": "evaluation-followup-5",
+            "type": "single_question",
+            "title": "Report follow-up retry",
+            "reason": "Latest report feedback: IO multiplexing",
+            "outcome": "Retry the same question so the feedback turns into updated ability data.",
+            "action_label": "Retry from report",
+            "entrypoint": "create_session",
+            "payload": {"mode": "single", "question_id": 9},
+        }
+
+        reason = _generated_reason(None, None, "Recent report score 72.", evaluation_task)
+
+        self.assertIn("Latest report action items", reason)
+        self.assertNotIn("鍘嗗彶鏁版嵁涓嶈冻", reason)
 
     def test_plan_out_validates_task_shape(self) -> None:
         now = datetime(2026, 1, 1, tzinfo=timezone.utc)
