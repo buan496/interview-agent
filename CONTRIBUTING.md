@@ -13,6 +13,15 @@ Every change must start from that document:
 6. Add or update tests for changed behavior.
 7. Record local verification in the PR.
 
+Before pushing a PR, run the local quality gate when practical:
+
+```powershell
+.\scripts\ci-local.ps1
+```
+
+Use `-SkipDocker` or `-SkipSecretScan` only when the required local runtime is
+not available, and note the skipped step in the PR.
+
 Default PR sequence:
 
 1. User isolation and auth boundaries.

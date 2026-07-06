@@ -13,12 +13,14 @@
 
 - [ ] Secret scan passes
 - [ ] Backend lint passes
+- [ ] Database migrations pass
 - [ ] Backend unit tests pass
 - [ ] Frontend lint passes
 - [ ] Frontend typecheck passes
 - [ ] Frontend production build passes
 - [ ] Docker Compose config validates
 - [ ] Docker image build verifies
+- [ ] Local `scripts/ci-local.ps1` passes, or any skipped step is explained
 - [ ] Changes satisfy the related design acceptance criteria
 
 ## Risk
