@@ -11,6 +11,7 @@ from sqlalchemy.types import JSON, UserDefinedType
 
 
 jsonb_type = JSONB().with_variant(JSON(), "sqlite")
+bigint_type = BigInteger().with_variant(Integer(), "sqlite")
 
 
 class Vector(UserDefinedType):
@@ -63,7 +64,7 @@ class Question(Base):
     __tablename__ = "questions"
     __table_args__ = (Index("idx_q_company_pos", "company_id", "position_id", "status"),)
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     body: Mapped[str | None] = mapped_column(Text)
     answer_key: Mapped[str] = mapped_column(Text, nullable=False)
@@ -88,7 +89,7 @@ class Question(Base):
 class QuestionTag(Base):
     __tablename__ = "question_tags"
 
-    question_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("questions.id", ondelete="CASCADE"), primary_key=True)
+    question_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("questions.id", ondelete="CASCADE"), primary_key=True)
     tag_id: Mapped[int] = mapped_column(Integer, ForeignKey("tags.id"), primary_key=True)
 
     question: Mapped[Question] = relationship(back_populates="tag_links")
@@ -98,7 +99,7 @@ class QuestionTag(Base):
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
     phone: Mapped[str | None] = mapped_column(String(20), unique=True)
     nickname: Mapped[str | None] = mapped_column(String(50))
     target_company_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("companies.id"))
@@ -114,8 +115,8 @@ class User(Base):
 class Session(Base):
     __tablename__ = "sessions"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
+    user_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("users.id"), nullable=False)
     mode: Mapped[str] = mapped_column(String(15), nullable=False)
     company_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("companies.id"))
     position_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("positions.id"))
@@ -126,7 +127,7 @@ class Session(Base):
     finished_at: Mapped[datetime | None]
     expired_at: Mapped[datetime | None]
     ended_at: Mapped[datetime | None]
-    current_question_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("questions.id"))
+    current_question_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("questions.id"))
     current_question_index: Mapped[int] = mapped_column(SmallInteger, default=1)
     total_questions: Mapped[int] = mapped_column(SmallInteger, default=1)
     max_followups: Mapped[int] = mapped_column(SmallInteger, default=3)
@@ -142,9 +143,9 @@ class Session(Base):
 class SessionQuestion(Base):
     __tablename__ = "session_questions"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    session_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("sessions.id"), nullable=False)
-    question_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("questions.id"), nullable=False)
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
+    session_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("sessions.id"), nullable=False)
+    question_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("questions.id"), nullable=False)
     order_no: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     status: Mapped[str] = mapped_column(String(15), default="pending")
     started_at: Mapped[datetime | None]
@@ -170,11 +171,11 @@ class EvaluationResult(Base):
         Index("idx_eval_session_question", "session_id", "sq_id"),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
-    session_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("sessions.id"), nullable=False)
-    sq_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("session_questions.id"), nullable=False)
-    question_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("questions.id"), nullable=False)
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
+    user_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("users.id"), nullable=False)
+    session_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("sessions.id"), nullable=False)
+    sq_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("session_questions.id"), nullable=False)
+    question_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("questions.id"), nullable=False)
     score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     mastery: Mapped[str] = mapped_column(String(10), nullable=False)
     verdict: Mapped[str] = mapped_column(Text, nullable=False)
@@ -199,8 +200,8 @@ class Message(Base):
     __tablename__ = "messages"
     __table_args__ = (Index("idx_msg_sq", "sq_id", "id"),)
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    sq_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("session_questions.id"), nullable=False)
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
+    sq_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("session_questions.id"), nullable=False)
     role: Mapped[str] = mapped_column(String(12), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     msg_type: Mapped[str] = mapped_column(String(15), nullable=False)
@@ -213,8 +214,8 @@ class Message(Base):
 class WrongBook(Base):
     __tablename__ = "wrong_book"
 
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), primary_key=True)
-    question_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("questions.id"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("users.id"), primary_key=True)
+    question_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("questions.id"), primary_key=True)
     last_score: Mapped[int | None] = mapped_column(SmallInteger)
     fail_count: Mapped[int] = mapped_column(SmallInteger, default=1)
     next_review: Mapped[date | None] = mapped_column(Date)
@@ -223,7 +224,7 @@ class WrongBook(Base):
 class UserTagStat(Base):
     __tablename__ = "user_tag_stats"
 
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("users.id"), primary_key=True)
     tag_id: Mapped[int] = mapped_column(Integer, ForeignKey("tags.id"), primary_key=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     avg_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=0)
@@ -236,8 +237,8 @@ class PracticePlan(Base):
         Index("idx_practice_plan_completed", "user_id", "completed"),
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
+    user_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("users.id"), nullable=False)
     plan_date: Mapped[date] = mapped_column(Date, nullable=False)
     recommended_tasks: Mapped[list[dict[str, Any]]] = mapped_column(jsonb_type, default=list)
     weak_tags: Mapped[list[dict[str, Any]]] = mapped_column(jsonb_type, default=list)
@@ -254,7 +255,7 @@ class QuestionSubmission(Base):
     __tablename__ = "question_submissions"
     __table_args__ = (Index("idx_submission_status_created", "status", "created_at"),)
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
     submitter_name: Mapped[str | None] = mapped_column(String(80))
     company_name: Mapped[str] = mapped_column(String(100), nullable=False)
     position_name: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -267,6 +268,6 @@ class QuestionSubmission(Base):
     tags: Mapped[list[dict[str, Any]]] = mapped_column(jsonb_type, default=list)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending_review")
     review_note: Mapped[str | None] = mapped_column(Text)
-    created_question_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("questions.id"))
+    created_question_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("questions.id"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     reviewed_at: Mapped[datetime | None]
