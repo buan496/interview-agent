@@ -4,12 +4,14 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   BookOpenCheck,
   CheckCircle2,
   Circle,
   Clock3,
   FileText,
+  Gauge,
   Loader2,
   MessageSquareText,
   Mic,
@@ -21,7 +23,7 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
-import { Badge, Button, Panel } from "@/components/ui";
+import { AppButton, AppCard, Badge, BrandLogo, PageShell, cn } from "@/components/ui";
 import { getSession, submitAnswer, transcribeAudio } from "@/lib/session-api";
 import { readSse } from "@/lib/sse";
 import type { Message, SessionDetail, SseDonePayload, Verdict } from "@/lib/types";
@@ -34,14 +36,14 @@ const sessionStatusCopy: Record<string, string> = {
   created: "已创建",
   ongoing: "训练中",
   paused: "已暂停",
-  finished: "已完成",
+  finished: "已结束",
   expired: "已超时",
   cancelled: "已取消",
 };
 
 const questionStatusCopy: Record<string, string> = {
   pending: "等待中",
-  answering: "作答中",
+  answering: "答题中",
   scored: "已评分",
   skipped: "已跳过",
   timeout: "已超时",
@@ -85,7 +87,7 @@ export default function SessionPage() {
   const visibleVerdict = verdict ?? persistedVerdict;
   const isTerminal = terminalStatuses.has(session.data?.status ?? "");
   const canAnswer = Boolean(current && current.status === "answering" && !pending && !isTerminal);
-  const phase = getPhase(session.data?.status, current, pending, latestFollowup);
+  const phase = getPhase(session.data?.status, current, pending, latestFollowup, Boolean(answer.trim()));
   const progressPercent = getProgressPercent(session.data, current);
 
   useEffect(() => {
@@ -171,14 +173,18 @@ export default function SessionPage() {
 
   if (session.isLoading) {
     return (
-      <main className="grid min-h-[calc(100vh-3.5rem)] place-items-center">
+      <PageShell className="grid place-items-center">
         <Loader2 className="h-6 w-6 animate-spin text-brand" />
-      </main>
+      </PageShell>
     );
   }
 
   if (!current || !session.data) {
-    return <main className="p-6 text-sm text-muted">会话不存在或已无法读取。</main>;
+    return (
+      <PageShell>
+        <AppCard className="p-8 text-sm text-muted">会话不存在或已无法读取。</AppCard>
+      </PageShell>
+    );
   }
 
   const timeText = formatSeconds(secondsLeft);
@@ -186,169 +192,200 @@ export default function SessionPage() {
   const nextAction = getNextAction(session.data.status, current, visibleVerdict, pending);
   const answerStructure = getAnswerStructure(current.question.qtype);
   const answerGoal = getAnswerGoal(current.question.qtype);
+  const totalQuestions = Math.max(questions.length, session.data.total_questions);
+  const PhaseIcon = phase.icon;
+  const questionNumber = Math.max(1, currentIndex + 1);
 
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6">
-      <section className="rounded border border-line bg-white px-4 py-3 shadow-soft">
-        <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+    <PageShell className="grid gap-6 pb-12">
+      <AppCard className="overflow-hidden">
+        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className="border-brand/30 bg-[#edf7f4] text-brand">{statusText}</Badge>
-              <Badge>{session.data.mode === "mock" ? "模拟面试" : "单题训练"}</Badge>
-              <Badge>{questionStatusCopy[current.status] ?? current.status}</Badge>
-              <Badge>{qtypeCopy[current.question.qtype] ?? current.question.qtype}</Badge>
-            </div>
-            <div className="mt-3 flex items-center gap-3">
-              <div className="h-2 flex-1 overflow-hidden rounded bg-panel">
-                <div className="h-full bg-brand transition-all" style={{ width: `${progressPercent}%` }} />
+            <div className="flex flex-wrap items-center gap-3">
+              <BrandLogo variant="mark" className="h-10 w-10 rounded-2xl border border-line bg-white p-1.5 shadow-soft" />
+              <div>
+                <p className="text-sm font-semibold text-brand">{session.data.mode === "mock" ? "模拟面试 Session" : "单题训练 Session"}</p>
+                <h1 className="mt-1 text-2xl font-semibold text-ink">第 {questionNumber} / {totalQuestions} 题</h1>
               </div>
-              <span className="shrink-0 text-sm font-medium text-ink">
-                第 {Math.max(1, currentIndex + 1)} / {Math.max(questions.length, session.data.total_questions)} 题
-              </span>
+              <Badge className={cn("ml-0 border-brand/20 bg-brandSoft text-brand lg:ml-2", phase.tone === "danger" && "border-accent/20 bg-[#fff6f2] text-accent")}>
+                <PhaseIcon className={cn("mr-1 h-3.5 w-3.5", pending && "animate-spin")} />
+                {phase.label}
+              </Badge>
+              <Badge>{statusText}</Badge>
             </div>
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-brandSoft">
+              <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${progressPercent}%` }} />
+            </div>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">{nextAction}</p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:min-w-[500px]">
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[560px]">
             <Metric icon={Clock3} label="剩余时间" value={timeText} tone={secondsLeft <= 180 && !isTerminal ? "danger" : "default"} />
             <Metric icon={MessageSquareText} label="追问轮次" value={`${current.followup_count}/${session.data.max_followups}`} />
-            <Metric icon={Target} label="当前阶段" value={phase.label} />
+            <Metric icon={Gauge} label="当前状态" value={phase.label} />
             <Metric icon={ShieldCheck} label="本题评分" value={current.final_score == null ? "--" : `${current.final_score}`} />
           </div>
         </div>
-      </section>
+      </AppCard>
 
-      <section className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)_340px]">
-        <Panel className="p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <BookOpenCheck className="h-4 w-4 text-brand" />
-            当前题目
-          </div>
-          <h1 className="mt-3 text-xl font-semibold leading-8 text-ink">{current.question.title}</h1>
-          {current.question.body ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted">{current.question.body}</p> : null}
+      {isTerminal ? <FinishedSessionCard status={session.data.status} sessionId={params.id} /> : null}
 
-          <div className="mt-5 space-y-4">
-            <InfoBlock title="本题考察点">
-              <div className="flex flex-wrap gap-2">
-                {current.question.tags.length ? current.question.tags.slice(0, 6).map((tag) => <Badge key={tag.id}>{tag.name}</Badge>) : <span>通用表达与基础理解</span>}
-              </div>
-            </InfoBlock>
-            <InfoBlock title="答题目标">{answerGoal}</InfoBlock>
-            <InfoBlock title="参考结构">
-              <ol className="list-decimal space-y-1 pl-4">
-                {answerStructure.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ol>
-            </InfoBlock>
-          </div>
-        </Panel>
-
-        <section className="grid min-h-[calc(100vh-12rem)] grid-rows-[auto_1fr_auto] overflow-hidden rounded border border-line bg-white shadow-soft">
-          <div className="border-b border-line px-4 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <phase.icon className="h-4 w-4 text-brand" />
-                {phase.label}
-              </div>
-              <span className="text-sm text-muted">{nextAction}</span>
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-5">
+          <AppCard className="p-5 sm:p-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge>{qtypeCopy[current.question.qtype] ?? current.question.qtype}</Badge>
+              <Badge>难度 {current.question.difficulty}</Badge>
+              <Badge>{questionStatusCopy[current.status] ?? current.status}</Badge>
+              {current.question.tags.slice(0, 5).map((tag) => (
+                <Badge key={tag.id} className="border-brand/20 bg-brandSoft text-brand">
+                  {tag.name}
+                </Badge>
+              ))}
             </div>
-          </div>
+            <h2 className="mt-5 text-2xl font-semibold leading-9 text-ink">{current.question.title}</h2>
+            {current.question.body ? <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-muted">{current.question.body}</p> : null}
+          </AppCard>
 
-          <div className="space-y-3 overflow-y-auto p-4">
-            {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
-            ))}
-            {streamingText ? <MessageBubble message={{ id: -1, role: "interviewer", content: streamingText, msg_type: "followup" }} /> : null}
-            {!messages.length && !streamingText ? <EmptyTrace /> : null}
-          </div>
-
-          <form onSubmit={submit} className="border-t border-line bg-white p-4">
-            {actionError ? (
-              <div className="mb-3 flex items-center gap-2 rounded border border-[#f0d2c6] bg-[#fff6f2] px-3 py-2 text-sm text-accent">
-                <AlertCircle className="h-4 w-4" />
-                {actionError}
-              </div>
-            ) : null}
-            <textarea
-              className="min-h-32 w-full resize-none rounded border border-line bg-white p-3 text-sm leading-6 text-ink placeholder:text-muted disabled:bg-panel"
-              value={answer}
-              onChange={(event) => setAnswer(event.target.value)}
-              placeholder="输入你的回答，或使用语音作答。"
-              disabled={!canAnswer}
-            />
-            {audioError ? <p className="mt-2 text-xs text-accent">{audioError}</p> : null}
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <Button type="button" variant="secondary" onClick={toggleRecording} disabled={!canAnswer || transcribing}>
-                {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                {transcribing ? "转写中" : recording ? "停止录音" : "语音作答"}
-              </Button>
-              <Button type="submit" disabled={!canAnswer || !answer.trim()}>
-                {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                提交回答
-              </Button>
-            </div>
-          </form>
-        </section>
-
-        <Panel className="p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <ShieldCheck className="h-4 w-4 text-brand" />
-            AI 反馈
-          </div>
-
-          <div className="mt-4 space-y-4">
-            <InfoBlock title="追问状态">
-              {latestFollowup && current.status === "answering" ? (
-                <p className="whitespace-pre-wrap">{latestFollowup.content}</p>
-              ) : (
-                <p>{current.followup_count > 0 ? "本题已有追问，继续围绕反馈补全回答。" : "当前暂无追问，提交后 AI 会判断是否需要继续深挖。"}</p>
-              )}
-            </InfoBlock>
-
-            <InfoBlock title="评分结果">
-              {visibleVerdict ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between rounded border border-line bg-panel px-3 py-2">
-                    <span className="text-sm text-muted">得分</span>
-                    <span className="text-lg font-semibold text-ink">{visibleVerdict.score}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded border border-line bg-panel px-3 py-2">
-                    <span className="text-sm text-muted">掌握度</span>
-                    <span className="text-sm font-medium text-ink">{masteryCopy[visibleVerdict.mastery] ?? visibleVerdict.mastery}</span>
-                  </div>
-                  <p className="whitespace-pre-wrap">{visibleVerdict.feedback}</p>
+          <AppCard className="overflow-hidden">
+            <div className="border-b border-line bg-white/80 px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <PhaseIcon className={cn("h-4 w-4 text-brand", pending && "animate-spin")} />
+                  答题工作区
                 </div>
-              ) : (
-                <p>完成作答后，这里会展示评分、掌握度和改进建议。</p>
-              )}
-            </InfoBlock>
-
-            {visibleVerdict?.ideal_answer ? (
-              <InfoBlock title="参考答案">
-                <p className="whitespace-pre-wrap">{visibleVerdict.ideal_answer}</p>
-              </InfoBlock>
-            ) : null}
-
-            <InfoBlock title="下一步">
-              <div className="space-y-3">
-                <p>{nextAction}</p>
-                {session.data.status === "finished" ? (
-                  <Link href={`/report/${params.id}`} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded bg-brand px-4 text-sm font-medium text-white hover:bg-[#17675c]">
-                    <FileText className="h-4 w-4" />
-                    查看完整报告
-                  </Link>
-                ) : null}
-                {session.data.status === "expired" ? (
-                  <Link href="/practice" className="inline-flex h-10 w-full items-center justify-center gap-2 rounded border border-line bg-white px-4 text-sm font-medium text-ink hover:bg-panel">
-                    <ArrowRight className="h-4 w-4" />
-                    返回题库重练
-                  </Link>
-                ) : null}
+                <span className="text-sm text-muted">{canAnswer ? "组织回答后提交给 AI 面试官评分。" : "当前状态不可提交回答。"}</span>
               </div>
-            </InfoBlock>
-          </div>
-        </Panel>
+            </div>
+
+            <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="grid gap-4">
+                <section className="max-h-[420px] min-h-[260px] overflow-y-auto rounded-3xl border border-line bg-brandMist p-4">
+                  <div className="grid gap-3">
+                    {messages.map((message) => (
+                      <MessageBubble key={message.id} message={message} />
+                    ))}
+                    {streamingText ? <MessageBubble message={{ id: -1, role: "interviewer", content: streamingText, msg_type: "followup" }} /> : null}
+                    {!messages.length && !streamingText ? <EmptyTrace /> : null}
+                  </div>
+                </section>
+
+                <form onSubmit={submit} className="grid gap-3">
+                  {actionError ? (
+                    <div className="flex items-center gap-2 rounded-2xl border border-[#f0d2c6] bg-[#fff6f2] px-4 py-3 text-sm text-accent">
+                      <AlertCircle className="h-4 w-4" />
+                      {actionError}
+                    </div>
+                  ) : null}
+                  <textarea
+                    className="min-h-36 w-full resize-none rounded-3xl border border-line bg-white p-4 text-sm leading-6 text-ink shadow-[0_1px_0_rgba(15,23,42,0.02)] transition placeholder:text-[#98a2b3] focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 disabled:bg-panel"
+                    value={answer}
+                    onChange={(event) => setAnswer(event.target.value)}
+                    placeholder="输入你的回答，建议先给结论，再解释关键依据和取舍。也可以使用语音作答。"
+                    disabled={!canAnswer}
+                  />
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs leading-5 text-muted">
+                      {!answer.trim() && canAnswer ? "请先填写回答内容，提交按钮会自动启用。" : pending ? "AI 正在评分，请不要重复提交。" : "回答会进入本轮 Session 记录，并用于生成报告。"}
+                    </p>
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <AppButton type="button" variant="secondary" onClick={toggleRecording} disabled={!canAnswer || transcribing}>
+                        {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                        {transcribing ? "转写中" : recording ? "停止录音" : "语音作答"}
+                      </AppButton>
+                      <AppButton type="submit" disabled={!canAnswer || !answer.trim()}>
+                        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        {pending ? "评分中" : "提交回答"}
+                      </AppButton>
+                    </div>
+                  </div>
+                  {audioError ? <p className="text-xs text-accent">{audioError}</p> : null}
+                </form>
+              </div>
+
+              <div className="grid content-start gap-4">
+                <InfoPanel title="答题目标" icon={Target}>
+                  <p>{answerGoal}</p>
+                </InfoPanel>
+                <InfoPanel title="推荐结构" icon={BookOpenCheck}>
+                  <ol className="list-decimal space-y-1 pl-4">
+                    {answerStructure.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ol>
+                </InfoPanel>
+                <InfoPanel title="下一步" icon={ArrowRight}>
+                  <p>{nextAction}</p>
+                </InfoPanel>
+              </div>
+            </div>
+          </AppCard>
+        </div>
+
+        <aside className="grid h-fit gap-5">
+          <AppCard className="p-5">
+            <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <ShieldCheck className="h-4 w-4 text-brand" />
+              AI 反馈
+            </div>
+
+            <div className="mt-5 grid gap-4">
+              <FeedbackSection title="追问内容">
+                {latestFollowup && current.status === "answering" ? (
+                  <p className="whitespace-pre-wrap">{latestFollowup.content}</p>
+                ) : (
+                  <p>{current.followup_count > 0 ? "本题已有追问，继续围绕反馈补全回答。" : "当前暂无追问，提交后 AI 会判断是否需要继续深挖。"}</p>
+                )}
+              </FeedbackSection>
+
+              <FeedbackSection title="总体评价">
+                {visibleVerdict ? (
+                  <div className="grid gap-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <ScoreTile label="得分" value={`${visibleVerdict.score}`} />
+                      <ScoreTile label="掌握度" value={masteryCopy[visibleVerdict.mastery] ?? visibleVerdict.mastery} />
+                    </div>
+                    <p className="whitespace-pre-wrap">{visibleVerdict.feedback}</p>
+                  </div>
+                ) : (
+                  <p>完成作答后，这里会展示即时评分、掌握度和总体反馈。</p>
+                )}
+              </FeedbackSection>
+
+              <FeedbackSection title="优点 / 问题 / 改进建议">
+                <p>
+                  即时反馈会先给总体评价；训练结束后，完整报告会按优点、缺失点、表达问题和行动项拆开展示。
+                </p>
+              </FeedbackSection>
+
+              {visibleVerdict?.ideal_answer ? (
+                <FeedbackSection title="参考答案">
+                  <details className="rounded-2xl border border-line bg-white p-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-ink">展开参考答案</summary>
+                    <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted">{visibleVerdict.ideal_answer}</p>
+                  </details>
+                </FeedbackSection>
+              ) : null}
+
+              <FeedbackSection title="页面入口">
+                <div className="grid gap-3">
+                  {session.data.status === "finished" ? (
+                    <LinkButton href={`/report/${params.id}`} variant="primary">
+                      <FileText className="h-4 w-4" />
+                      查看报告
+                    </LinkButton>
+                  ) : null}
+                  <LinkButton href="/practice" variant="secondary">
+                    <ArrowLeft className="h-4 w-4" />
+                    返回今日训练
+                  </LinkButton>
+                </div>
+              </FeedbackSection>
+            </div>
+          </AppCard>
+        </aside>
       </section>
-    </main>
+    </PageShell>
   );
 }
 
@@ -367,30 +404,30 @@ function getProgressPercent(session: SessionDetail | undefined, current: Session
   return Math.min(100, Math.max(6, ((completed + activeOffset) / total) * 100));
 }
 
-function getPhase(status: string | undefined, current: SessionQuestion | undefined, pending: boolean, latestFollowup: Message | undefined) {
-  if (pending) return { label: "评分中", icon: Loader2 };
-  if (status === "finished") return { label: "查看反馈", icon: CheckCircle2 };
-  if (status === "expired") return { label: "已超时", icon: AlertCircle };
-  if (status === "cancelled") return { label: "已取消", icon: AlertCircle };
-  if (!current) return { label: "读取题目", icon: Circle };
-  if (current.status === "scored") return { label: "查看反馈", icon: ShieldCheck };
-  if (latestFollowup && current.status === "answering") return { label: "追问作答", icon: MessageSquareText };
-  if (current.status === "answering") return { label: "作答中", icon: Target };
-  return { label: questionStatusCopy[current.status] ?? current.status, icon: Circle };
+function getPhase(status: string | undefined, current: SessionQuestion | undefined, pending: boolean, latestFollowup: Message | undefined, hasDraft: boolean) {
+  if (pending) return { label: "评分中", icon: Loader2, tone: "default" as const };
+  if (status === "finished") return { label: "已结束", icon: CheckCircle2, tone: "default" as const };
+  if (status === "expired") return { label: "已超时", icon: AlertCircle, tone: "danger" as const };
+  if (status === "cancelled") return { label: "已取消", icon: AlertCircle, tone: "danger" as const };
+  if (!current) return { label: "读取题目", icon: Circle, tone: "default" as const };
+  if (current.status === "scored") return { label: "已评分", icon: ShieldCheck, tone: "default" as const };
+  if (latestFollowup && current.status === "answering") return { label: "追问作答", icon: MessageSquareText, tone: "default" as const };
+  if (current.status === "answering") return { label: hasDraft ? "答题中" : "准备答题", icon: Target, tone: "default" as const };
+  return { label: questionStatusCopy[current.status] ?? current.status, icon: Circle, tone: "default" as const };
 }
 
 function getNextAction(status: string, current: SessionQuestion, verdict: Verdict | null, pending: boolean) {
-  if (pending) return "AI 正在评估本轮回答。";
-  if (status === "finished") return "本轮训练已完成，可以查看完整报告。";
+  if (pending) return "AI 正在评估本轮回答，请等待评分或追问结果。";
+  if (status === "finished") return "本轮训练已完成，可以查看完整报告或返回今日训练。";
   if (status === "expired") return "会话已超时，本轮不能继续提交。";
-  if (status === "cancelled") return "会话已取消。";
-  if (current.status === "scored" || verdict) return "本题已完成，系统会进入下一题或生成报告。";
+  if (status === "cancelled") return "会话已取消，请返回今日训练重新开始。";
+  if (current.status === "scored" || verdict) return "本题已评分，系统会进入下一题或生成报告。";
   if (current.followup_count > 0) return "回答追问，补齐缺失点后再次提交。";
   return "先组织结构化回答，再提交给 AI 面试官评估。";
 }
 
 function getAnswerGoal(qtype: string) {
-  if (qtype === "coding") return "讲清思路、复杂度、边界条件，并能解释关键实现取舍。";
+  if (qtype === "coding") return "讲清思路、复杂度、边界条件，并解释关键实现取舍。";
   if (qtype === "system_design") return "从需求、约束、核心模型、关键链路和扩展性逐层展开。";
   if (qtype === "behavioral") return "用具体场景说明背景、行动、结果和复盘，避免空泛描述。";
   return "准确覆盖核心概念、原理、适用场景和常见误区。";
@@ -434,22 +471,91 @@ function Metric({
   tone?: "default" | "danger";
 }) {
   return (
-    <div className="rounded border border-line bg-panel px-3 py-2">
+    <div className="rounded-2xl border border-line bg-white px-3 py-2 shadow-soft">
       <div className="flex items-center gap-1.5 text-xs text-muted">
         <Icon className={tone === "danger" ? "h-3.5 w-3.5 text-accent" : "h-3.5 w-3.5 text-brand"} />
         {label}
       </div>
-      <div className={tone === "danger" ? "mt-1 text-base font-semibold text-accent" : "mt-1 text-base font-semibold text-ink"}>{value}</div>
+      <div className={tone === "danger" ? "mt-1 truncate text-base font-semibold text-accent" : "mt-1 truncate text-base font-semibold text-ink"}>{value}</div>
     </div>
   );
 }
 
-function InfoBlock({ title, children }: { title: string; children: React.ReactNode }) {
+function InfoPanel({ title, icon: Icon, children }: { title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+  return (
+    <section className="rounded-3xl border border-line bg-white p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <Icon className="h-4 w-4 text-brand" />
+        {title}
+      </div>
+      <div className="mt-3 text-sm leading-6 text-muted">{children}</div>
+    </section>
+  );
+}
+
+function FeedbackSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-xs font-semibold uppercase tracking-normal text-muted">{title}</h2>
-      <div className="mt-2 text-sm leading-6 text-ink">{children}</div>
+      <h2 className="text-sm font-semibold text-ink">{title}</h2>
+      <div className="mt-2 text-sm leading-6 text-muted">{children}</div>
     </section>
+  );
+}
+
+function ScoreTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-line bg-brandMist p-3">
+      <p className="text-xs text-muted">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-ink">{value}</p>
+    </div>
+  );
+}
+
+function LinkButton({ href, variant, children }: { href: string; variant: "primary" | "secondary"; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "inline-flex h-11 items-center justify-center gap-2 rounded-control px-4 text-sm font-semibold transition",
+        variant === "primary" && "bg-brand text-white shadow-button hover:bg-brandDeep",
+        variant === "secondary" && "border border-line bg-white text-ink shadow-soft hover:border-brand/30 hover:bg-brandMist"
+      )}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function FinishedSessionCard({ status, sessionId }: { status: string; sessionId: string }) {
+  const isFinished = status === "finished";
+  return (
+    <AppCard className="border-brand/20 bg-white p-5 sm:p-6">
+      <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div>
+          <p className="text-sm font-semibold text-brand">{isFinished ? "本轮训练已完成" : "本轮训练已停止"}</p>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">{isFinished ? "查看报告，把反馈转成下一轮计划" : "返回今日训练，重新选择下一步"}</h2>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            {isFinished ? "报告会整理得分、薄弱点、参考答案和后续行动项。" : "当前会话不能继续提交，可以回到今日训练重新开始。"}
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          {isFinished ? (
+            <LinkButton href={`/report/${sessionId}`} variant="primary">
+              <FileText className="h-4 w-4" />
+              查看报告
+            </LinkButton>
+          ) : null}
+          <LinkButton href="/practice" variant="secondary">
+            <ArrowLeft className="h-4 w-4" />
+            返回今日训练
+          </LinkButton>
+          <LinkButton href="/practice" variant="secondary">
+            <ArrowRight className="h-4 w-4" />
+            再练一轮
+          </LinkButton>
+        </div>
+      </div>
+    </AppCard>
   );
 }
 
@@ -458,7 +564,13 @@ function MessageBubble({ message }: { message: Pick<Message, "id" | "role" | "co
   const label = isCandidate ? "候选人" : message.msg_type === "question" ? "题目" : message.msg_type === "verdict" ? "评分反馈" : "AI 面试官";
   return (
     <div className={isCandidate ? "flex justify-end" : "flex justify-start"}>
-      <div className={isCandidate ? "max-w-[88%] rounded bg-steel px-4 py-3 text-sm leading-6 text-white" : "max-w-[88%] rounded border border-line bg-panel px-4 py-3 text-sm leading-6 text-ink"}>
+      <div
+        className={
+          isCandidate
+            ? "max-w-[88%] rounded-3xl bg-brand px-4 py-3 text-sm leading-6 text-white shadow-button"
+            : "max-w-[88%] rounded-3xl border border-line bg-white px-4 py-3 text-sm leading-6 text-ink shadow-soft"
+        }
+      >
         <div className="mb-1 text-xs opacity-70">{label}</div>
         <div className="whitespace-pre-wrap">{message.content}</div>
       </div>
@@ -468,7 +580,7 @@ function MessageBubble({ message }: { message: Pick<Message, "id" | "role" | "co
 
 function EmptyTrace() {
   return (
-    <div className="grid h-full min-h-56 place-items-center rounded border border-dashed border-line bg-panel px-6 text-center">
+    <div className="grid h-full min-h-56 place-items-center rounded-3xl border border-dashed border-line bg-white/75 px-6 text-center">
       <div>
         <Target className="mx-auto h-7 w-7 text-brand" />
         <p className="mt-3 text-sm font-medium text-ink">本题还没有作答记录</p>
