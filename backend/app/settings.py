@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     app_name: str = "Interview Agent"
     api_prefix: str = "/api"
+    environment: str = Field(default="development", validation_alias=AliasChoices("APP_ENV", "ENVIRONMENT"))
 
     database_url: str = Field(
         default="postgresql+asyncpg://interview:local-dev-only@localhost:5432/interview_agent",
@@ -26,7 +27,13 @@ class Settings(BaseSettings):
     whisper_base_url: str = Field(default="https://api.siliconflow.cn/v1", validation_alias="WHISPER_BASE_URL")
     whisper_model: str = Field(default="FunAudioLLM/SenseVoiceSmall", validation_alias="WHISPER_MODEL")
     sms_provider_key: str = Field(default="", validation_alias="SMS_PROVIDER_KEY")
-    jwt_secret: str = Field(default="local-dev-only-change-me", validation_alias="JWT_SECRET")
+    auth_dev_code_enabled: bool = Field(default=True, validation_alias="AUTH_DEV_CODE_ENABLED")
+    auth_dev_code: str = Field(default="000000", validation_alias="AUTH_DEV_CODE")
+    access_token_expire_minutes: int = Field(default=24 * 60, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    jwt_secret: str = Field(
+        default="local-dev-only-change-me",
+        validation_alias=AliasChoices("JWT_SECRET_KEY", "TOKEN_SECRET", "JWT_SECRET"),
+    )
     admin_phones: str = Field(default="", validation_alias="ADMIN_PHONES")
     cors_origins: str = Field(default="http://localhost:3000", validation_alias="CORS_ORIGINS")
 
@@ -39,6 +46,10 @@ class Settings(BaseSettings):
     @property
     def admin_phone_set(self) -> set[str]:
         return {phone.strip() for phone in self.admin_phones.split(",") if phone.strip()}
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.strip().lower() in {"prod", "production"}
 
 
 @lru_cache

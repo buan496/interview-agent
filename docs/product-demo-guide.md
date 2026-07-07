@@ -19,7 +19,7 @@
 
 3. 登录说明：
 
-   - 本地没有短信服务时，登录接口会返回开发验证码 `000000`。
+   - 本地演示默认使用 `APP_ENV=development` 和 `AUTH_DEV_CODE_ENABLED=true`，登录接口会返回 `AUTH_DEV_CODE`（默认 `000000`）。
    - 没有配置 `DEEPSEEK_API_KEY` 时，AI 追问和评分使用本地 fallback，适合演示主流程。
 
 4. 视觉截图可通过以下命令刷新：

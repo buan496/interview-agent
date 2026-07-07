@@ -26,7 +26,7 @@
 
 ## 核心功能
 
-- 登录与训练入口：手机号验证码登录，本地开发无短信服务时返回开发验证码 `000000`。
+- 登录与训练入口：手机号验证码登录；开发/测试环境可通过 `AUTH_DEV_CODE_ENABLED=true` 使用可配置开发验证码，生产环境会拒绝默认 `000000`。
 - 今日训练 Dashboard：展示今日训练目标、薄弱点、错题沉淀、最近报告和推荐训练任务。
 - 模拟面试：按公司和岗位筛选，创建一轮结构化模拟面试 Session。
 - 答题 Session：支持单题训练和模拟面试，展示题号、状态、倒计时、作答区、评分反馈和下一步操作。
@@ -125,7 +125,9 @@ docker compose -p interview-agent up --build
 默认说明：
 
 - 未配置 `DEEPSEEK_API_KEY` 时，追问和评分使用本地 fallback，便于本地演示闭环。
-- 未配置短信服务时，登录接口返回开发验证码 `000000`。
+- 开发/测试认证：`APP_ENV=development` 且 `AUTH_DEV_CODE_ENABLED=true` 时，登录接口返回 `AUTH_DEV_CODE`（默认 `000000`），便于本地演示。
+- 生产认证边界：`APP_ENV=production` 时会拒绝默认开发验证码 `000000` 和默认 `JWT_SECRET`；当前未接入真实短信服务商，生产登录需要补齐短信验证实现。
+- Token 过期时间通过 `ACCESS_TOKEN_EXPIRE_MINUTES` 配置，默认 1440 分钟。
 - 未配置 `WHISPER_API_KEY` 时，文本作答不受影响；音频转写接口会返回不可用状态。
 
 前端单独启动：
