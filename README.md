@@ -31,6 +31,7 @@
 - 模拟面试：按公司和岗位筛选，创建一轮结构化模拟面试 Session。
 - 答题 Session：支持单题训练和模拟面试，展示题号、状态、倒计时、作答区、评分反馈和下一步操作。
 - AI 追问与评分：后端通过 LLM 抽象层生成追问和评分；未配置真实模型时使用本地 fallback 便于跑通闭环。
+- LLM usage metering v1: records provider, model, feature, tokens, estimated cost, latency, status, request_id, user_id and session_id, with a current-user usage summary API; no payment, plans or quotas.
 - 报告复盘：展示综合得分、能力诊断、题目复盘、参考答案和下一步训练建议。
 - 训练历史中心：按当前登录用户汇总历史 Session、状态、分数、报告入口和继续训练入口。
 - 能力画像：按当前登录用户聚合长期标签表现、优势项、薄弱项、训练次数和错题次数。
@@ -193,6 +194,7 @@ GitHub Actions 当前包含：
 - 蓝白品牌视觉系统：统一 Logo、导航、卡片、按钮、输入态和移动端布局。
 - 前后端分离：Next.js 前端通过 API client 调用 FastAPI 后端。
 - LLM 抽象层：支持真实 LLM 配置，也支持本地 fallback 保证演示和测试稳定。
+- LLM cost metering foundation: `llm_usage_records` stores only call metadata, token estimates, estimated cost, latency and status; it does not store prompt, completion or answer text.
 - 生产可观测性地基：每个请求返回 `X-Request-ID`，后端输出结构化 JSON 日志，关键训练链路有业务事件日志。
 - 核心链路 E2E：覆盖 practice -> session -> report -> practice、wrong-book 回流、mock 创建等路径。
 - 视觉 QA：为核心页面生成桌面端和移动端截图，并检查无横向溢出。
@@ -248,6 +250,7 @@ docs                   产品设计、视觉验收和演示文档
 - 今日训练、模拟面试、答题 Session、报告复盘、错题本闭环。
 - 训练历史中心 v1：当前用户历史 Session、报告入口和继续训练入口。
 - 能力画像 v1：当前用户标签平均分、优势项、薄弱项、训练次数和错题次数。
+- LLM usage metering v1: records current-user LLM call metadata and estimated cost, with aggregation through `/api/me/usage/summary`.
 - 核心路径 E2E、视觉 QA 截图和 CI artifact。
 - Docker Compose 本地完整链路。
 

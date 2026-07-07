@@ -226,3 +226,18 @@ flowchart TB
 - 审计：记录登录、管理操作、题库审核、报告访问、数据导出。
 - 隐私：数据最小化、导出、删除、脱敏、保留期限。
 - 防护：rate limit、CSRF 视场景而定、CORS 收紧、输入大小限制、文件上传安全。
+## AI FinOps / Usage Ledger v1
+
+PR #35 adds the minimum AI FinOps foundation to the target architecture. The scope is internal metering only: no payments, no plans and no quota deduction.
+
+Completed in v1:
+
+- Added `llm_usage_records`, scoped by `user_id`.
+- Records `provider`, `model`, `feature`, token counts, `estimated_cost`, `pricing_version`, `latency_ms`, `status`, `request_id` and `session_id`.
+- `GET /api/me/usage/summary` returns only the current user's totals, current-month totals, feature breakdown, model breakdown and recent records.
+- The usage ledger does not store prompts, completions, answer text, tokens, secrets or verification codes.
+
+Target state:
+
+- The ledger can later support plans, quota checks, model cost dashboards, quality/cost comparison and abnormal usage alerts.
+- Enterprise usage still needs tenant-level aggregation, quota policy, real billing and audit logs. PR #35 does not include those capabilities.

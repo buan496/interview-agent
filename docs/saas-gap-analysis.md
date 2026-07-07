@@ -368,3 +368,28 @@
 - PR #33 已完成能力画像 v1，让历史得分、标签和错题数据进入更稳定的个性化训练基础。
 - PR #34 已补生产可观测性地基，让后续多人使用和复杂链路排障有 request_id 与结构化日志基础。
 - 后续应补组织/租户边界，这是从单用户 SaaS 走向企业级 SaaS 的关键数据安全前提。
+## PR #35 Update: LLM Usage and Cost Metering v1
+
+Status: partially complete.
+
+Completed:
+
+- Added `llm_usage_records`, bound to `user_id`.
+- Integrated usage recording into the answer scoring flow for actual LLM call attempts; local rule-based early returns do not create fake usage.
+- Successful calls record `status=success`; DeepSeek configuration or response failures that fall back locally record `status=failed` and `error_type`.
+- `GET /api/me/usage/summary` is strictly current-user scoped and returns total, current month, by feature, by model and recent records.
+- `estimated_cost` uses `pricing_version=llm-pricing-v1-2026-07` and is explicitly an estimate, not a bill.
+- The ledger does not store prompt text, model output text, user answer text, tokens, secrets, verification codes or full phone numbers.
+
+Still missing:
+
+- No payment system, plan system, quota deduction, rate limiting or real billing settlement.
+- No tenant or organization level usage summary.
+- No model quality/cost dashboard.
+- No abnormal usage alerting.
+
+Suggested follow-up PRs:
+
+- Organization / tenant model: add tenant scope before tenant-level usage reporting.
+- Quota and rate limit v1: build on the ledger after quota policy is designed.
+- Model cost dashboard: show cost, failure rate, latency and feature distribution.

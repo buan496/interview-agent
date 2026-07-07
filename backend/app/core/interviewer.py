@@ -166,6 +166,9 @@ def _normalize_result(raw: dict[str, Any], question: InterviewQuestion) -> Evalu
 class InterviewerEngine:
     def __init__(self, llm: LLMClient | None = None) -> None:
         self.llm = llm or DeepSeekLLM()
+        self.last_llm_call_attempted = False
+        self.last_llm_call_failed = False
+        self.last_llm_error_type: str | None = None
 
     async def evaluate_answer(
         self,
@@ -174,6 +177,9 @@ class InterviewerEngine:
         answer: str,
         depth: int,
     ) -> EvaluationResult:
+        self.last_llm_call_attempted = False
+        self.last_llm_call_failed = False
+        self.last_llm_error_type = None
         candidate_type = classify_candidate_input(answer)
         if any(word in answer.strip().lower() for word in SKIP_WORDS):
             return _fallback_verdict(question, 0.0, "候选人选择跳过。本题建议先掌握基础概念，再练习完整表达。")
@@ -192,9 +198,12 @@ class InterviewerEngine:
 
         prompt = build_evaluation_prompt(question, history, answer, depth)
         try:
+            self.last_llm_call_attempted = True
             raw = await self.llm.json_chat([ChatMessage(role="system", content=prompt)])
             result = _normalize_result(raw, question)
-        except (LLMConfigurationError, LLMResponseError):
+        except (LLMConfigurationError, LLMResponseError) as exc:
+            self.last_llm_call_failed = True
+            self.last_llm_error_type = exc.__class__.__name__
             result = self._local_fallback(question, answer, depth)
 
         return self._apply_transition_rules(question, result, depth)
