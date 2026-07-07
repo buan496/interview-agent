@@ -327,3 +327,23 @@ Interview value:
 
 - Shows that an AI SaaS system needs cost, latency, failure-rate and per-user usage traceability, not only runnable product features.
 - Explains why v1 starts with a ledger and summary API before introducing complex billing.
+
+## PR #37 Update: Release/CD Management v1
+
+Status: partially complete.
+
+Completed:
+
+- Added a manual release candidate workflow in `.github/workflows/release.yml`.
+- Added `docs/release-management.md` with environment layers, release checklist, migration gate, image tag strategy, rollback SOP and hotfix SOP.
+- Added `docs/release-evidence-template.md` for release records.
+- Release candidate workflow builds and validates candidate images but does not deploy production and does not push to a registry.
+- Existing GHCR image publishing no longer tags images as `latest`; release images use immutable release tags.
+
+Still missing:
+
+- No real production deployment.
+- No production secret provisioning flow.
+- No automated rollback execution.
+- No backup and restore automation.
+- No Kubernetes or external CD platform.

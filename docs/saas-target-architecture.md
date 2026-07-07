@@ -98,6 +98,12 @@ PR #36 adds a settings-layer configuration governance baseline. The backend grou
 
 This is intentionally local settings governance, not an external configuration platform. Vault, Apollo, Nacos, Kubernetes ConfigMap, runtime reload and release orchestration remain out of scope for the current codebase.
 
+### Release/CD Layer
+
+PR #37 adds the first release/CD management layer. The repository now has a manual release candidate workflow, release management SOP, release evidence template, migration gate, Docker image tag strategy and rollback procedure.
+
+This layer is governance only. It does not deploy production, does not require production secrets, does not introduce Kubernetes, and does not push release-candidate images to a registry. Existing CI remains the required quality gate before release candidate review.
+
 ## 前端架构
 
 当前已完成：

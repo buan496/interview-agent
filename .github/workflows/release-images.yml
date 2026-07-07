@@ -34,9 +34,7 @@ jobs:
           context: .
           file: backend/Dockerfile
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}/api:${{ github.ref_name }}
-            ghcr.io/${{ github.repository }}/api:latest
+          tags: ghcr.io/${{ github.repository }}/api:${{ github.ref_name }}
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
@@ -46,6 +44,4 @@ jobs:
           push: true
           build-args: |
             NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api' }}
-          tags: |
-            ghcr.io/${{ github.repository }}/frontend:${{ github.ref_name }}
-            ghcr.io/${{ github.repository }}/frontend:latest
+          tags: ghcr.io/${{ github.repository }}/frontend:${{ github.ref_name }}

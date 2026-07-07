@@ -418,3 +418,29 @@ Suggested follow-up PRs:
 - Production deployment blueprint: define how production secrets are supplied outside the repository.
 - Operational readiness checklist: add release-time config verification steps.
 - RBAC and tenant model: add tenant-aware configuration only after tenant boundaries exist.
+
+## PR #37 Update: Release/CD Management v1
+
+Status: partially complete.
+
+Completed:
+
+- Added a manual release candidate workflow with backend tests, frontend checks, optional E2E, Alembic migration gate, Docker Compose config and Docker builds.
+- Added release management documentation for local/test/staging/production environment layers.
+- Added release evidence template, rollback SOP, hotfix SOP, image tag strategy and migration checklist.
+- Existing release image publishing no longer emits mutable `latest` tags.
+
+Still missing:
+
+- No real production deployment.
+- No production secrets are configured or required by the release candidate workflow.
+- No automatic registry push from the release candidate workflow.
+- No backup automation or production migration execution.
+- No external CD platform or Kubernetes.
+
+Suggested follow-up PRs:
+
+- Backup and recovery runbook with restore drill.
+- Production deployment blueprint for the chosen runtime.
+- Registry publishing policy with protected tags and environment approvals.
+- Post-release smoke workflow for staging.
