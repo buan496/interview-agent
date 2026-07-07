@@ -227,6 +227,28 @@ class RadarItemOut(BaseModel):
     attempts: int
 
 
+class AbilityTagProfileOut(BaseModel):
+    tag_id: int
+    tag: str
+    category: str | None = None
+    average_score: Decimal
+    practice_count: int
+    wrong_count: int
+    mastery_level: Literal["strong", "stable", "weak"]
+    last_practiced_at: datetime | None = None
+
+
+class AbilityProfileOut(BaseModel):
+    overall_score: int | None = None
+    total_sessions: int
+    completed_sessions: int
+    total_questions: int
+    updated_at: datetime | None = None
+    strengths: list[AbilityTagProfileOut] = Field(default_factory=list)
+    weaknesses: list[AbilityTagProfileOut] = Field(default_factory=list)
+    tag_profiles: list[AbilityTagProfileOut] = Field(default_factory=list)
+
+
 class SubmissionCreate(BaseModel):
     submitter_name: str | None = Field(default=None, max_length=80)
     company_name: str = Field(min_length=2, max_length=100)

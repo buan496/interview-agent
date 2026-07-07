@@ -1,6 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 
-import type { PracticePlan, SessionDetail, SessionReport, TrainingHistoryItem } from "@/lib/types";
+import type { AbilityProfile, PracticePlan, SessionDetail, SessionReport, TrainingHistoryItem } from "@/lib/types";
 
 export const metadata = {
   companies: [{ id: 1, name: "General Co", region: "CN", tier: 1 }],
@@ -175,12 +175,67 @@ export const trainingHistory: TrainingHistoryItem[] = [
   },
 ];
 
+export const abilityProfile: AbilityProfile = {
+  overall_score: 76,
+  total_sessions: 3,
+  completed_sessions: 2,
+  total_questions: 5,
+  updated_at: "2026-07-06T00:18:00Z",
+  strengths: [
+    {
+      tag_id: 7,
+      tag: "Redis",
+      category: "knowledge",
+      average_score: 92,
+      practice_count: 3,
+      wrong_count: 0,
+      mastery_level: "strong",
+      last_practiced_at: "2026-07-06T00:18:00Z",
+    },
+  ],
+  weaknesses: [
+    {
+      tag_id: 8,
+      tag: "System Design",
+      category: "ability",
+      average_score: 58,
+      practice_count: 2,
+      wrong_count: 3,
+      mastery_level: "weak",
+      last_practiced_at: "2026-07-05T00:18:00Z",
+    },
+  ],
+  tag_profiles: [
+    {
+      tag_id: 7,
+      tag: "Redis",
+      category: "knowledge",
+      average_score: 92,
+      practice_count: 3,
+      wrong_count: 0,
+      mastery_level: "strong",
+      last_practiced_at: "2026-07-06T00:18:00Z",
+    },
+    {
+      tag_id: 8,
+      tag: "System Design",
+      category: "ability",
+      average_score: 58,
+      practice_count: 2,
+      wrong_count: 3,
+      mastery_level: "weak",
+      last_practiced_at: "2026-07-05T00:18:00Z",
+    },
+  ],
+};
+
 export async function mockBaseApis(page: Page, options?: { wrongBookEmpty?: boolean }) {
   await page.route("**/api/questions/meta", async (route) => route.fulfill({ json: metadata }));
   await page.route("**/api/me/wrong-book", async (route) => route.fulfill({ json: options?.wrongBookEmpty ? [] : wrongBookItems }));
   await page.route("**/api/me/radar", async (route) => route.fulfill({ json: [{ tag: "Redis", avg_score: 52, attempts: 2 }] }));
   await page.route("**/api/me/reports", async (route) => route.fulfill({ json: [{ session_id: 42, mode: "single", status: "finished", overall_score: 82, started_at: "2026-07-06T00:00:00Z", ended_at: "2026-07-06T00:18:00Z" }] }));
   await page.route("**/api/sessions/history**", async (route) => route.fulfill({ json: trainingHistory }));
+  await page.route("**/api/me/ability-profile", async (route) => route.fulfill({ json: abilityProfile }));
   await page.route("**/api/questions?**", async (route) => route.fulfill({ json: { items: [question], total: 1 } }));
   await page.route("**/api/me/practice-plan/today", async (route) => route.fulfill({ json: practicePlan }));
   await page.route("**/api/sessions/42/report", async (route) => route.fulfill({ json: sessionReport }));

@@ -67,6 +67,17 @@ test.describe("desktop visual smoke screenshots", () => {
     await capture(page, "history-desktop");
   });
 
+  test("captures ability desktop", async ({ page }) => {
+    await mockVisualApis(page);
+    await page.goto("/ability");
+
+    await expect(page.getByRole("heading", { name: "看清自己的优势和薄弱项，再决定下一轮训练" })).toBeVisible();
+    await expect(page.getByText("优势能力")).toBeVisible();
+    await expect(page.getByText("薄弱能力")).toBeVisible();
+
+    await capture(page, "ability-desktop");
+  });
+
   test("captures session desktop", async ({ page }) => {
     await mockVisualApis(page);
     await page.goto("/session/42");
@@ -133,6 +144,17 @@ test.describe("mobile visual smoke screenshots", () => {
     await expect(page.getByRole("link", { name: "继续训练" })).toBeVisible();
 
     await capture(page, "history-mobile");
+  });
+
+  test("captures ability mobile", async ({ page }) => {
+    await mockVisualApis(page);
+    await page.goto("/ability");
+
+    await expect(page.getByText("大厂面试训练 Agent")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "看清自己的优势和薄弱项，再决定下一轮训练" })).toBeVisible();
+    await expect(page.getByText("优势能力")).toBeVisible();
+
+    await capture(page, "ability-mobile");
   });
 
   test("captures session mobile", async ({ page }) => {

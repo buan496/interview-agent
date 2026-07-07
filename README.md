@@ -33,8 +33,9 @@
 - AI 追问与评分：后端通过 LLM 抽象层生成追问和评分；未配置真实模型时使用本地 fallback 便于跑通闭环。
 - 报告复盘：展示综合得分、能力诊断、题目复盘、参考答案和下一步训练建议。
 - 训练历史中心：按当前登录用户汇总历史 Session、状态、分数、报告入口和继续训练入口。
+- 能力画像：按当前登录用户聚合长期标签表现、优势项、薄弱项、训练次数和错题次数。
 - 错题本：沉淀低分题、失败次数、待复习题和重新训练入口。
-- 全局导航：统一进入今日训练、错题本和模拟面试。
+- 全局导航：统一进入今日训练、训练历史、能力画像、错题本和模拟面试。
 - 视觉 QA 与 E2E：覆盖核心链路、导航、移动端布局和截图证据。
 
 ## 技术栈
@@ -106,7 +107,7 @@ flowchart LR
 3. 点击“开始今日训练”或进入 `/mock` 创建模拟面试。
 4. 进入 `/session/{id}`，完成作答、提交回答并查看 AI 反馈。
 5. 训练结束后进入 `/report/{id}`，查看综合表现、题目复盘和下一步建议。
-6. 进入 `/history` 回看历史训练，或回到 `/practice` / `/wrong-book` 继续训练。
+6. 进入 `/history` 回看历史训练，进入 `/ability` 查看长期能力画像，或回到 `/practice` / `/wrong-book` 继续训练。
 
 ## 本地启动
 
@@ -172,6 +173,7 @@ GitHub Actions 当前包含：
 
 - Backend: `ruff check`、`compileall`、`unittest`
 - Backend isolation: 单元测试覆盖 Session、Report、WrongBook、Radar、PracticePlan 的 `user_id` 数据隔离回归场景。
+- Ability Profile: 后端测试覆盖当前用户画像聚合、空画像、优势/薄弱规则和跨用户隔离。
 - Frontend: `lint`、`typecheck`、`build`、Playwright E2E
 - Migrations: PostgreSQL 服务下执行 `alembic upgrade head`
 - Compose Config: `docker compose config --quiet`
@@ -184,6 +186,7 @@ GitHub Actions 当前包含：
 ## 工程亮点
 
 - 训练闭环产品主线：今日训练、模拟面试、答题 Session、报告复盘、错题本串成完整路径。
+- 长期训练沉淀：训练历史中心和能力画像 v1 将单次训练结果沉淀为可复盘的用户视角数据。
 - 蓝白品牌视觉系统：统一 Logo、导航、卡片、按钮、输入态和移动端布局。
 - 前后端分离：Next.js 前端通过 API client 调用 FastAPI 后端。
 - LLM 抽象层：支持真实 LLM 配置，也支持本地 fallback 保证演示和测试稳定。
@@ -213,6 +216,7 @@ docs                   产品设计、视觉验收和演示文档
 - `/session/{id}`：答题、追问、评分和结束态。
 - `/report/{id}`：报告复盘工作台。
 - `/history`：训练历史中心。
+- `/ability`：能力画像工作台。
 - `/wrong-book`：错题复盘和重新训练。
 - `/contribute`：用户投稿。
 - `/admin`：题目生成和人工审核。
@@ -226,8 +230,9 @@ docs                   产品设计、视觉验收和演示文档
 3. 进入 `/session/{id}`，说明答题状态、AI 反馈和下一步动作。
 4. 打开 `/report/{id}`，讲报告如何指导下一轮训练。
 5. 进入 `/history`，说明历史 Session、报告入口和继续训练如何沉淀长期复盘。
-6. 进入 `/wrong-book`，说明错题如何回流到训练闭环。
-7. 最后展示 CI、E2E 和视觉 QA，证明项目不是只做页面，而是有工程化质量保障。
+6. 进入 `/ability`，说明系统如何聚合优势项、薄弱项、标签表现和错题次数。
+7. 进入 `/wrong-book`，说明错题如何回流到训练闭环。
+8. 最后展示 CI、E2E 和视觉 QA，证明项目不是只做页面，而是有工程化质量保障。
 
 更完整的演示脚本见 [Product Demo Guide](docs/product-demo-guide.md)。
 
@@ -238,13 +243,14 @@ docs                   产品设计、视觉验收和演示文档
 - 蓝白品牌设计底座与核心页面统一。
 - 今日训练、模拟面试、答题 Session、报告复盘、错题本闭环。
 - 训练历史中心 v1：当前用户历史 Session、报告入口和继续训练入口。
+- 能力画像 v1：当前用户标签平均分、优势项、薄弱项、训练次数和错题次数。
 - 核心路径 E2E、视觉 QA 截图和 CI artifact。
 - Docker Compose 本地完整链路。
 
 计划中：
 
 - 更完整的用户体系和训练历史筛选 / 趋势分析。
-- Agent Memory 与更细粒度能力画像。
+- Agent Memory、画像趋势、画像版本和更细粒度岗位能力模型。
 - 多模型评分对比。
 - 报告导出和分享。
 - 题库管理体验增强。
