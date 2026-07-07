@@ -170,6 +170,7 @@ npm run test:e2e:visual
 GitHub Actions 当前包含：
 
 - Backend: `ruff check`、`compileall`、`unittest`
+- Backend isolation: 单元测试覆盖 Session、Report、WrongBook、Radar、PracticePlan 的 `user_id` 数据隔离回归场景。
 - Frontend: `lint`、`typecheck`、`build`、Playwright E2E
 - Migrations: PostgreSQL 服务下执行 `alembic upgrade head`
 - Compose Config: `docker compose config --quiet`
