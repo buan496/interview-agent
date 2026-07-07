@@ -55,7 +55,7 @@
 
 ### 关键 PR
 
-1. PR #33：Ability profile v1
+1. PR #33：Ability profile v1（已完成基础版）
 2. PR #44：Training timeline and filters
 3. PR #45：Ability trend visualization
 
@@ -68,19 +68,22 @@
 - `frontend/app/practice/page.tsx`
 - `frontend/app/report/[id]/page.tsx`
 - `frontend/app/history/page.tsx`
+- `frontend/app/ability/page.tsx`
 - `frontend/lib/stats-api.ts`
+- `frontend/lib/ability-profile-api.ts`
 - `frontend/lib/types.ts`
 
 ### 验收标准
 
 - 能按时间、模式、题型、能力维度查看训练历史。
-- 能力画像不只展示 tag 平均分，还包含趋势、最近训练次数和薄弱点排序。
+- 能力画像 v1 不只展示 tag 平均分，还包含训练次数、错题次数、优势项和薄弱项排序；趋势仍属于后续增强。
 - PracticePlan 可以引用更稳定的画像数据。
 - 页面不伪造不存在的数据。
 
 ### 测试要求
 
 - 后端画像计算测试。
+- 前端能力画像 E2E 和 visual smoke。
 - 前端历史筛选 E2E。
 - visual smoke 增加历史页截图。
 - API contract 更新。
@@ -267,7 +270,7 @@
 PR #30 认证生产化基础加固（已完成）
 PR #31 用户隔离回归测试（已完成）
 PR #32 训练历史中心（已完成基础版）
-PR #33 能力画像 v1
+PR #33 能力画像 v1（已完成基础版）
 PR #34 组织/租户模型
 PR #35 Agent Memory v1
 PR #36 Rubric 版本化
@@ -284,7 +287,8 @@ PR #43 隐私与数据保留
 
 最建议立即启动：
 
-1. PR #33：Ability profile v1
+1. PR #34：组织/租户模型
 2. 后续认证增强：真实短信服务商、验证码存储、错误次数限制和登录审计
+3. 后续能力画像增强：趋势、画像快照和岗位能力模型
 
-PR #33 会在训练历史中心之上继续补能力画像，为后续 Memory、租户模型和 RBAC 打下更清晰的数据边界。
+PR #33 已在训练历史中心之上补充能力画像 v1。下一步更适合补组织/租户边界，让企业级 SaaS 的数据隔离从 `user_id` 升级到更完整的 `tenant_id + user_id`。

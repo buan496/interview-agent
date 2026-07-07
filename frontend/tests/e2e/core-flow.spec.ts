@@ -25,9 +25,10 @@ test("completes practice to session to report and returns to today training", as
   await expect(page.getByText("Good structure. Add IO multiplexing").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "查看报告" }).first()).toBeVisible();
 
-  await page.locator('a[href="/report/42"]').first().click();
-
-  await expect(page).toHaveURL(/\/report\/42$/);
+  await Promise.all([
+    page.waitForURL(/\/report\/42$/),
+    page.getByRole("link", { name: "查看报告" }).first().click(),
+  ]);
   await expect(page.getByRole("heading", { name: "本轮面试报告" })).toBeVisible();
   await expect(page.getByText("综合得分").first()).toBeVisible();
   await expect(page.getByText("题目复盘")).toBeVisible();

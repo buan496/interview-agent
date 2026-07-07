@@ -159,6 +159,30 @@ export type TrainingHistoryItem = {
   next_action: "continue" | "view_report" | "review_wrong_book";
 };
 
+export type AbilityMasteryLevel = "strong" | "stable" | "weak";
+
+export type AbilityTagProfile = {
+  tag_id: number;
+  tag: string;
+  category?: string | null;
+  average_score: number | string;
+  practice_count: number;
+  wrong_count: number;
+  mastery_level: AbilityMasteryLevel;
+  last_practiced_at?: string | null;
+};
+
+export type AbilityProfile = {
+  overall_score?: number | null;
+  total_sessions: number;
+  completed_sessions: number;
+  total_questions: number;
+  updated_at?: string | null;
+  strengths: AbilityTagProfile[];
+  weaknesses: AbilityTagProfile[];
+  tag_profiles: AbilityTagProfile[];
+};
+
 export type PracticePlanTask = {
   id: string;
   type:

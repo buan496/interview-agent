@@ -18,6 +18,8 @@ This checklist protects the blue-white brand experience for the core AI intervie
 - `/mock`
 - `/session/{id}`
 - `/report/{id}`
+- `/history`
+- `/ability`
 - `/wrong-book`
 
 ## Automated Smoke Coverage
@@ -45,11 +47,15 @@ Expected files:
 - `login-desktop.png`
 - `practice-desktop.png`
 - `mock-desktop.png`
+- `history-desktop.png`
+- `ability-desktop.png`
 - `session-desktop.png`
 - `report-desktop.png`
 - `wrong-book-desktop.png`
 - `practice-mobile.png`
 - `mock-mobile.png`
+- `history-mobile.png`
+- `ability-mobile.png`
 - `session-mobile.png`
 - `report-mobile.png`
 - `wrong-book-mobile.png`
