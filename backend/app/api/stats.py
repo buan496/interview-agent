@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.api.auth import get_current_user
 from app.db import get_db
 from app.models import EvaluationResult, Question, QuestionTag, Session, Tag, User, UserTagStat, WrongBook
+from app.observability import log_event
 from app.schemas import AbilityProfileOut, AbilityTagProfileOut, RadarItemOut, ReportListItemOut, TagOut, WrongBookOut
 
 
@@ -33,6 +34,7 @@ async def wrong_book(
     if due == "today":
         stmt = stmt.where(WrongBook.next_review <= date.today())
     rows = (await db.execute(stmt)).all()
+    log_event("wrong_book.read", status="success", result_count=len(rows), due=due)
     return [
         WrongBookOut(
             question_id=question.id,
@@ -59,6 +61,7 @@ async def radar(
             .order_by(Tag.category, Tag.name)
         )
     ).all()
+    log_event("radar.read", status="success", result_count=len(rows))
     return [RadarItemOut(tag=tag.name, avg_score=stat.avg_score, attempts=stat.attempts) for stat, tag in rows]
 
 
@@ -152,6 +155,13 @@ async def ability_profile(
     ]
     updated_candidates.extend(item.last_practiced_at for item in tag_profiles if item.last_practiced_at is not None)
 
+    log_event(
+        "ability_profile.read",
+        status="success",
+        tag_count=len(tag_profiles),
+        total_sessions=len(session_rows),
+        completed_sessions=len(completed_sessions),
+    )
     return AbilityProfileOut(
         overall_score=overall_score,
         total_sessions=len(session_rows),
@@ -177,6 +187,7 @@ async def reports(
             .limit(50)
         )
     ).scalars().all()
+    log_event("reports.list", status="success", result_count=len(rows))
     return [
         ReportListItemOut(
             session_id=item.id,

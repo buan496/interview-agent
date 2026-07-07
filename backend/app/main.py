@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi import Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import admin, audio, auth, practice_plan, questions, sessions, stats, submissions
+from app.db import get_db
+from app.observability import install_observability
 from app.settings import get_settings
 
 
@@ -17,6 +22,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+install_observability(app, settings)
 
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(questions.router, prefix=settings.api_prefix)
@@ -30,4 +36,10 @@ app.include_router(audio.router, prefix=settings.api_prefix)
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {"service": settings.app_name, "status": "ok", "environment": settings.environment}
+
+
+@app.get("/ready")
+async def ready(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
+    await db.execute(text("SELECT 1"))
+    return {"service": settings.app_name, "status": "ready", "environment": settings.environment}
