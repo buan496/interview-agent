@@ -203,6 +203,7 @@ flowchart TB
 当前已完成：
 
 - Bearer token 认证。
+- 开发验证码已通过 `APP_ENV`、`AUTH_DEV_CODE_ENABLED`、`AUTH_DEV_CODE` 配置隔离；生产环境会拒绝默认 `000000` 和默认 `JWT_SECRET`。
 - 管理接口通过 `require_admin` 和 `ADMIN_PHONES` 限制。
 - 用户训练数据大多通过 `user_id` 过滤。
 - CI 有 Secret Scan。
@@ -210,7 +211,7 @@ flowchart TB
 当前不足：
 
 - Token 是自定义 HMAC 格式，不是标准 JWT 库实现。
-- 登录验证码固定为 `000000`，当前适合本地开发，不适合生产。
+- 真实短信服务商、验证码存储、过期校验、错误次数限制和重放保护仍未接入。
 - 没有 refresh token、设备管理、登录审计和会话撤销。
 - 权限模型只有 admin phone allowlist，没有角色/权限表。
 - 没有租户隔离、审计日志、数据导出/删除、隐私合规流程。
