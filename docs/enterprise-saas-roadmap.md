@@ -12,7 +12,7 @@
 
 1. PR #30：Production-ready auth hardening（已完成基础加固）
 2. PR #31：User data isolation regression tests（已完成基础回归测试）
-3. PR #32：Training history center v1
+3. PR #32：Training history center v1（已完成基础版）
 
 ### 涉及文件
 
@@ -266,7 +266,7 @@
 ```text
 PR #30 认证生产化基础加固（已完成）
 PR #31 用户隔离回归测试（已完成）
-PR #32 训练历史中心
+PR #32 训练历史中心（已完成基础版）
 PR #33 能力画像 v1
 PR #34 组织/租户模型
 PR #35 Agent Memory v1
@@ -284,7 +284,7 @@ PR #43 隐私与数据保留
 
 最建议立即启动：
 
-1. PR #32：Training history center v1
+1. PR #33：Ability profile v1
 2. 后续认证增强：真实短信服务商、验证码存储、错误次数限制和登录审计
 
-这两个 PR 投入相对可控，但能显著提升企业级可信度，并为后续训练历史、Memory、租户模型和 RBAC 打下边界。
+PR #33 会在训练历史中心之上继续补能力画像，为后续 Memory、租户模型和 RBAC 打下更清晰的数据边界。

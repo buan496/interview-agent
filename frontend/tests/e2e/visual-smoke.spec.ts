@@ -57,6 +57,16 @@ test.describe("desktop visual smoke screenshots", () => {
     await capture(page, "mock-desktop");
   });
 
+  test("captures history desktop", async ({ page }) => {
+    await mockVisualApis(page);
+    await page.goto("/history");
+
+    await expect(page.getByRole("heading", { name: "历史训练记录" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "查看报告" })).toBeVisible();
+
+    await capture(page, "history-desktop");
+  });
+
   test("captures session desktop", async ({ page }) => {
     await mockVisualApis(page);
     await page.goto("/session/42");
@@ -113,6 +123,16 @@ test.describe("mobile visual smoke screenshots", () => {
     await expect(page.getByRole("button", { name: "开始模拟面试" }).first()).toBeVisible();
 
     await capture(page, "mock-mobile");
+  });
+
+  test("captures history mobile", async ({ page }) => {
+    await mockVisualApis(page);
+    await page.goto("/history");
+
+    await expect(page.getByRole("heading", { name: "历史训练记录" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "继续训练" })).toBeVisible();
+
+    await capture(page, "history-mobile");
   });
 
   test("captures session mobile", async ({ page }) => {

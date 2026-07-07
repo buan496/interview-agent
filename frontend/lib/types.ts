@@ -144,6 +144,21 @@ export type ReportListItem = {
   ended_at?: string | null;
 };
 
+export type TrainingHistoryItem = {
+  session_id: number;
+  report_id?: number | null;
+  mode: string;
+  title: string;
+  status: string;
+  overall_score?: number | null;
+  question_count: number;
+  started_at: string;
+  completed_at?: string | null;
+  created_at: string;
+  weak_tags: string[];
+  next_action: "continue" | "view_report" | "review_wrong_book";
+};
+
 export type PracticePlanTask = {
   id: string;
   type:

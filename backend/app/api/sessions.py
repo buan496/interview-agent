@@ -4,7 +4,7 @@ import json
 from collections.abc import AsyncIterator
 from datetime import date, datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +24,7 @@ from app.schemas import (
     RadarItemOut,
     ReportQuestionOut,
     SessionDetailOut,
+    TrainingHistoryItemOut,
     SessionQuestionOut,
     SessionReportOut,
     TagOut,
@@ -224,6 +225,83 @@ async def create_session(
         deadline_at=session.deadline_at,
         remaining_seconds=_remaining_seconds(session, now),
     )
+
+
+def _history_next_action(session: Session) -> str:
+    if session.status == "finished":
+        return "view_report"
+    if session.status in ACTIVE_SESSION_STATUSES:
+        return "continue"
+    return "review_wrong_book"
+
+
+def _history_weak_tags(session: Session) -> list[str]:
+    report = session.report or {}
+    questions = report.get("questions", []) if isinstance(report, dict) else []
+    weak_tags: list[str] = []
+    if isinstance(questions, list):
+        for item in questions:
+            if not isinstance(item, dict) or item.get("mastery") not in {"weak", "fail"}:
+                continue
+            for tag in item.get("tags", []) or []:
+                if isinstance(tag, dict) and isinstance(tag.get("name"), str) and tag["name"] not in weak_tags:
+                    weak_tags.append(tag["name"])
+    radar = report.get("radar", []) if isinstance(report, dict) else []
+    if isinstance(radar, list):
+        for item in radar:
+            if not isinstance(item, dict):
+                continue
+            score = item.get("avg_score", 100)
+            tag = item.get("tag")
+            if isinstance(tag, str) and isinstance(score, (int, float)) and score < 70 and tag not in weak_tags:
+                weak_tags.append(tag)
+    return weak_tags[:5]
+
+
+def _history_title(session: Session) -> str:
+    first_question = next((item for item in sorted(session.questions, key=lambda value: value.order_no) if item.question), None)
+    if first_question:
+        return first_question.question.title
+    return "模拟面试" if session.mode == "mock" else "单题训练"
+
+
+def _history_item(session: Session) -> TrainingHistoryItemOut:
+    report = session.report or {}
+    overall_score = report.get("overall_score") if isinstance(report, dict) else None
+    return TrainingHistoryItemOut(
+        session_id=session.id,
+        report_id=session.id if session.status == "finished" else None,
+        mode=session.mode,
+        title=_history_title(session),
+        status=session.status,
+        overall_score=int(overall_score) if overall_score is not None else None,
+        question_count=session.total_questions,
+        started_at=session.started_at,
+        completed_at=session.ended_at or session.finished_at,
+        created_at=session.started_at,
+        weak_tags=_history_weak_tags(session),
+        next_action=_history_next_action(session),
+    )
+
+
+@router.get("/history", response_model=list[TrainingHistoryItemOut])
+async def training_history(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[TrainingHistoryItemOut]:
+    rows = (
+        await db.execute(
+            select(Session)
+            .where(Session.user_id == current_user.id)
+            .options(selectinload(Session.questions).selectinload(SessionQuestion.question))
+            .order_by(Session.started_at.desc(), Session.id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+    ).scalars().all()
+    return [_history_item(session) for session in rows]
 
 
 @router.get("/{session_id}", response_model=SessionDetailOut)
