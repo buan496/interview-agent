@@ -21,6 +21,7 @@
 | WrongBook 绑定用户 | 已完成基础版 | `WrongBook` 主键为 `user_id + question_id`；查询按当前用户过滤 |
 | 能力统计 | 部分完成 | `UserTagStat` 按 `user_id + tag_id` 记录平均分和次数 |
 | 今日计划 | 部分完成 | `PracticePlan` 按 `user_id + plan_date` 唯一；可基于错题、弱标签、报告行动项生成任务 |
+| 用户数据隔离测试 | 已完成基础版 | `backend/tests/test_user_data_isolation.py` 覆盖 Session、Report、WrongBook、Radar、PracticePlan 跨用户隔离 |
 | 题库与投稿 | 部分完成 | `questions`、`question_submissions`、`admin/submissions`、`admin/generate` |
 | LLM fallback | 已完成基础版 | `DeepSeekLLM` 与 `MockLLM`，未配置模型时可跑通 |
 | E2E 核心路径 | 已完成基础版 | `frontend/tests/e2e/core-flow.spec.ts`、`navigation.spec.ts`、`visual-smoke.spec.ts` |
@@ -49,7 +50,7 @@
 
 建议下一步：
 
-- PR #31：User data isolation regression tests，先固化已有用户数据边界。
+- PR #31 已补充 User data isolation regression tests，固化已有用户数据边界。
 - 后续认证增强：接入真实短信服务、验证码存储、过期、错误次数、rate limit、标准 JWT 或 OIDC。
 
 ### 后端数据是否按 user_id 隔离？
@@ -63,17 +64,18 @@
 - `_answer_stream` 二次校验 `sq.session.user_id != user_id` 时拒绝。
 - `WrongBook`、`UserTagStat`、`PracticePlan` 都包含 `user_id`。
 - `stats.py` 中 wrong-book、radar、reports 均按当前用户过滤。
+- `backend/tests/test_user_data_isolation.py` 已覆盖 A 用户无法读取或写入 B 用户 Session/Report，并验证 wrong-book、radar、reports、practice-plan 只返回当前 token 用户数据。
 
 缺口：
 
 - 题库是全局共享，没有 tenant/organization 维度。
 - 投稿 `QuestionSubmission` 没有绑定提交用户 id，仅有 `submitter_name`。
-- 没有系统级测试覆盖“用户 A 不能访问用户 B 的 Session/Report/WrongBook”。
+- 已有系统级回归测试覆盖“用户 A 不能访问用户 B 的 Session/Report/WrongBook/UserTagStat/PracticePlan”基础场景。
 - 没有租户级隔离。
 
 建议下一步：
 
-- PR #31：User data isolation regression tests。先补跨用户访问测试。
+- PR #32：Training history center。继续补训练历史中心。
 - PR #34：Organization and tenant model。再引入组织/租户维度。
 
 ### Session / Report / WrongBook 是否绑定真实用户？
@@ -318,8 +320,8 @@
 
 | 优先级 | 缺口 | 风险等级 | 为什么重要 | 建议 PR |
 | --- | --- | --- | --- | --- |
-| P0 | 缺少跨用户隔离回归测试 | 高 | 当前有隔离逻辑，但需要测试防回归 | #31 |
 | P1 | 未接入真实短信和验证码存储 | 高 | 生产环境不能依赖开发验证码，需要可审计的验证码生命周期 | 后续认证增强 |
+| P1 | 当前隔离粒度仅为 user_id | 高 | 企业级 SaaS 还需要 organization/tenant 边界 | #34 |
 | P1 | 缺少训练历史中心 | 中 | SaaS 用户需要长期复盘和趋势 | #32 |
 | P1 | 能力画像过粗 | 中 | 个性化训练质量依赖画像质量 | #33 |
 | P1 | 缺少组织/租户模型 | 高 | 企业级 SaaS 需要组织和数据边界 | #34 |
@@ -335,20 +337,20 @@
 
 ## 建议修复顺序
 
-1. PR #31：补用户数据隔离回归测试，防止后续重构破坏数据边界。
-2. PR #32：做训练历史中心，让 SaaS 用户能查看长期训练记录。
-3. PR #33：扩展能力画像，为 Agent Memory 和个性化训练打基础。
-4. PR #34：引入组织/租户模型，支撑企业级 SaaS。
-5. PR #35：引入 Agent Memory v1。
-6. 后续认证增强：接入真实短信/OIDC、验证码存储、错误次数限制和登录审计。
-7. PR #36-#39：补评分、题库、权限、审计。
-8. PR #40-#43：补可观测性、部署、备份、隐私。
+1. PR #32：做训练历史中心，让 SaaS 用户能查看长期训练记录。
+2. PR #33：扩展能力画像，为 Agent Memory 和个性化训练打基础。
+3. PR #34：引入组织/租户模型，支撑企业级 SaaS。
+4. PR #35：引入 Agent Memory v1。
+5. 后续认证增强：接入真实短信/OIDC、验证码存储、错误次数限制和登录审计。
+6. PR #36-#39：补评分、题库、权限、审计。
+7. PR #40-#43：补可观测性、部署、备份、隐私。
 
 ## 当前最应该做什么
 
-下一步最应该做 PR #31。
+下一步最应该做 PR #32。
 
 原因：
 
 - PR #30 已完成认证生产化基础加固，把开发验证码和生产环境边界拆清楚。
-- PR #31 用测试固化已有 user_id 隔离，投入小、风险收益高，并能保护后续重构。
+- PR #31 已用测试固化已有 user_id 隔离，投入小、风险收益高，并能保护后续重构。
+- PR #32 开始补训练历史中心，让用户能长期回看训练记录和报告沉淀。
