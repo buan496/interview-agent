@@ -171,6 +171,7 @@ flowchart TB
 - 前端 E2E 位于 `frontend/tests/e2e`，覆盖核心训练链路、导航、mock 创建、视觉截图。
 - 本地 CI 脚本 `scripts/ci-local.ps1` 覆盖后端 lint/compile/unit、前端 lint/typecheck/build/e2e、Compose config。
 - GitHub Actions 覆盖 Backend、Frontend、Migrations、Compose Config、Docker Build、Secret Scan。
+- 生产可观测性基础版已覆盖 `X-Request-ID`、结构化请求日志、统一 500 响应、`/health`、`/ready` 和关键业务事件日志。
 
 目标形态：
 
@@ -178,6 +179,7 @@ flowchart TB
 - 增加多租户测试：租户 A 不能访问租户 B 的数据和题库。
 - 增加 Rubric 版本兼容测试。
 - 增加审计日志测试。
+- 增加 metrics、trace propagation 和告警规则测试。
 - 增加迁移回滚/备份恢复演练。
 - 增加生产构建部署 smoke test。
 
@@ -187,14 +189,15 @@ flowchart TB
 
 - Docker Compose 本地完整链路：frontend、api、worker、postgres、redis。
 - CI 做 Docker image build check。
-- 当前仓库没有生产环境部署清单、域名、TLS、监控、备份或恢复脚本。
+- 后端已有 `/health` 和 `/ready`，请求日志包含 `request_id`、method、path、status、duration，500 响应包含 `request_id`。
+- 当前仓库没有生产环境部署清单、域名、TLS、外部监控、备份或恢复脚本。
 
 目标形态：
 
 - 生产环境容器平台：云服务、Kubernetes、ECS、Fly.io、Render 或类似平台。
 - 托管 PostgreSQL、托管 Redis、对象存储。
 - TLS、域名、CORS、环境变量和密钥管理。
-- 日志、指标、链路追踪和告警。
+- 指标、链路追踪、日志采集和告警平台。
 - 数据库备份、恢复演练和迁移策略。
 - 灰度发布和回滚机制。
 

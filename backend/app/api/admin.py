@@ -12,6 +12,7 @@ from app.db import get_db
 from app.ingest.generator import generate_from_jd
 from app.ingest.review_queue import precheck_question
 from app.models import Company, Position, Question, QuestionSubmission, QuestionTag, Tag
+from app.observability import log_event
 from app.schemas import (
     GenerateFromJdRequest,
     GeneratedSubmissionOut,
@@ -25,6 +26,7 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 
 @router.get("/health")
 async def admin_health() -> dict[str, str]:
+    log_event("admin.health", status="success")
     return {"status": "ready"}
 
 
@@ -37,6 +39,7 @@ async def list_submissions(
     if status:
         stmt = stmt.where(QuestionSubmission.status == status)
     rows = (await db.execute(stmt.order_by(QuestionSubmission.created_at.desc()).limit(200))).scalars().all()
+    log_event("admin.submissions.list", status="success", review_status=status, result_count=len(rows))
     return [SubmissionOut.model_validate(item) for item in rows]
 
 
@@ -78,8 +81,10 @@ async def review_submission(
 ) -> SubmissionOut:
     submission = await db.get(QuestionSubmission, submission_id)
     if not submission:
+        log_event("admin.submission.review", status="not_found", submission_id=submission_id, action=request.action)
         raise HTTPException(status_code=404, detail="Submission not found")
     if submission.status not in {"pending_review", "rejected"}:
+        log_event("admin.submission.review", status="conflict", submission_id=submission_id, action=request.action)
         raise HTTPException(status_code=409, detail="Submission has already been approved")
 
     if request.action == "reject":
@@ -91,6 +96,7 @@ async def review_submission(
             await db.execute(select(Question).where(Question.title == submission.title))
         ).scalar_one_or_none()
         if duplicate:
+            log_event("admin.submission.review", status="duplicate_title", submission_id=submission_id, action=request.action)
             raise HTTPException(status_code=409, detail="Question with the same title already exists")
         embedding_service = EmbeddingService()
         submission_embedding = await embedding_service.embed_question(submission.title, submission.body)
@@ -101,6 +107,13 @@ async def review_submission(
         ]
         duplicate_check = await embedding_service.check_duplicate(submission_embedding, candidate_embeddings)
         if duplicate_check.is_duplicate:
+            log_event(
+                "admin.submission.review",
+                status="duplicate_embedding",
+                submission_id=submission_id,
+                action=request.action,
+                matched_question_id=duplicate_check.matched_question_id,
+            )
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -134,6 +147,7 @@ async def review_submission(
 
     await db.commit()
     await db.refresh(submission)
+    log_event("admin.submission.review", status="success", submission_id=submission.id, action=request.action)
     return SubmissionOut.model_validate(submission)
 
 
@@ -164,4 +178,5 @@ async def generate_submissions(
     await db.commit()
     for item in submissions:
         await db.refresh(item)
+    log_event("admin.submissions.generate", status="success", generated_count=len(submissions))
     return GeneratedSubmissionOut(items=[SubmissionOut.model_validate(item) for item in submissions])

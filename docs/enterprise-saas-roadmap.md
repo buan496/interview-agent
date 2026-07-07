@@ -185,15 +185,17 @@
 
 ### 关键 PR
 
-1. PR #38：RBAC and organization membership
-2. PR #39：Audit log foundation
-3. PR #40：Observability foundation
-4. PR #43：Privacy and data retention design
+1. PR #34：Production observability foundation（已完成基础版）
+2. PR #38：RBAC and organization membership
+3. PR #39：Audit log foundation
+4. PR #40：Observability metrics and tracing
+5. PR #43：Privacy and data retention design
 
 ### 涉及文件
 
 - `backend/app/models.py`
 - `backend/app/main.py`
+- `backend/app/observability.py`
 - `backend/app/api/auth.py`
 - `backend/app/api/admin.py`
 - `backend/app/settings.py`
@@ -206,8 +208,8 @@
 
 - 有组织、成员、角色、权限基础模型。
 - 管理操作、报告访问、题库审核有审计记录。
-- 每个请求有 request id。
-- 有结构化日志和基础 metrics 设计。
+- 每个请求有 request id，响应返回 `X-Request-ID`。
+- 有结构化请求日志和关键业务事件日志；metrics 和 tracing 属于后续增强。
 - 有数据导出、删除、保留期限和脱敏策略文档。
 
 ### 测试要求
@@ -215,6 +217,8 @@
 - RBAC 权限矩阵测试。
 - 审计日志写入测试。
 - request id 传播测试。
+- 500 错误 request_id 测试。
+- 日志敏感信息保护测试。
 - 隐私操作测试或 runbook。
 
 ### 面试讲解价值
@@ -271,13 +275,13 @@ PR #30 认证生产化基础加固（已完成）
 PR #31 用户隔离回归测试（已完成）
 PR #32 训练历史中心（已完成基础版）
 PR #33 能力画像 v1（已完成基础版）
-PR #34 组织/租户模型
+PR #34 生产可观测性地基（已完成基础版）
 PR #35 Agent Memory v1
 PR #36 Rubric 版本化
 PR #37 题库管理 v1
 PR #38 RBAC
 PR #39 审计日志
-PR #40 可观测性
+PR #40 指标与链路追踪
 PR #41 生产部署蓝图
 PR #42 备份恢复
 PR #43 隐私与数据保留
@@ -287,8 +291,9 @@ PR #43 隐私与数据保留
 
 最建议立即启动：
 
-1. PR #34：组织/租户模型
-2. 后续认证增强：真实短信服务商、验证码存储、错误次数限制和登录审计
-3. 后续能力画像增强：趋势、画像快照和岗位能力模型
+1. 组织/租户模型：把当前 `user_id` 隔离升级到 `tenant_id + user_id`。
+2. 后续认证增强：真实短信服务商、验证码存储、错误次数限制和登录审计。
+3. 后续能力画像增强：趋势、画像快照和岗位能力模型。
+4. PR #40：在 request_id 基础上补 metrics、trace propagation 和告警设计。
 
-PR #33 已在训练历史中心之上补充能力画像 v1。下一步更适合补组织/租户边界，让企业级 SaaS 的数据隔离从 `user_id` 升级到更完整的 `tenant_id + user_id`。
+PR #34 已先补生产可观测性地基，让后续多用户、多租户和 Agent Memory 改造具备基础排障能力。下一步更适合补组织/租户边界。

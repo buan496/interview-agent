@@ -122,6 +122,7 @@ docker compose -p interview-agent up --build
 
 - Frontend: http://localhost:3000
 - API health: http://localhost:8000/health
+- API readiness: http://localhost:8000/ready
 - API docs: http://localhost:8000/docs
 
 默认说明：
@@ -174,6 +175,7 @@ GitHub Actions 当前包含：
 - Backend: `ruff check`、`compileall`、`unittest`
 - Backend isolation: 单元测试覆盖 Session、Report、WrongBook、Radar、PracticePlan 的 `user_id` 数据隔离回归场景。
 - Ability Profile: 后端测试覆盖当前用户画像聚合、空画像、优势/薄弱规则和跨用户隔离。
+- Observability: 后端测试覆盖 `X-Request-ID`、统一 500 响应、`/health`、`/ready` 和日志敏感信息保护。
 - Frontend: `lint`、`typecheck`、`build`、Playwright E2E
 - Migrations: PostgreSQL 服务下执行 `alembic upgrade head`
 - Compose Config: `docker compose config --quiet`
@@ -182,6 +184,7 @@ GitHub Actions 当前包含：
 - Visual Artifact: 上传 `frontend/test-results/visual/` 截图证据
 
 更多视觉验收标准见 [Frontend Visual QA](docs/frontend-visual-qa.md)。
+可观测性排障说明见 [Observability Foundation](docs/observability.md)。
 
 ## 工程亮点
 
@@ -190,6 +193,7 @@ GitHub Actions 当前包含：
 - 蓝白品牌视觉系统：统一 Logo、导航、卡片、按钮、输入态和移动端布局。
 - 前后端分离：Next.js 前端通过 API client 调用 FastAPI 后端。
 - LLM 抽象层：支持真实 LLM 配置，也支持本地 fallback 保证演示和测试稳定。
+- 生产可观测性地基：每个请求返回 `X-Request-ID`，后端输出结构化 JSON 日志，关键训练链路有业务事件日志。
 - 核心链路 E2E：覆盖 practice -> session -> report -> practice、wrong-book 回流、mock 创建等路径。
 - 视觉 QA：为核心页面生成桌面端和移动端截图，并检查无横向溢出。
 - CI 质量门禁：代码检查、类型检查、构建、迁移、Docker 构建、E2E 和 secret scan。

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.auth import get_current_user
 from app.db import get_db
 from app.models import EvaluationResult, PracticePlan, Question, Session, Tag, User, UserTagStat, WrongBook
+from app.observability import log_event
 from app.schemas import PracticePlanOut, PracticePlanTaskOut
 
 
@@ -333,6 +334,7 @@ async def today_practice_plan(
         plan = await _build_plan(db, current_user, today)
     else:
         plan = await _sync_resume_task(db, plan, current_user)
+    log_event("practice_plan.read", status="success", plan_id=plan.id, completed=plan.completed, task_count=len(plan.recommended_tasks))
     return _plan_out(plan)
 
 
@@ -346,8 +348,10 @@ async def complete_practice_plan(
         await db.execute(select(PracticePlan).where(PracticePlan.id == plan_id, PracticePlan.user_id == current_user.id))
     ).scalar_one_or_none()
     if not plan:
+        log_event("practice_plan.complete", status="not_found", plan_id=plan_id)
         raise HTTPException(status_code=404, detail="Practice plan not found")
     plan.completed = True
     await db.commit()
     await db.refresh(plan)
+    log_event("practice_plan.complete", status="success", plan_id=plan.id)
     return _plan_out(plan)

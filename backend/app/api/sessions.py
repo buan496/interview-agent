@@ -15,6 +15,7 @@ from app.core.interviewer import ConversationMessage, InterviewerEngine, Intervi
 from app.core.scheduler import target_question_count, target_type_counts
 from app.db import SessionLocal, get_db
 from app.models import EvaluationResult, Message, Question, QuestionTag, Session, SessionQuestion, User, UserTagStat, WrongBook
+from app.observability import log_event
 from app.schemas import (
     AnswerRequest,
     CreateSessionOut,
@@ -179,6 +180,7 @@ async def create_session(
         else [question] if (question := await _select_question(db, request)) else []
     )
     if not questions:
+        log_event("session.create", status="not_found", mode=request.mode)
         raise HTTPException(status_code=404, detail="No active question matched filters")
 
     now = _now()
@@ -217,6 +219,7 @@ async def create_session(
     assert first_sq is not None
     db.add(Message(sq_id=first_sq.id, role="interviewer", content=questions[0].title, msg_type="question"))
     await db.commit()
+    log_event("session.create", status="success", session_id=session.id, mode=session.mode, question_count=len(questions))
     return CreateSessionOut(
         session_id=session.id,
         first_question=_first_question(questions[0], first_sq.id),
@@ -301,7 +304,9 @@ async def training_history(
             .limit(limit)
         )
     ).scalars().all()
-    return [_history_item(session) for session in rows]
+    items = [_history_item(session) for session in rows]
+    log_event("session.history.read", status="success", result_count=len(items), limit=limit, offset=offset)
+    return items
 
 
 @router.get("/{session_id}", response_model=SessionDetailOut)
@@ -325,10 +330,12 @@ async def get_session(
         )
     ).scalar_one_or_none()
     if not session:
+        log_event("session.read", status="not_found", session_id=session_id)
         raise HTTPException(status_code=404, detail="Session not found")
     now = _now()
     if _expire_if_needed(session, now):
         await db.commit()
+        log_event("session.expire", status="success", session_id=session.id)
     questions = []
     for sq in sorted(session.questions, key=lambda item: item.order_no):
         messages = sorted(sq.messages, key=lambda item: item.id)
@@ -346,6 +353,7 @@ async def get_session(
                 messages=[MessageOut.model_validate(message) for message in messages],
             )
         )
+    log_event("session.read", status="success", session_id=session.id, session_status=session.status)
     return SessionDetailOut(
         session_id=session.id,
         mode=session.mode,
@@ -537,9 +545,12 @@ async def get_report(
         )
     ).scalar_one_or_none()
     if not session:
+        log_event("report.read", status="not_found", session_id=session_id)
         raise HTTPException(status_code=404, detail="Session not found")
     if session.status != "finished":
+        log_event("report.read", status="not_ready", session_id=session_id, session_status=session.status)
         raise HTTPException(status_code=409, detail="Session is not finished")
+    log_event("report.read", status="success", session_id=session.id)
     return _report_out(session)
 
 
@@ -664,6 +675,12 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
                 )
             ).scalar_one()
             refreshed.report = _build_report(refreshed)
+            log_event(
+                "report.generate",
+                status="success",
+                session_id=refreshed.id,
+                overall_score=refreshed.report.get("overall_score") if isinstance(refreshed.report, dict) else None,
+            )
         await db.commit()
 
     for char in content:
@@ -699,15 +716,20 @@ async def answer(
     )
     result = row.first()
     if result is None:
+        log_event("answer.submit", status="not_found", session_id=session_id, sq_id=request.sq_id)
         raise HTTPException(status_code=404, detail="Session question not found")
     session, sq = result
     try:
         _assert_answerable(session)
     except HTTPException:
         await db.commit()
+        log_event("answer.submit", status="not_answerable", session_id=session_id, sq_id=request.sq_id, session_status=session.status)
         raise
     if sq.status in {"scored", "skipped", "timeout"} or sq.finished_at:
+        log_event("answer.submit", status="conflict", session_id=session_id, sq_id=request.sq_id, question_status=sq.status)
         raise HTTPException(status_code=409, detail="Question is already finished")
     if sq.status != "answering":
+        log_event("answer.submit", status="conflict", session_id=session_id, sq_id=request.sq_id, question_status=sq.status)
         raise HTTPException(status_code=409, detail="Question is not active")
+    log_event("answer.submit", status="accepted", session_id=session_id, sq_id=request.sq_id)
     return StreamingResponse(_answer_stream(session_id, current_user.id, request), media_type="text/event-stream")

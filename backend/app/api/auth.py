@@ -7,13 +7,14 @@ import json
 import time
 from typing import Protocol
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models import User
+from app.observability import log_event, mask_phone, set_user_context
 from app.settings import Settings, get_settings
 
 
@@ -114,12 +115,17 @@ async def _get_or_create_user(db: AsyncSession, phone: str) -> User:
 async def get_current_user(
     authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
+    request: Request = None,
 ) -> User:
     payload = _decode(_bearer_token(authorization))
     phone = str(payload.get("sub") or "")
     if not phone:
         raise HTTPException(status_code=401, detail="Invalid token subject")
-    return await _get_or_create_user(db, phone)
+    user = await _get_or_create_user(db, phone)
+    set_user_context(user.id)
+    if request is not None:
+        request.state.user_id = user.id
+    return user
 
 
 async def require_admin(current_user: User = Depends(get_current_user)) -> User:
@@ -133,21 +139,32 @@ async def request_code(request: RequestCodeRequest) -> dict[str, str | int]:
     settings = get_settings()
     _ensure_auth_config(settings)
     if settings.is_production and not settings.sms_provider_key:
+        log_event("auth.request_code", status="failed", phone=mask_phone(request.phone), reason="sms_provider_missing")
         raise HTTPException(status_code=503, detail="SMS provider is not configured")
     response: dict[str, str | int] = {"status": "sent", "expires_in": 300}
     if settings.auth_dev_code_enabled and not settings.is_production:
         response["development_code"] = settings.auth_dev_code
+    log_event("auth.request_code", status="success", phone=mask_phone(request.phone), dev_code_enabled=settings.auth_dev_code_enabled)
     return response
 
 
 @router.post("/login")
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)) -> dict[str, str | int]:
+async def login(
+    request: LoginRequest,
+    db: AsyncSession = Depends(get_db),
+    http_request: Request = None,
+) -> dict[str, str | int]:
     settings = get_settings()
     if not verify_sms_code(request.phone, request.code, settings):
+        log_event("auth.login", status="failed", phone=mask_phone(request.phone), reason="invalid_code")
         raise HTTPException(status_code=401, detail="Invalid verification code")
     user = await _get_or_create_user(db, request.phone)
+    set_user_context(user.id)
+    if http_request is not None:
+        http_request.state.user_id = user.id
     expires_in = settings.access_token_expire_minutes * 60
     token = _encode({"sub": request.phone, "uid": user.id, "exp": int(time.time()) + expires_in})
+    log_event("auth.login", status="success", phone=mask_phone(request.phone), user_id=user.id)
     return {"access_token": token, "token_type": "bearer", "expires_in": expires_in}
 
 

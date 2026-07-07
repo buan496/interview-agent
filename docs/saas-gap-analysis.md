@@ -264,17 +264,22 @@
 
 ### 是否有监控和可观测性？
 
-状态：未完成。
+状态：部分完成，基础版已完成。
 
 事实：
 
+- `backend/app/observability.py` 提供 request_id 中间件、结构化 JSON 日志、HTTPException 统一 `request_id` 响应和 500 兜底响应。
+- 每个请求返回 `X-Request-ID`，客户端传入时服务端会规范化并复用。
+- `/health` 是轻量存活检查，`/ready` 会执行数据库 `SELECT 1`。
+- 核心事件已覆盖登录、Session、answer、report、history、ability profile、practice plan 和 admin 基础访问。
+- `backend/tests/test_observability.py` 覆盖 request_id、500 响应、health/ready 和 Authorization token 不进日志。
 - `docker-compose.yml` 没有 Prometheus/Grafana。
 - `backend/app/main.py` 当前未暴露 metrics endpoint。
-- CI 有测试和构建，但没有运行时指标、日志聚合、trace id。
+- CI 有测试和构建，但没有运行时指标、日志聚合平台和完整 trace propagation。
 
 建议下一步：
 
-- PR #40：Observability foundation。增加 request id、结构化日志、health/metrics 设计。
+- PR #40：Observability metrics and tracing。在 request_id 基础上增加 metrics、trace propagation 和告警设计。
 
 ### 是否有生产部署方案？
 
@@ -327,33 +332,33 @@
 | 优先级 | 缺口 | 风险等级 | 为什么重要 | 建议 PR |
 | --- | --- | --- | --- | --- |
 | P1 | 未接入真实短信和验证码存储 | 高 | 生产环境不能依赖开发验证码，需要可审计的验证码生命周期 | 后续认证增强 |
-| P1 | 当前隔离粒度仅为 user_id | 高 | 企业级 SaaS 还需要 organization/tenant 边界 | #34 |
+| P1 | 当前隔离粒度仅为 user_id | 高 | 企业级 SaaS 还需要 organization/tenant 边界 | 后续租户模型 |
 | P1 | 训练历史中心仍缺筛选和趋势 | 中 | SaaS 用户需要长期复盘、筛选和趋势分析 | 后续历史增强 |
 | P1 | 能力画像 v1 仍缺趋势和岗位模型 | 中 | 个性化训练质量依赖更稳定的长期画像 | 后续画像增强 |
-| P1 | 缺少组织/租户模型 | 高 | 企业级 SaaS 需要组织和数据边界 | #34 |
+| P1 | 缺少组织/租户模型 | 高 | 企业级 SaaS 需要组织和数据边界 | 后续租户模型 |
 | P1 | 缺少 Agent Memory | 中 | Agent 训练系统的差异化核心 | #35 |
 | P2 | Rubric 未版本化 | 中 | 评分一致性、回放和解释性不足 | #36 |
 | P2 | 题库管理后台不完整 | 中 | 内容运营和质量治理能力不足 | #37 |
 | P2 | RBAC 不完整 | 高 | 角色和资源权限无法支持企业场景 | #38 |
 | P2 | 审计日志缺失 | 高 | 管理操作和敏感数据访问不可追踪 | #39 |
-| P3 | 可观测性缺失 | 中 | 上线后排障和稳定性不足 | #40 |
+| P3 | 可观测性仅有基础版 | 中 | 上线后还需要 metrics、trace 和告警 | #40 |
 | P3 | 生产部署蓝图缺失 | 中 | 无法形成可复用上线方案 | #41 |
 | P3 | 备份恢复缺失 | 高 | 数据丢失风险不可接受 | #42 |
 | P3 | 隐私与数据保留缺失 | 高 | 用户回答和手机号属于敏感数据 | #43 |
 
 ## 建议修复顺序
 
-1. PR #34：引入组织/租户模型，支撑企业级 SaaS。
+1. 后续租户模型：引入组织/租户边界，支撑企业级 SaaS。
 2. PR #35：引入 Agent Memory v1。
 3. 后续能力画像增强：补趋势、画像快照和岗位能力模型。
 4. 后续认证增强：接入真实短信/OIDC、验证码存储、错误次数限制和登录审计。
 5. 后续历史增强：补筛选、趋势和完整 timeline。
 6. PR #36-#39：补评分、题库、权限、审计。
-7. PR #40-#43：补可观测性、部署、备份、隐私。
+7. PR #40-#43：补 metrics/tracing、部署、备份、隐私。
 
 ## 当前最应该做什么
 
-下一步最应该做 PR #34。
+下一步最应该做组织/租户模型。
 
 原因：
 
@@ -361,4 +366,5 @@
 - PR #31 已用测试固化已有 user_id 隔离，投入小、风险收益高，并能保护后续重构。
 - PR #32 已完成训练历史中心基础版，让用户能长期回看训练记录和报告沉淀。
 - PR #33 已完成能力画像 v1，让历史得分、标签和错题数据进入更稳定的个性化训练基础。
-- PR #34 应继续补组织/租户边界，这是从单用户 SaaS 走向企业级 SaaS 的关键数据安全前提。
+- PR #34 已补生产可观测性地基，让后续多人使用和复杂链路排障有 request_id 与结构化日志基础。
+- 后续应补组织/租户边界，这是从单用户 SaaS 走向企业级 SaaS 的关键数据安全前提。
