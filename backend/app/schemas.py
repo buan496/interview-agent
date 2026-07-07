@@ -166,6 +166,21 @@ class ReportListItemOut(BaseModel):
     ended_at: datetime | None = None
 
 
+class TrainingHistoryItemOut(BaseModel):
+    session_id: int
+    report_id: int | None = None
+    mode: str
+    title: str
+    status: str
+    overall_score: int | None = None
+    question_count: int
+    started_at: datetime
+    completed_at: datetime | None = None
+    created_at: datetime
+    weak_tags: list[str] = Field(default_factory=list)
+    next_action: Literal["continue", "view_report", "review_wrong_book"]
+
+
 class PracticePlanTaskOut(BaseModel):
     id: str
     type: Literal[

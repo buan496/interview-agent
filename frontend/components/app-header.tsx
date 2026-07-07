@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpenCheck, Gauge, Home, Timer } from "lucide-react";
+import { BookOpenCheck, Gauge, History, Home, Timer } from "lucide-react";
 
 import { Badge, BrandLogo, cn } from "@/components/ui";
 
 const navItems = [
+  { href: "/history", label: "训练历史", icon: History },
   { href: "/practice", label: "今日训练", icon: Home },
   { href: "/wrong-book", label: "错题本", icon: Gauge },
   { href: "/mock", label: "模拟面试", icon: Timer },

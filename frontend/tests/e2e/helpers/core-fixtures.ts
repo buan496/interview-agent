@@ -1,6 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 
-import type { PracticePlan, SessionDetail, SessionReport } from "@/lib/types";
+import type { PracticePlan, SessionDetail, SessionReport, TrainingHistoryItem } from "@/lib/types";
 
 export const metadata = {
   companies: [{ id: 1, name: "General Co", region: "CN", tier: 1 }],
@@ -144,11 +144,43 @@ export const sessionReport: SessionReport = {
   ],
 };
 
+export const trainingHistory: TrainingHistoryItem[] = [
+  {
+    session_id: 43,
+    report_id: null,
+    mode: "single",
+    title: "Why is Redis fast?",
+    status: "ongoing",
+    overall_score: null,
+    question_count: 1,
+    started_at: "2026-07-06T01:00:00Z",
+    completed_at: null,
+    created_at: "2026-07-06T01:00:00Z",
+    weak_tags: [],
+    next_action: "continue",
+  },
+  {
+    session_id: 42,
+    report_id: 42,
+    mode: "single",
+    title: "Why is Redis fast?",
+    status: "finished",
+    overall_score: 82,
+    question_count: 1,
+    started_at: "2026-07-06T00:00:00Z",
+    completed_at: "2026-07-06T00:18:00Z",
+    created_at: "2026-07-06T00:00:00Z",
+    weak_tags: ["Redis"],
+    next_action: "view_report",
+  },
+];
+
 export async function mockBaseApis(page: Page, options?: { wrongBookEmpty?: boolean }) {
   await page.route("**/api/questions/meta", async (route) => route.fulfill({ json: metadata }));
   await page.route("**/api/me/wrong-book", async (route) => route.fulfill({ json: options?.wrongBookEmpty ? [] : wrongBookItems }));
   await page.route("**/api/me/radar", async (route) => route.fulfill({ json: [{ tag: "Redis", avg_score: 52, attempts: 2 }] }));
   await page.route("**/api/me/reports", async (route) => route.fulfill({ json: [{ session_id: 42, mode: "single", status: "finished", overall_score: 82, started_at: "2026-07-06T00:00:00Z", ended_at: "2026-07-06T00:18:00Z" }] }));
+  await page.route("**/api/sessions/history**", async (route) => route.fulfill({ json: trainingHistory }));
   await page.route("**/api/questions?**", async (route) => route.fulfill({ json: { items: [question], total: 1 } }));
   await page.route("**/api/me/practice-plan/today", async (route) => route.fulfill({ json: practicePlan }));
   await page.route("**/api/sessions/42/report", async (route) => route.fulfill({ json: sessionReport }));
