@@ -25,9 +25,10 @@ _request_id_pattern = re.compile(r"[^a-zA-Z0-9_.-]")
 logger = logging.getLogger("interview_agent")
 
 
-def configure_logging() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
-    logger.setLevel(logging.INFO)
+def configure_logging(level: str = "INFO") -> None:
+    log_level = getattr(logging, level.upper(), logging.INFO)
+    logging.basicConfig(level=log_level, format="%(message)s")
+    logger.setLevel(log_level)
 
 
 def normalize_request_id(value: str | None) -> str:
@@ -81,8 +82,12 @@ def log_exception(event_name: str, **fields: Any) -> None:
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app: FastAPI, request_id_header: str = REQUEST_ID_HEADER) -> None:
+        super().__init__(app)
+        self.request_id_header = request_id_header or REQUEST_ID_HEADER
+
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-        request_id = normalize_request_id(request.headers.get(REQUEST_ID_HEADER))
+        request_id = normalize_request_id(request.headers.get(self.request_id_header))
         request.state.request_id = request_id
         request_token = _request_id.set(request_id)
         user_token = _user_id.set(None)
@@ -103,7 +108,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Internal Server Error", "request_id": request_id},
             )
         duration_ms = round((time.perf_counter() - started) * 1000, 2)
-        response.headers[REQUEST_ID_HEADER] = request_id
+        response.headers[self.request_id_header] = request_id
         if response.status_code >= 500:
             request_status = "error"
         elif response.status_code >= 400:
@@ -136,8 +141,8 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 
 
 def install_observability(app: FastAPI, settings: Settings) -> None:
-    configure_logging()
-    app.add_middleware(RequestIdMiddleware)
+    configure_logging(getattr(settings, "log_level", "INFO"))
+    app.add_middleware(RequestIdMiddleware, request_id_header=getattr(settings, "request_id_header", REQUEST_ID_HEADER))
     app.add_exception_handler(HTTPException, http_exception_handler)
     app.state.service_name = settings.app_name
     app.state.environment = settings.environment

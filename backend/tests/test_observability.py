@@ -57,6 +57,23 @@ class ObservabilityTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["X-Request-ID"], "trace-123")
 
+    async def test_custom_request_id_header_is_configurable(self) -> None:
+        test_app = FastAPI()
+        install_observability(
+            test_app,
+            SimpleNamespace(app_name="Test App", environment="test", log_level="INFO", request_id_header="X-Correlation-ID"),
+        )
+
+        @test_app.get("/health")
+        async def custom_health() -> dict[str, str]:
+            return {"status": "ok"}
+
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=test_app), base_url="http://testserver") as client:
+            response = await client.get("/health", headers={"X-Correlation-ID": "corr-123"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["X-Correlation-ID"], "corr-123")
+
     async def test_health_and_ready_are_available(self) -> None:
         async def override_get_db() -> AsyncIterator[_ReadyDb]:
             yield _ReadyDb()

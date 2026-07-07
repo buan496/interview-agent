@@ -393,3 +393,28 @@ Suggested follow-up PRs:
 - Organization / tenant model: add tenant scope before tenant-level usage reporting.
 - Quota and rate limit v1: build on the ledger after quota policy is designed.
 - Model cost dashboard: show cost, failure rate, latency and feature distribution.
+
+## PR #36 Update: Production Config Governance v1
+
+Status: partially complete.
+
+Completed:
+
+- `backend/app/settings.py` now groups app, auth, dev-auth, admin, database, LLM, observability and usage-metering settings.
+- Production startup validation rejects unsafe defaults such as default JWT secret, default development verification code, enabled development code, missing database URL, invalid token expiry, missing pricing version, and missing LLM API key when a real provider is enabled.
+- `config.loaded` emits only a sanitized configuration summary. Secrets, API keys, verification codes, database passwords and full phone numbers are not logged.
+- `.env.example`, Docker Compose development defaults and `docs/configuration.md` now document environment differences and production-required variables.
+- Unit tests cover production fail-fast rules and sanitized summary behavior.
+
+Still missing:
+
+- No external configuration center.
+- No runtime config reload.
+- No tenant-specific configuration.
+- No CD release gate that validates production secrets before deployment.
+
+Suggested follow-up PRs:
+
+- Production deployment blueprint: define how production secrets are supplied outside the repository.
+- Operational readiness checklist: add release-time config verification steps.
+- RBAC and tenant model: add tenant-aware configuration only after tenant boundaries exist.

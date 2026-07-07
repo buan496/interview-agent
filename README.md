@@ -186,6 +186,7 @@ GitHub Actions 当前包含：
 
 更多视觉验收标准见 [Frontend Visual QA](docs/frontend-visual-qa.md)。
 可观测性排障说明见 [Observability Foundation](docs/observability.md)。
+Production configuration governance is documented in [Configuration](docs/configuration.md).
 
 ## 工程亮点
 
@@ -195,6 +196,7 @@ GitHub Actions 当前包含：
 - 前后端分离：Next.js 前端通过 API client 调用 FastAPI 后端。
 - LLM 抽象层：支持真实 LLM 配置，也支持本地 fallback 保证演示和测试稳定。
 - LLM cost metering foundation: `llm_usage_records` stores only call metadata, token estimates, estimated cost, latency and status; it does not store prompt, completion or answer text.
+- Production config governance: startup validation rejects unsafe production defaults, and `config.loaded` logs only a sanitized configuration summary.
 - 生产可观测性地基：每个请求返回 `X-Request-ID`，后端输出结构化 JSON 日志，关键训练链路有业务事件日志。
 - 核心链路 E2E：覆盖 practice -> session -> report -> practice、wrong-book 回流、mock 创建等路径。
 - 视觉 QA：为核心页面生成桌面端和移动端截图，并检查无横向溢出。

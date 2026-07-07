@@ -186,10 +186,11 @@
 ### 关键 PR
 
 1. PR #34：Production observability foundation（已完成基础版）
-2. PR #38：RBAC and organization membership
-3. PR #39：Audit log foundation
-4. PR #40：Observability metrics and tracing
-5. PR #43：Privacy and data retention design
+2. PR #36：Production config governance（已完成 settings-layer v1）
+3. PR #38：RBAC and organization membership
+4. PR #39：Audit log foundation
+5. PR #40：Observability metrics and tracing
+6. PR #43：Privacy and data retention design
 
 ### 涉及文件
 
@@ -210,6 +211,7 @@
 - 管理操作、报告访问、题库审核有审计记录。
 - 每个请求有 request id，响应返回 `X-Request-ID`。
 - 有结构化请求日志和关键业务事件日志；metrics 和 tracing 属于后续增强。
+- 生产环境危险默认配置会 fail fast，启动日志只输出脱敏配置摘要。
 - 有数据导出、删除、保留期限和脱敏策略文档。
 
 ### 测试要求
@@ -219,6 +221,7 @@
 - request id 传播测试。
 - 500 错误 request_id 测试。
 - 日志敏感信息保护测试。
+- production 配置校验和脱敏摘要测试。
 - 隐私操作测试或 runbook。
 
 ### 面试讲解价值

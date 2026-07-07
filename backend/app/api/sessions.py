@@ -23,6 +23,7 @@ from app.llm_usage import (
     model_from_llm,
     provider_from_llm,
     record_llm_usage,
+    usage_metering_enabled,
 )
 from app.models import EvaluationResult, Message, Question, QuestionTag, Session, SessionQuestion, User, UserTagStat, WrongBook
 from app.observability import log_event
@@ -625,25 +626,26 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
                 depth,
             )
         except Exception as exc:
-            await record_llm_usage(
-                db,
-                user_id=sq.session.user_id,
-                session_id=sq.session.id,
-                feature="scoring",
-                provider=provider,
-                model=model_name,
-                prompt_tokens=prompt_tokens,
-                completion_tokens=0,
-                latency_ms=elapsed_ms(llm_started_at),
-                status="failed",
-                error_type=exc.__class__.__name__,
-            )
-            await db.commit()
+            if usage_metering_enabled():
+                await record_llm_usage(
+                    db,
+                    user_id=sq.session.user_id,
+                    session_id=sq.session.id,
+                    feature="scoring",
+                    provider=provider,
+                    model=model_name,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=0,
+                    latency_ms=elapsed_ms(llm_started_at),
+                    status="failed",
+                    error_type=exc.__class__.__name__,
+                )
+                await db.commit()
             raise
 
         llm_call_attempted = bool(getattr(engine, "last_llm_call_attempted", False))
         llm_call_failed = bool(getattr(engine, "last_llm_call_failed", False))
-        if llm_call_attempted:
+        if llm_call_attempted and usage_metering_enabled():
             await record_llm_usage(
                 db,
                 user_id=sq.session.user_id,

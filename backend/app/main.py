@@ -8,11 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import admin, audio, auth, practice_plan, questions, sessions, stats, submissions
 from app.db import get_db
-from app.observability import install_observability
+from app.observability import install_observability, log_event
 from app.settings import get_settings
 
 
 settings = get_settings()
+settings.validate_production_config()
 
 app = FastAPI(title=settings.app_name)
 app.add_middleware(
@@ -23,6 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 install_observability(app, settings)
+log_event("config.loaded", status="success", config=settings.sanitized_config_summary())
 
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(questions.router, prefix=settings.api_prefix)
