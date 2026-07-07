@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.models import User
 from app.observability import log_event, mask_phone, set_user_context
-from app.settings import Settings, get_settings
+from app.settings import ConfigValidationError, DEFAULT_DEV_CODE, DEFAULT_JWT_SECRET, Settings, get_settings
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -51,10 +51,19 @@ class ProductionSmsCodeVerifier:
 
 
 def _ensure_auth_config(settings: Settings) -> None:
-    if settings.is_production and settings.jwt_secret == "local-dev-only-change-me":
+    validate = getattr(settings, "validate_production_config", None)
+    if callable(validate):
+        try:
+            validate()
+        except ConfigValidationError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return
+    if settings.is_production and settings.jwt_secret == DEFAULT_JWT_SECRET:
         raise HTTPException(status_code=500, detail="Production JWT secret is not configured")
-    if settings.is_production and settings.auth_dev_code_enabled and settings.auth_dev_code == "000000":
+    if settings.is_production and settings.auth_dev_code == DEFAULT_DEV_CODE:
         raise HTTPException(status_code=500, detail="Production auth cannot use the default development code")
+    if settings.is_production and settings.auth_dev_code_enabled:
+        raise HTTPException(status_code=500, detail="Production auth cannot enable development verification code")
 
 
 def _sms_verifier(settings: Settings) -> SmsCodeVerifier:

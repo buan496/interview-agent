@@ -150,7 +150,12 @@ class AuthTokenTest(unittest.TestCase):
 
     def test_production_rejects_default_dev_code(self) -> None:
         async def run() -> None:
-            settings = _auth_settings(environment="production", jwt_secret="prod-secret", auth_dev_code_enabled=True, auth_dev_code="000000")
+            settings = _auth_settings(
+                environment="production",
+                jwt_secret="prod-jwt-test-value",
+                auth_dev_code_enabled=True,
+                auth_dev_code="000000",
+            )
             with patch("app.api.auth.get_settings", return_value=settings):
                 with self.assertRaises(HTTPException) as ctx:
                     await request_code(RequestCodeRequest(phone="13800000000"))
@@ -162,7 +167,13 @@ class AuthTokenTest(unittest.TestCase):
 
     def test_production_requires_sms_provider_when_dev_code_disabled(self) -> None:
         async def run() -> None:
-            settings = _auth_settings(environment="production", jwt_secret="prod-secret", auth_dev_code_enabled=False, sms_provider_key="")
+            settings = _auth_settings(
+                environment="production",
+                jwt_secret="prod-jwt-test-value",
+                auth_dev_code_enabled=False,
+                auth_dev_code="654321",
+                sms_provider_key="",
+            )
             with patch("app.api.auth.get_settings", return_value=settings):
                 with self.assertRaises(HTTPException) as ctx:
                     await request_code(RequestCodeRequest(phone="13800000000"))

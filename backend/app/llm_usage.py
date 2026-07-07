@@ -14,9 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.interviewer import ConversationMessage, EvaluationResult, InterviewQuestion
 from app.models import LLMUsageRecord
 from app.observability import get_request_id, log_event
+from app.settings import DEFAULT_LLM_PRICING_VERSION, Settings, get_settings
 
 
-LLM_PRICING_VERSION = "llm-pricing-v1-2026-07"
+LLM_PRICING_VERSION = DEFAULT_LLM_PRICING_VERSION
 USD_QUANT = Decimal("0.000001")
 
 UsageFeature = Literal["scoring", "follow_up", "report", "mock", "ability", "unknown"]
@@ -48,6 +49,16 @@ def calculate_estimated_cost(
     input_cost = (Decimal(max(prompt_tokens, 0)) / Decimal(1_000_000)) * price.input_per_million
     output_cost = (Decimal(max(completion_tokens, 0)) / Decimal(1_000_000)) * price.output_per_million
     return (input_cost + output_cost).quantize(USD_QUANT, rounding=ROUND_HALF_UP)
+
+
+def pricing_version(settings: Settings | None = None) -> str:
+    active_settings = settings or get_settings()
+    return active_settings.llm_pricing_version or LLM_PRICING_VERSION
+
+
+def usage_metering_enabled(settings: Settings | None = None) -> bool:
+    active_settings = settings or get_settings()
+    return active_settings.llm_usage_metering_enabled
 
 
 def estimate_text_tokens(value: str | None) -> int:
@@ -140,7 +151,7 @@ async def record_llm_usage(
         total_tokens=prompt_token_count + completion_token_count,
         estimated_cost=calculate_estimated_cost(provider, model, prompt_token_count, completion_token_count),
         currency="USD",
-        pricing_version=LLM_PRICING_VERSION,
+        pricing_version=pricing_version(),
         latency_ms=latency_ms,
         status=status,
         error_type=error_type,
@@ -183,7 +194,7 @@ def _empty_summary() -> dict[str, Any]:
         "current_month_tokens": 0,
         "current_month_estimated_cost": Decimal("0.000000"),
         "currency": "USD",
-        "pricing_version": LLM_PRICING_VERSION,
+        "pricing_version": pricing_version(),
         "by_feature": [],
         "by_model": [],
         "recent_records": [],
@@ -229,7 +240,7 @@ async def get_user_usage_summary(db: AsyncSession, user_id: int) -> dict[str, An
         "current_month_tokens": current_month_tokens,
         "current_month_estimated_cost": current_month_cost.quantize(USD_QUANT),
         "currency": "USD",
-        "pricing_version": LLM_PRICING_VERSION,
+        "pricing_version": pricing_version(),
         "by_feature": [breakdown(key, feature_groups[key]) for key in sorted(feature_groups)],
         "by_model": [breakdown(key, model_groups[key]) for key in sorted(model_groups)],
         "recent_records": records[:20],

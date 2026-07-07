@@ -130,3 +130,18 @@ Cost notes:
 - `estimated_cost` is for internal estimation and engineering decisions only; it is not a bill.
 - The current `pricing_version` is `llm-pricing-v1-2026-07`.
 - Unknown models still record tokens, but estimated cost is 0.
+
+## Configuration Events
+
+PR #36 adds a `config.loaded` startup event. It is designed for operational debugging and production readiness checks, not for exposing secrets.
+
+The event includes:
+
+- app environment, service name and API prefix
+- whether auth, LLM, SMS and audio secrets are configured
+- masked database and Redis URLs
+- masked admin phone numbers
+- log level, log format and request id header
+- LLM usage metering enablement and pricing version
+
+The event does not include secret values, tokens, verification codes, API keys, database passwords or full phone numbers.

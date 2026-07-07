@@ -92,6 +92,12 @@ flowchart TB
   CI --> Deploy
 ```
 
+### Production Config Governance
+
+PR #36 adds a settings-layer configuration governance baseline. The backend groups app, auth, dev-auth, admin, database, LLM, observability and usage-metering settings in one place, validates dangerous production defaults before startup, and logs only a sanitized `config.loaded` summary.
+
+This is intentionally local settings governance, not an external configuration platform. Vault, Apollo, Nacos, Kubernetes ConfigMap, runtime reload and release orchestration remain out of scope for the current codebase.
+
 ## 前端架构
 
 当前已完成：
