@@ -1,0 +1,197 @@
+name: Release Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Release target. This workflow never deploys production directly."
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      image_tag:
+        description: "Release image tag or release candidate tag. Leave empty to use the short git SHA."
+        required: false
+        type: string
+      run_e2e:
+        description: "Run Playwright E2E before producing release evidence."
+        required: true
+        type: boolean
+        default: true
+      migration_mode:
+        description: "Migration gate mode. Production migrations are not applied by this workflow."
+        required: true
+        type: choice
+        default: check_only
+        options:
+          - check_only
+          - apply_manual
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}-${{ inputs.target_environment }}
+  cancel-in-progress: false
+
+jobs:
+  release-candidate:
+    name: Release Candidate Evidence
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.target_environment }}
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: interview_agent_release
+          POSTGRES_USER: interview
+          POSTGRES_PASSWORD: local-dev-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U interview -d interview_agent_release"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          requested_tag="${{ inputs.image_tag }}"
+          if [ -z "$requested_tag" ]; then
+            requested_tag="${GITHUB_SHA::12}"
+          fi
+          if ! [[ "$requested_tag" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "image_tag may only contain letters, numbers, dot, underscore, and dash" >&2
+            exit 1
+          fi
+          echo "IMAGE_TAG=$requested_tag" >> "$GITHUB_ENV"
+          echo "RELEASE_SHA=${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "This workflow creates release candidate evidence only. It does not deploy production."
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Backend compile
+        working-directory: backend
+        run: python -m compileall app tests alembic
+
+      - name: Backend lint
+        working-directory: backend
+        run: ruff check app tests
+
+      - name: Backend tests
+        working-directory: backend
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Alembic migration gate
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://interview:local-dev-only@localhost:5432/interview_agent_release
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          alembic heads
+          alembic upgrade head
+          if [ "${{ inputs.migration_mode }}" = "apply_manual" ]; then
+            echo "apply_manual selected: CI test database was upgraded, but no staging or production database was modified."
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Frontend typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Frontend build
+        working-directory: frontend
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Install Playwright browsers
+        if: ${{ inputs.run_e2e }}
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Frontend E2E
+        if: ${{ inputs.run_e2e }}
+        working-directory: frontend
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run test:e2e
+
+      - name: Docker Compose config
+        run: docker compose -p interview-agent-release config --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image candidate
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          tags: interview-agent-api:${{ env.IMAGE_TAG }}
+
+      - name: Build frontend image candidate
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: false
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
+          tags: interview-agent-frontend:${{ env.IMAGE_TAG }}
+
+      - name: Generate release summary
+        shell: bash
+        run: |
+          {
+            echo "## Release Candidate Evidence"
+            echo ""
+            echo "- Target environment: \`${{ inputs.target_environment }}\`"
+            echo "- Commit SHA: \`${RELEASE_SHA}\`"
+            echo "- Image tag: \`${IMAGE_TAG}\`"
+            echo "- Migration mode: \`${{ inputs.migration_mode }}\`"
+            echo "- E2E requested: \`${{ inputs.run_e2e }}\`"
+            echo "- Production deploy performed: \`false\`"
+            echo "- Registry push performed: \`false\`"
+            echo ""
+            echo "Built candidate images:"
+            echo "- \`interview-agent-api:${IMAGE_TAG}\`"
+            echo "- \`interview-agent-frontend:${IMAGE_TAG}\`"
+            echo ""
+            echo "Use \`docs/release-evidence-template.md\` to copy this evidence into a release record."
+          } >> "$GITHUB_STEP_SUMMARY"

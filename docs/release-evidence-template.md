@@ -1,0 +1,99 @@
+# Release Evidence Template
+
+Use this template for every staging or production release candidate.
+
+## Release Identity
+
+- Release version:
+- Release candidate:
+- Commit SHA:
+- Source branch:
+- Pull request:
+- Target environment:
+- Release owner:
+- Release approver:
+- Release window:
+
+## Configuration Checklist
+
+- [ ] `APP_ENV` matches target environment.
+- [ ] Production does not use default JWT secret.
+- [ ] Production does not use default development verification code.
+- [ ] Production has `AUTH_DEV_CODE_ENABLED=false`.
+- [ ] `DATABASE_URL` is configured outside the repository.
+- [ ] LLM provider, model, timeout, and pricing version are confirmed.
+- [ ] Required LLM API key is configured for real provider usage.
+- [ ] Logs and evidence contain no secret values, tokens, verification codes, database passwords, full phone numbers, prompt text, or user answer text.
+
+## Test Results
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Backend unit tests |  |  |
+| Backend lint |  |  |
+| Backend compile |  |  |
+| Frontend lint |  |  |
+| Frontend typecheck |  |  |
+| Frontend build |  |  |
+| Playwright E2E |  |  |
+| Visual smoke |  |  |
+| Docker Compose config |  |  |
+| Docker build |  |  |
+| Secret scan |  |  |
+
+## Migration Status
+
+- Alembic current revision:
+- Alembic target head:
+- Migration mode:
+- Staging migration result:
+- Production backup completed:
+- Production migration approved by:
+- Production migration result:
+- Notes:
+
+## Docker Image Tags
+
+- API image:
+- Frontend image:
+- Registry push performed: yes / no
+- Production deploy performed: yes / no
+
+## Release Summary
+
+- User-visible changes:
+- Operational changes:
+- Config changes:
+- Database changes:
+- Known risks:
+
+## Rollback Plan
+
+- Previous API image:
+- Previous frontend image:
+- Code rollback command or process:
+- Database rollback strategy:
+- Backup location:
+- Rollback owner:
+- Rollback approval required:
+
+## Post-Release Smoke
+
+- `/health`:
+- `/ready`:
+- Login smoke:
+- `/practice` smoke:
+- `/session/{id}` smoke:
+- `/report/{id}` smoke:
+- `/wrong-book` smoke:
+- `/history` smoke:
+- `/ability` smoke:
+- Observed request_id for smoke:
+
+## Incident Follow-Up
+
+- Any errors observed:
+- Request IDs:
+- LLM usage anomaly:
+- Cost anomaly:
+- Follow-up issues or PRs:

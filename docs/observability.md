@@ -145,3 +145,17 @@ The event includes:
 - LLM usage metering enablement and pricing version
 
 The event does not include secret values, tokens, verification codes, API keys, database passwords or full phone numbers.
+
+## Release Troubleshooting
+
+PR #37 adds release/CD management documentation and a manual release candidate workflow. After a staging or production release, operational troubleshooting should start from release evidence and request tracing:
+
+1. Identify the release version, commit SHA and image tag from `docs/release-evidence-template.md`.
+2. Collect `X-Request-ID` from the user report, API response or support ticket.
+3. Search structured logs by `request_id`.
+4. For 500 errors, inspect `http_request_exception`.
+5. For auth issues, inspect masked `auth.login` and `auth.request_code` events.
+6. For LLM cost or failure spikes, inspect `llm_usage_records` and current-user usage summaries.
+7. Confirm `/health` and `/ready` before and after rollback.
+
+Release notes and incident records must not include tokens, secrets, verification codes, full phone numbers, prompt text or user answer text.

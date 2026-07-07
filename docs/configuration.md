@@ -123,4 +123,16 @@ When adding a new config variable:
 - No runtime dynamic config reload.
 - No tenant-specific config.
 - No real SMS provider integration.
-- No CD release promotion policy.
+- Release/CD promotion is documented in `docs/release-management.md`, but this repository still does not deploy production directly.
+
+## Release Configuration Relationship
+
+Release candidates must use this document as the configuration checklist source.
+
+- local and test may use deterministic development-style settings
+- staging should use production-shaped settings without real production user data
+- production must pass `Settings.validate_production_config()` before app startup
+- production secrets must be supplied outside the repository
+- release evidence must record whether each required config group was checked
+
+The release workflow builds and validates release candidates, but it does not inject production secrets and does not deploy production.
