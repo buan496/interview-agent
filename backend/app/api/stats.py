@@ -10,9 +10,10 @@ from sqlalchemy.orm import selectinload
 
 from app.api.auth import get_current_user
 from app.db import get_db
+from app.llm_usage import get_user_usage_summary
 from app.models import EvaluationResult, Question, QuestionTag, Session, Tag, User, UserTagStat, WrongBook
 from app.observability import log_event
-from app.schemas import AbilityProfileOut, AbilityTagProfileOut, RadarItemOut, ReportListItemOut, TagOut, WrongBookOut
+from app.schemas import AbilityProfileOut, AbilityTagProfileOut, LLMUsageSummaryOut, RadarItemOut, ReportListItemOut, TagOut, WrongBookOut
 
 
 router = APIRouter(prefix="/me", tags=["stats"])
@@ -199,3 +200,18 @@ async def reports(
         )
         for item in rows
     ]
+
+
+@router.get("/usage/summary", response_model=LLMUsageSummaryOut)
+async def usage_summary(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> LLMUsageSummaryOut:
+    summary = await get_user_usage_summary(db, current_user.id)
+    log_event(
+        "llm_usage.summary.read",
+        status="success",
+        record_count=len(summary["recent_records"]),
+        total_tokens=summary["total_tokens"],
+    )
+    return LLMUsageSummaryOut.model_validate(summary)

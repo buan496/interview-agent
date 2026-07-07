@@ -110,6 +110,7 @@ class User(Base):
     sessions: Mapped[list[Session]] = relationship(back_populates="user")
     practice_plans: Mapped[list[PracticePlan]] = relationship(back_populates="user")
     evaluation_results: Mapped[list[EvaluationResult]] = relationship(back_populates="user")
+    llm_usage_records: Mapped[list[LLMUsageRecord]] = relationship(back_populates="user")
 
 
 class Session(Base):
@@ -138,6 +139,7 @@ class Session(Base):
     user: Mapped[User] = relationship(back_populates="sessions")
     questions: Mapped[list[SessionQuestion]] = relationship(back_populates="session", cascade="all, delete-orphan")
     evaluation_results: Mapped[list[EvaluationResult]] = relationship(back_populates="session", cascade="all, delete-orphan")
+    llm_usage_records: Mapped[list[LLMUsageRecord]] = relationship(back_populates="session")
 
 
 class SessionQuestion(Base):
@@ -194,6 +196,36 @@ class EvaluationResult(Base):
     session: Mapped[Session] = relationship(back_populates="evaluation_results")
     session_question: Mapped[SessionQuestion] = relationship(back_populates="evaluation_results")
     question: Mapped[Question] = relationship(back_populates="evaluation_results")
+
+
+class LLMUsageRecord(Base):
+    __tablename__ = "llm_usage_records"
+    __table_args__ = (
+        Index("idx_llm_usage_user_created", "user_id", "created_at"),
+        Index("idx_llm_usage_user_feature", "user_id", "feature"),
+        Index("idx_llm_usage_request_id", "request_id"),
+    )
+
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
+    user_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("users.id"), nullable=False)
+    session_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("sessions.id"))
+    request_id: Mapped[str | None] = mapped_column(String(80))
+    feature: Mapped[str] = mapped_column(String(30), nullable=False, default="unknown")
+    provider: Mapped[str] = mapped_column(String(30), nullable=False, default="unknown")
+    model: Mapped[str] = mapped_column(String(80), nullable=False, default="unknown")
+    prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    estimated_cost: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False, default=0)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
+    pricing_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(15), nullable=False, default="success")
+    error_type: Mapped[str | None] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    user: Mapped[User] = relationship(back_populates="llm_usage_records")
+    session: Mapped[Session | None] = relationship(back_populates="llm_usage_records")
 
 
 class Message(Base):

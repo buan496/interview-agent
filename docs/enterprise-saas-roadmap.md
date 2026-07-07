@@ -297,3 +297,30 @@ PR #43 隐私与数据保留
 4. PR #40：在 request_id 基础上补 metrics、trace propagation 和告警设计。
 
 PR #34 已先补生产可观测性地基，让后续多用户、多租户和 Agent Memory 改造具备基础排障能力。下一步更适合补组织/租户边界。
+## PR #35: LLM Usage and Cost Metering v1 (foundation complete)
+
+Goal: prepare the internal LLM usage ledger needed for multi-user operation and later commercialization. The immediate engineering questions are how much was called, what the estimated cost is, where it failed, and which request_id can trace it.
+
+Files involved:
+
+- `backend/app/models.py`
+- `backend/alembic/versions/0006_llm_usage_records.py`
+- `backend/app/llm_usage.py`
+- `backend/app/api/sessions.py`
+- `backend/app/api/stats.py`
+- `backend/app/schemas.py`
+- `backend/tests/test_llm_usage.py`
+
+Acceptance criteria:
+
+- Actual LLM call attempts can be recorded as usage.
+- Usage summary is strictly filtered by `current_user.id`.
+- `estimated_cost` has a `pricing_version` and is not presented as a bill.
+- Failed calls are recorded and can be correlated through `request_id` and structured logs.
+- Prompt, completion and answer text are not stored in the ledger.
+- Payment, plans, quotas and rate limits are not included.
+
+Interview value:
+
+- Shows that an AI SaaS system needs cost, latency, failure-rate and per-user usage traceability, not only runnable product features.
+- Explains why v1 starts with a ledger and summary API before introducing complex billing.

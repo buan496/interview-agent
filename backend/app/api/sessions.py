@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from collections.abc import AsyncIterator
 from datetime import date, datetime, timedelta, timezone
+from time import perf_counter
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -14,6 +15,15 @@ from app.api.auth import get_current_user
 from app.core.interviewer import ConversationMessage, InterviewerEngine, InterviewQuestion
 from app.core.scheduler import target_question_count, target_type_counts
 from app.db import SessionLocal, get_db
+from app.llm_usage import (
+    elapsed_ms,
+    estimate_completion_tokens,
+    estimate_prompt_tokens,
+    feature_from_result,
+    model_from_llm,
+    provider_from_llm,
+    record_llm_usage,
+)
 from app.models import EvaluationResult, Message, Question, QuestionTag, Session, SessionQuestion, User, UserTagStat, WrongBook
 from app.observability import log_event
 from app.schemas import (
@@ -597,17 +607,56 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
 
         question = sq.question
         engine = InterviewerEngine()
-        result = await engine.evaluate_answer(
-            InterviewQuestion(
-                title=question.title,
-                answer_key=question.answer_key,
-                company=question.company.name if question.company else "目标公司",
-                position=question.position.name if question.position else "目标岗位",
-            ),
-            history,
-            request.content,
-            depth,
+        interview_question = InterviewQuestion(
+            title=question.title,
+            answer_key=question.answer_key,
+            company=question.company.name if question.company else "目标公司",
+            position=question.position.name if question.position else "目标岗位",
         )
+        prompt_tokens = estimate_prompt_tokens(interview_question, history, request.content, depth)
+        provider = provider_from_llm(engine.llm)
+        model_name = model_from_llm(engine.llm)
+        llm_started_at = perf_counter()
+        try:
+            result = await engine.evaluate_answer(
+                interview_question,
+                history,
+                request.content,
+                depth,
+            )
+        except Exception as exc:
+            await record_llm_usage(
+                db,
+                user_id=sq.session.user_id,
+                session_id=sq.session.id,
+                feature="scoring",
+                provider=provider,
+                model=model_name,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=0,
+                latency_ms=elapsed_ms(llm_started_at),
+                status="failed",
+                error_type=exc.__class__.__name__,
+            )
+            await db.commit()
+            raise
+
+        llm_call_attempted = bool(getattr(engine, "last_llm_call_attempted", False))
+        llm_call_failed = bool(getattr(engine, "last_llm_call_failed", False))
+        if llm_call_attempted:
+            await record_llm_usage(
+                db,
+                user_id=sq.session.user_id,
+                session_id=sq.session.id,
+                feature=feature_from_result(result) if not llm_call_failed else "scoring",
+                provider=provider,
+                model=model_name,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=0 if llm_call_failed else estimate_completion_tokens(result),
+                latency_ms=elapsed_ms(llm_started_at),
+                status="failed" if llm_call_failed else "success",
+                error_type=getattr(engine, "last_llm_error_type", None),
+            )
 
         if result.action == "verdict" and result.verdict:
             content = result.verdict.feedback
@@ -619,7 +668,6 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
             sq.verdict = result.verdict.as_dict()
             sq.scored_at = now
             sq.finished_at = now
-            model_name = str(getattr(engine.llm, "model", "local-fallback"))
             db.add(_evaluation_result_row(sq.session, sq, result, model_name))
             await _update_retention_tables(db, sq.session, sq, result.verdict.score, result.verdict.mastery)
             next_sq = next(

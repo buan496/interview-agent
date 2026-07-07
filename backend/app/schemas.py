@@ -249,6 +249,47 @@ class AbilityProfileOut(BaseModel):
     tag_profiles: list[AbilityTagProfileOut] = Field(default_factory=list)
 
 
+class LLMUsageBreakdownOut(BaseModel):
+    key: str
+    call_count: int
+    failed_count: int
+    total_tokens: int
+    estimated_cost: Decimal
+
+
+class LLMUsageRecordOut(BaseModel):
+    id: int
+    session_id: int | None = None
+    request_id: str | None = None
+    feature: str
+    provider: str
+    model: str
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    estimated_cost: Decimal
+    currency: str
+    pricing_version: str
+    latency_ms: int | None = None
+    status: str
+    error_type: str | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LLMUsageSummaryOut(BaseModel):
+    total_tokens: int
+    total_estimated_cost: Decimal
+    current_month_tokens: int
+    current_month_estimated_cost: Decimal
+    currency: str
+    pricing_version: str
+    by_feature: list[LLMUsageBreakdownOut] = Field(default_factory=list)
+    by_model: list[LLMUsageBreakdownOut] = Field(default_factory=list)
+    recent_records: list[LLMUsageRecordOut] = Field(default_factory=list)
+
+
 class SubmissionCreate(BaseModel):
     submitter_name: str | None = Field(default=None, max_length=80)
     company_name: str = Field(min_length=2, max_length=100)
