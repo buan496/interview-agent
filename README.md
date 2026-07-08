@@ -188,6 +188,7 @@ GitHub Actions 当前包含：
 可观测性排障说明见 [Observability Foundation](docs/observability.md)。
 Production configuration governance is documented in [Configuration](docs/configuration.md).
 Release/CD management is documented in [Release Management](docs/release-management.md), with evidence template in [Release Evidence Template](docs/release-evidence-template.md).
+Audit log v1 is documented in [Audit Log](docs/audit-log.md).
 
 ## 工程亮点
 
@@ -199,6 +200,7 @@ Release/CD management is documented in [Release Management](docs/release-managem
 - LLM cost metering foundation: `llm_usage_records` stores only call metadata, token estimates, estimated cost, latency and status; it does not store prompt, completion or answer text.
 - Production config governance: startup validation rejects unsafe production defaults, and `config.loaded` logs only a sanitized configuration summary.
 - Release/CD management v1: manual release candidate workflow, release evidence template, migration gate, immutable image tag policy, and rollback SOP; it does not deploy production directly.
+- Audit log v1: login success/failure and admin access/denial are persisted with `request_id`, masked actor identity and sanitized metadata.
 - 生产可观测性地基：每个请求返回 `X-Request-ID`，后端输出结构化 JSON 日志，关键训练链路有业务事件日志。
 - 核心链路 E2E：覆盖 practice -> session -> report -> practice、wrong-book 回流、mock 创建等路径。
 - 视觉 QA：为核心页面生成桌面端和移动端截图，并检查无横向溢出。

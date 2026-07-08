@@ -158,4 +158,17 @@ PR #37 adds release/CD management documentation and a manual release candidate w
 6. For LLM cost or failure spikes, inspect `llm_usage_records` and current-user usage summaries.
 7. Confirm `/health` and `/ready` before and after rollback.
 
+## Audit Logs
+
+PR #38 adds a persistent `audit_events` ledger for selected security and admin events. It complements structured logs:
+
+- Structured logs are high-volume runtime telemetry for request timing, errors and business events.
+- Audit logs are persistent security records for selected actions such as login success, login failure, admin access and admin denial.
+- Both include `request_id`, so an operator can correlate `audit_events` with `http_request`, auth logs and exception logs.
+- Audit logs are queryable only through admin-protected APIs and database tooling.
+
+Audit events follow the same sensitive data rules as runtime logs. They do not store Authorization headers, tokens, secrets, verification codes, full phone numbers, prompt text, model completion text or user answer text.
+
+See [Audit Log](audit-log.md) for event fields, API filters and troubleshooting flow.
+
 Release notes and incident records must not include tokens, secrets, verification codes, full phone numbers, prompt text or user answer text.

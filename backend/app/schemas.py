@@ -290,6 +290,26 @@ class LLMUsageSummaryOut(BaseModel):
     recent_records: list[LLMUsageRecordOut] = Field(default_factory=list)
 
 
+class AuditEventOut(BaseModel):
+    id: int
+    actor_user_id: int | None = None
+    actor_phone_masked: str | None = None
+    actor_role: str
+    action: str
+    resource_type: str | None = None
+    resource_id: str | None = None
+    target_user_id: int | None = None
+    request_id: str | None = None
+    status: str
+    reason: str | None = None
+    ip_address: str | None = None
+    user_agent: str | None = None
+    metadata_json: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class SubmissionCreate(BaseModel):
     submitter_name: str | None = Field(default=None, max_length=80)
     company_name: str = Field(min_length=2, max_length=100)

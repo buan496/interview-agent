@@ -11,9 +11,10 @@ from app.core.embedding import EmbeddingService
 from app.db import get_db
 from app.ingest.generator import generate_from_jd
 from app.ingest.review_queue import precheck_question
-from app.models import Company, Position, Question, QuestionSubmission, QuestionTag, Tag
+from app.models import AuditEvent, Company, Position, Question, QuestionSubmission, QuestionTag, Tag
 from app.observability import log_event
 from app.schemas import (
+    AuditEventOut,
     GenerateFromJdRequest,
     GeneratedSubmissionOut,
     ReviewSubmissionRequest,
@@ -28,6 +29,33 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 async def admin_health() -> dict[str, str]:
     log_event("admin.health", status="success")
     return {"status": "ready"}
+
+
+@router.get("/audit-events", response_model=list[AuditEventOut])
+async def list_audit_events(
+    action: str | None = Query(default=None, max_length=50),
+    actor_user_id: int | None = Query(default=None, ge=1),
+    event_status: str | None = Query(default=None, alias="status", max_length=20),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db),
+) -> list[AuditEventOut]:
+    stmt = select(AuditEvent)
+    if action:
+        stmt = stmt.where(AuditEvent.action == action)
+    if actor_user_id is not None:
+        stmt = stmt.where(AuditEvent.actor_user_id == actor_user_id)
+    if event_status:
+        stmt = stmt.where(AuditEvent.status == event_status)
+    rows = (
+        await db.execute(
+            stmt.order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    ).scalars().all()
+    log_event("admin.audit_events.list", status="success", result_count=len(rows), action=action)
+    return [AuditEventOut.model_validate(item) for item in rows]
 
 
 @router.get("/submissions", response_model=list[SubmissionOut])

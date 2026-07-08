@@ -104,6 +104,12 @@ PR #37 adds the first release/CD management layer. The repository now has a manu
 
 This layer is governance only. It does not deploy production, does not require production secrets, does not introduce Kubernetes, and does not push release-candidate images to a registry. Existing CI remains the required quality gate before release candidate review.
 
+### Audit Layer
+
+PR #38 adds a persistent `audit_events` ledger for selected security and admin events. Login success, login failure, admin access and admin denial are recorded with `request_id`, masked actor identity, status, reason and sanitized metadata.
+
+This is audit foundation v1. It does not add RBAC, tenant scoping, frontend admin pages, full report access audit, data export audit or privacy request workflows.
+
 ## 前端架构
 
 当前已完成：
@@ -134,7 +140,7 @@ This layer is governance only. It does not deploy production, does not require p
 
 - 将当前路由内领域逻辑逐步抽到 service 层，例如 `SessionService`、`ReportService`、`PracticePlanService`。
 - 引入组织/租户上下文，API 查询统一带 `tenant_id` 或 `organization_id`。
-- 增加审计中间件和 request id。
+- 在 request id 基础上继续扩展审计事件覆盖范围。
 - 增加 rate limit、幂等键、后台任务状态查询。
 - 将 LLM 调用、评分、报告生成等长耗时能力异步化。
 
@@ -155,7 +161,7 @@ This layer is governance only. It does not deploy production, does not require p
 - 增加 `training_history` 或以查询视图聚合 Session、Report、WrongBook、PracticePlan。
 - 增加 `agent_memories`、`memory_events`、`ability_profiles`。
 - 增加 `scoring_rubrics`、`rubric_versions`，让评分体系可版本化。
-- 增加 `audit_logs`、`data_exports`、`privacy_requests`。
+- 扩展 `audit_events` 覆盖报告访问、题库审核、数据导出和隐私请求；增加 `data_exports`、`privacy_requests`。
 - 增加备份、恢复、归档和数据保留策略。
 
 ## Agent 能力架构
@@ -227,9 +233,9 @@ This layer is governance only. It does not deploy production, does not require p
 
 - Token 是自定义 HMAC 格式，不是标准 JWT 库实现。
 - 真实短信服务商、验证码存储、过期校验、错误次数限制和重放保护仍未接入。
-- 没有 refresh token、设备管理、登录审计和会话撤销。
+- 没有 refresh token、设备管理和会话撤销；登录审计已有 v1 但仍缺验证码生命周期和设备维度。
 - 权限模型只有 admin phone allowlist，没有角色/权限表。
-- 没有租户隔离、审计日志、数据导出/删除、隐私合规流程。
+- 没有租户隔离、完整 RBAC、完整资源审计、数据导出/删除、隐私合规流程。
 
 目标形态：
 

@@ -228,6 +228,31 @@ class LLMUsageRecord(Base):
     session: Mapped[Session | None] = relationship(back_populates="llm_usage_records")
 
 
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+    __table_args__ = (
+        Index("idx_audit_actor_created", "actor_user_id", "created_at"),
+        Index("idx_audit_action_created", "action", "created_at"),
+        Index("idx_audit_request_id", "request_id"),
+    )
+
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
+    actor_user_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("users.id"))
+    actor_phone_masked: Mapped[str | None] = mapped_column(String(20))
+    actor_role: Mapped[str] = mapped_column(String(20), nullable=False, default="anonymous")
+    action: Mapped[str] = mapped_column(String(50), nullable=False)
+    resource_type: Mapped[str | None] = mapped_column(String(50))
+    resource_id: Mapped[str | None] = mapped_column(String(80))
+    target_user_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("users.id"))
+    request_id: Mapped[str | None] = mapped_column(String(80))
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    reason: Mapped[str | None] = mapped_column(String(120))
+    ip_address: Mapped[str | None] = mapped_column(String(80))
+    user_agent: Mapped[str | None] = mapped_column(String(300))
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(jsonb_type, default=dict)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
 class Message(Base):
     __tablename__ = "messages"
     __table_args__ = (Index("idx_msg_sq", "sq_id", "id"),)
