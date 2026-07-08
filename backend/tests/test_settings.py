@@ -75,6 +75,18 @@ class SettingsGovernanceTest(unittest.TestCase):
         with self.assertRaises(ValidationError):
             Settings(_env_file=None, access_token_expire_minutes=0)
 
+    def test_invalid_rate_limit_value_fails(self) -> None:
+        with self.assertRaises(ValidationError):
+            Settings(_env_file=None, login_rate_limit_per_minute=0)
+
+    def test_production_requires_rate_limit_enabled(self) -> None:
+        settings = _production_settings(rate_limit_enabled=False)
+
+        with self.assertRaises(ConfigValidationError) as ctx:
+            settings.validate_production_config()
+
+        self.assertIn("RATE_LIMIT_ENABLED", str(ctx.exception))
+
     def test_missing_pricing_version_fails(self) -> None:
         settings = _production_settings(llm_pricing_version="")
 
@@ -115,6 +127,8 @@ class SettingsGovernanceTest(unittest.TestCase):
         self.assertTrue(summary["auth"]["jwt_secret_configured"])
         self.assertTrue(summary["llm"]["deepseek_api_key_configured"])
         self.assertEqual(summary["database"]["database_url"], "postgresql+asyncpg://interview:****@db.example.com:5432/interview_agent")
+        self.assertTrue(summary["rate_limit"]["enabled"])
+        self.assertGreater(summary["rate_limit"]["llm_daily_token_quota"], 0)
 
 
 if __name__ == "__main__":

@@ -172,3 +172,26 @@ Audit events follow the same sensitive data rules as runtime logs. They do not s
 See [Audit Log](audit-log.md) for event fields, API filters and troubleshooting flow.
 
 Release notes and incident records must not include tokens, secrets, verification codes, full phone numbers, prompt text or user answer text.
+
+## Rate Limit and Quota Events
+
+PR #39 adds abuse-protection events:
+
+- `rate_limit_exceeded`: emitted when an in-process request bucket rejects a request.
+- `rate_limit_phone_denied`: emitted when phone-based auth throttling rejects a request; phone numbers are masked.
+- `quota_exceeded`: emitted when a user would exceed LLM token or call quota before answer scoring.
+
+429 responses use the normal HTTP exception handler, so the response body includes `request_id`. Rate-limit responses also include:
+
+- `Retry-After`
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+
+Quota refusals are also written to `audit_events` with action `quota_exceeded`, resource type `session`, and sanitized metadata containing only quota name, limit, current usage and requested tokens.
+
+Troubleshooting:
+
+1. Collect `request_id` from the 429 response body or `X-Request-ID` response header.
+2. Search structured logs for `rate_limit_exceeded` or `quota_exceeded`.
+3. For quota issues, inspect `llm_usage_records` for the affected `user_id`.
+4. For auth throttling, use masked phone logs only; do not request or store verification codes.

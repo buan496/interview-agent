@@ -68,6 +68,15 @@ class Settings(BaseSettings):
     # Usage metering config
     llm_usage_metering_enabled: bool = Field(default=True, validation_alias="LLM_USAGE_METERING_ENABLED")
 
+    # Rate limit / quota config
+    rate_limit_enabled: bool = Field(default=True, validation_alias="RATE_LIMIT_ENABLED")
+    login_rate_limit_per_minute: int = Field(default=600, validation_alias="LOGIN_RATE_LIMIT_PER_MINUTE")
+    auth_phone_rate_limit_per_hour: int = Field(default=600, validation_alias="AUTH_PHONE_RATE_LIMIT_PER_HOUR")
+    answer_submit_rate_limit_per_minute: int = Field(default=600, validation_alias="ANSWER_SUBMIT_RATE_LIMIT_PER_MINUTE")
+    llm_daily_token_quota: int = Field(default=1_000_000, validation_alias="LLM_DAILY_TOKEN_QUOTA")
+    llm_monthly_token_quota: int = Field(default=10_000_000, validation_alias="LLM_MONTHLY_TOKEN_QUOTA")
+    llm_daily_call_quota: int = Field(default=1_000, validation_alias="LLM_DAILY_CALL_QUOTA")
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", populate_by_name=True)
 
     @field_validator("access_token_expire_minutes")
@@ -82,6 +91,20 @@ class Settings(BaseSettings):
     def _validate_llm_timeout_seconds(cls, value: float) -> float:
         if value <= 0:
             raise ValueError("LLM_TIMEOUT_SECONDS must be positive")
+        return value
+
+    @field_validator(
+        "login_rate_limit_per_minute",
+        "auth_phone_rate_limit_per_hour",
+        "answer_submit_rate_limit_per_minute",
+        "llm_daily_token_quota",
+        "llm_monthly_token_quota",
+        "llm_daily_call_quota",
+    )
+    @classmethod
+    def _validate_positive_limits(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("Rate limit and quota values must be positive")
         return value
 
     @property
@@ -114,6 +137,8 @@ class Settings(BaseSettings):
             errors.append("LLM_PRICING_VERSION is required")
 
         if self.is_production:
+            if not self.rate_limit_enabled:
+                errors.append("RATE_LIMIT_ENABLED must be true in production")
             if self.jwt_secret == DEFAULT_JWT_SECRET:
                 errors.append("JWT_SECRET_KEY/TOKEN_SECRET/JWT_SECRET must be configured for production")
             if self.auth_dev_code == DEFAULT_DEV_CODE:
@@ -165,6 +190,15 @@ class Settings(BaseSettings):
             "usage_metering": {
                 "enabled": self.llm_usage_metering_enabled,
                 "pricing_version": self.llm_pricing_version,
+            },
+            "rate_limit": {
+                "enabled": self.rate_limit_enabled,
+                "login_per_minute": self.login_rate_limit_per_minute,
+                "auth_phone_per_hour": self.auth_phone_rate_limit_per_hour,
+                "answer_submit_per_minute": self.answer_submit_rate_limit_per_minute,
+                "llm_daily_token_quota": self.llm_daily_token_quota,
+                "llm_monthly_token_quota": self.llm_monthly_token_quota,
+                "llm_daily_call_quota": self.llm_daily_call_quota,
             },
         }
 

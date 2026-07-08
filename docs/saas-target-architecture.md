@@ -110,6 +110,12 @@ PR #38 adds a persistent `audit_events` ledger for selected security and admin e
 
 This is audit foundation v1. It does not add RBAC, tenant scoping, frontend admin pages, full report access audit, data export audit or privacy request workflows.
 
+### Abuse Protection and Quota Layer
+
+PR #39 adds rate limit and quota foundation v1. Auth endpoints are protected by IP and phone buckets, answer submission is protected by user/session buckets, and LLM scoring checks user-scoped token/call quotas against `llm_usage_records` before model evaluation.
+
+This layer is intentionally simple. It uses in-process rate-limit buckets, not Redis or an external limiter. Quota is cost-control metadata, not payment, subscription, billing, or commercial plan enforcement.
+
 ## 前端架构
 
 当前已完成：
