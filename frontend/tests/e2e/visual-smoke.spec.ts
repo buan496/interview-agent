@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { mockBaseApis, sessionDetail } from "./helpers/core-fixtures";
+import { mockAdminApis, mockBaseApis, sessionDetail } from "./helpers/core-fixtures";
 
 const visualDir = "test-results/visual";
 
@@ -17,6 +17,7 @@ async function expectNoHorizontalOverflow(page: Page) {
 
 async function mockVisualApis(page: Page) {
   await mockBaseApis(page);
+  await mockAdminApis(page);
   await page.route("**/api/sessions/42", async (route) => route.fulfill({ json: sessionDetail(42) }));
 }
 
@@ -109,6 +110,36 @@ test.describe("desktop visual smoke screenshots", () => {
 
     await capture(page, "wrong-book-desktop");
   });
+
+  test("captures admin desktop", async ({ page }) => {
+    await mockVisualApis(page);
+    await page.goto("/admin");
+
+    await expect(page.getByRole("heading", { name: "后台管理控制台" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /题库管理/ })).toBeVisible();
+
+    await capture(page, "admin-desktop");
+  });
+
+  test("captures admin questions desktop", async ({ page }) => {
+    await mockVisualApis(page);
+    await page.goto("/admin/questions");
+
+    await expect(page.getByRole("heading", { name: "题库管理" })).toBeVisible();
+    await expect(page.getByText("Why is Redis fast?")).toBeVisible();
+
+    await capture(page, "admin-questions-desktop");
+  });
+
+  test("captures admin rubrics desktop", async ({ page }) => {
+    await mockVisualApis(page);
+    await page.goto("/admin/rubrics");
+
+    await expect(page.getByRole("heading", { name: "评分标准管理" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Agent Engineer Rubric" })).toBeVisible();
+
+    await capture(page, "admin-rubrics-desktop");
+  });
 });
 
 test.describe("mobile visual smoke screenshots", () => {
@@ -188,5 +219,16 @@ test.describe("mobile visual smoke screenshots", () => {
     await expect(page.getByRole("button", { name: "开始推荐训练" })).toBeVisible();
 
     await capture(page, "wrong-book-mobile");
+  });
+
+  test("captures admin mobile", async ({ page }) => {
+    await mockVisualApis(page);
+    await page.goto("/admin");
+
+    await expect(page.locator("header")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "后台管理控制台" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /题库管理/ })).toBeVisible();
+
+    await capture(page, "admin-mobile");
   });
 });

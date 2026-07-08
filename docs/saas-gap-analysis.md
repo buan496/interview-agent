@@ -591,3 +591,30 @@ Suggested follow-up PRs:
 - Rubric diff and rollback view.
 - Evaluation replay using a selected rubric version.
 - Rubric rollout policy once organization/tenant boundaries exist.
+
+## PR #43 Update: Admin Console v1
+
+Status: partially complete.
+
+Completed:
+
+- Added frontend Admin Console routes: `/admin`, `/admin/questions`, and `/admin/rubrics`.
+- Added admin/content-operator UI for question list filtering, question creation, editing, publishing and archiving.
+- Added admin/content-operator UI for rubric creation, rubric version creation, publishing and archiving.
+- Added question default Rubric Version selection using published rubric versions.
+- Kept backend RBAC as the source of truth; frontend shows a forbidden state when admin APIs return 403.
+- Added Playwright E2E and visual smoke coverage for the admin console.
+
+Still missing:
+
+- No user management or role management UI.
+- No organization or tenant model.
+- No bulk import/export workflow.
+- No rubric diff, rollback, replay or rollout policy UI.
+- No billing, plan management or Agent Memory.
+
+Next recommended PRs:
+
+- Question version history and bulk import/export.
+- Rubric diff/rollback and evaluation replay.
+- Role management API and admin UI after tenant boundaries are designed.

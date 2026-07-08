@@ -6,3 +6,15 @@ export { getReport } from "@/lib/report-api";
 export { getWrongBook } from "@/lib/wrong-book-api";
 export { createSubmission } from "@/lib/submission-api";
 export { generateFromJd, getSubmissions, reviewSubmission } from "@/lib/admin-api";
+export {
+  archiveAdminQuestion,
+  archiveAdminRubricVersion,
+  createAdminQuestion,
+  createAdminRubric,
+  createAdminRubricVersion,
+  getAdminQuestions,
+  getAdminRubrics,
+  publishAdminQuestion,
+  publishAdminRubricVersion,
+  updateAdminQuestion,
+} from "@/lib/admin-console-api";

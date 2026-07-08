@@ -138,6 +138,12 @@ PR #42 adds scoring rubric versioning backend v1. The data model introduces `sco
 
 This layer does not add a frontend admin page, Agent Memory, a complex scoring engine rewrite, rubric replay, rubric diffing, or production-grade rollout controls.
 
+### Admin Console Layer
+
+PR #43 adds Admin Console v1 on the frontend. The routes `/admin`, `/admin/questions`, and `/admin/rubrics` expose the existing backend question-bank and rubric APIs to `admin` and `content_operator` users. The console supports question list filtering, question creation/editing, publishing, archiving, rubric creation, rubric-version creation, publishing and archiving.
+
+The frontend does not become the source of truth for permissions. It treats backend 403 responses as the authority and shows a forbidden state for ordinary users. This layer does not add user management, organization/tenant management, billing, Agent Memory, or a complex permission matrix.
+
 ## 前端架构
 
 当前已完成：
