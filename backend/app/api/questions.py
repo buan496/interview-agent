@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.db import get_db
 from app.models import Company, Position, Question, QuestionTag, Tag
+from app.question_bank import PUBLISHED_QUESTION_STATUSES
 from app.schemas import MetadataOut, QuestionListOut, QuestionOut, TagOut
 
 
@@ -36,7 +37,7 @@ def _apply_filters(
     tag_ids: list[int],
     difficulty: int | None,
 ) -> Select[tuple[Question]]:
-    stmt = stmt.where(Question.status == "active")
+    stmt = stmt.where(Question.status.in_(PUBLISHED_QUESTION_STATUSES))
     if company_id:
         stmt = stmt.where(Question.company_id == company_id)
     if position_id:
@@ -98,6 +99,6 @@ async def get_question(question_id: int, db: AsyncSession = Depends(get_db)) -> 
             selectinload(Question.tag_links).selectinload(QuestionTag.tag),
         ],
     )
-    if not question or question.status != "active":
+    if not question or question.status not in PUBLISHED_QUESTION_STATUSES:
         raise HTTPException(status_code=404, detail="Question not found")
     return _question_out(question)

@@ -77,6 +77,11 @@ class Question(Base):
     embedding: Mapped[Any | None] = mapped_column(Vector(1024))
     status: Mapped[str] = mapped_column(String(15), default="active")
     ask_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_by_user_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("users.id"))
+    updated_by_user_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("users.id"))
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    published_at: Mapped[datetime | None]
+    archived_at: Mapped[datetime | None]
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     company: Mapped[Company | None] = relationship(back_populates="questions")

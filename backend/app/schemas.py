@@ -57,6 +57,51 @@ class QuestionListOut(BaseModel):
     total: int
 
 
+class QuestionBankQuestionOut(QuestionOut):
+    answer_reference: str
+    status: str
+    created_by_user_id: int | None = None
+    updated_by_user_id: int | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+    published_at: datetime | None = None
+    archived_at: datetime | None = None
+
+
+class QuestionBankListOut(BaseModel):
+    items: list[QuestionBankQuestionOut]
+    total: int
+
+
+class QuestionBankCreateRequest(BaseModel):
+    title: str = Field(min_length=6, max_length=300)
+    prompt: str | None = Field(default=None, max_length=4000)
+    answer_reference: str = Field(min_length=20, max_length=8000)
+    difficulty: int = Field(default=3, ge=1, le=5)
+    qtype: Literal["behavioral", "knowledge", "coding", "system_design"]
+    company_id: int | None = None
+    company_name: str | None = Field(default=None, min_length=2, max_length=100)
+    position_id: int | None = None
+    position_name: str | None = Field(default=None, min_length=2, max_length=50)
+    tags: list[str] = Field(default_factory=list, max_length=10)
+    source_note: str | None = Field(default=None, max_length=1000)
+    status: Literal["draft", "published"] = "draft"
+
+
+class QuestionBankUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=6, max_length=300)
+    prompt: str | None = Field(default=None, max_length=4000)
+    answer_reference: str | None = Field(default=None, min_length=20, max_length=8000)
+    difficulty: int | None = Field(default=None, ge=1, le=5)
+    qtype: Literal["behavioral", "knowledge", "coding", "system_design"] | None = None
+    company_id: int | None = None
+    company_name: str | None = Field(default=None, min_length=2, max_length=100)
+    position_id: int | None = None
+    position_name: str | None = Field(default=None, min_length=2, max_length=50)
+    tags: list[str] | None = Field(default=None, max_length=10)
+    source_note: str | None = Field(default=None, max_length=1000)
+
+
 class CreateSessionRequest(BaseModel):
     mode: Literal["single", "mock"] = "single"
     question_id: int | None = None

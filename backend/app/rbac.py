@@ -41,6 +41,11 @@ def is_admin_user(user: User | None, settings: AdminPhoneSettings) -> bool:
     return admin_access_decision(user, settings).allowed
 
 
+def can_manage_question_bank(user: User | None, settings: AdminPhoneSettings) -> bool:
+    role = get_user_role(user)
+    return role == ROLE_CONTENT_OPERATOR or admin_access_decision(user, settings).allowed
+
+
 def admin_access_decision(user: User | None, settings: AdminPhoneSettings) -> AdminAccessDecision:
     role = get_user_role(user)
     if role == ROLE_ADMIN:

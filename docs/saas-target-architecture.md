@@ -122,6 +122,14 @@ PR #40 adds RBAC foundation v1. `users.role` supports `user`, `admin`, and `cont
 
 This is not an organization or tenant model. It does not include resource-level permissions, a full permission matrix, role management UI, or frontend admin user management.
 
+### Question Bank Management Layer
+
+PR #41 adds question bank management backend v1. The system reuses the existing `questions`, `question_tags`, `tags`, `companies`, and `positions` tables instead of creating a parallel question model. Management metadata is added to `questions`: creator, updater, updated time, published time and archived time.
+
+`admin` and `content_operator` can create, update, publish, archive and query managed questions through `/api/admin/questions`. Ordinary `/api/questions` and training session selection only expose published questions. Legacy `active` questions remain readable and trainable for seed-data compatibility.
+
+This layer does not add a frontend admin page, organization/tenant scoping, complex permission matrices, bulk operations, question version diffing, or scoring rubric versioning.
+
 ## 前端架构
 
 当前已完成：

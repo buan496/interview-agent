@@ -401,3 +401,21 @@ Next roadmap implications:
 - Phase 5 now has a basic RBAC foundation.
 - Organization membership, tenant isolation, role management UI/API and resource-level permissions remain future work.
 - `content_operator` should be activated only after content review route boundaries and audit rules are explicit.
+
+## PR #41 Update: Question Bank Management Backend v1
+
+Status: partially complete.
+
+Completed:
+
+- Added backend-only question bank management APIs.
+- Added question lifecycle fields for managed content.
+- Enabled `admin` and `content_operator` to create, update, publish, archive and query questions.
+- Preserved ordinary user visibility so only published and legacy active questions are readable/trainable.
+- Added audit coverage for question bank management events.
+
+Next roadmap implications:
+
+- Phase 4 now has a backend foundation for content operations.
+- The next content-ops step should be a frontend management console or version history, depending on whether operator workflow or governance is the priority.
+- Rubric versioning remains a separate scoring-system PR.

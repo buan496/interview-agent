@@ -18,6 +18,14 @@ Extended in PR #40:
 - `admin_access`: also records RBAC role-based admin access. Metadata includes `required_role`, `user_role`, and `access_source`.
 - `admin_denied`: also records RBAC denial reasons such as `rbac_denied` and `content_operator_not_admin`.
 
+Extended in PR #41:
+
+- `question_created`: an admin or content operator creates a managed question.
+- `question_updated`: an admin or content operator updates managed question metadata or content fields.
+- `question_published`: an admin or content operator publishes a question into the ordinary readable/training pool.
+- `question_archived`: an admin or content operator archives a question so it no longer appears in ordinary reads or training selection.
+- `question_bank_denied`: a non-operator attempts to call a question bank management API.
+
 Not covered in v1:
 
 - Organization or tenant-level audit scopes.
@@ -78,6 +86,8 @@ Audit metadata must not store:
 - User answer text
 - Prompt text
 - Model completion text
+
+Question bank audit metadata stores only field summaries such as question id, status, difficulty, qtype, tag count, title length, prompt length, answer reference length, and changed field names. It does not store full prompt or answer reference text.
 
 The audit helper masks metadata keys that contain sensitive terms such as `token`, `secret`, `code`, `authorization`, `phone`, `prompt`, `completion`, and `answer`.
 
