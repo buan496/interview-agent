@@ -365,3 +365,21 @@ Next roadmap implications:
 - Phase 5 now has an audit foundation tied to observability `request_id`.
 - RBAC, organization membership and tenant-scoped audit remain separate follow-up work.
 - Future audit coverage should include report access, question review, data export and privacy request events.
+
+## PR #39 Update: Rate Limit and Quota v1
+
+Status: partially complete.
+
+Completed:
+
+- Added rate limit and quota settings to the production configuration surface.
+- Added in-process request throttling for auth and answer submission hot paths.
+- Added user-scoped LLM daily/monthly token and daily call quota checks before scoring.
+- Added 429 response coverage with `request_id` correlation.
+- Added audit/log coverage for quota denial.
+
+Next roadmap implications:
+
+- The project now has a basic abuse-protection and AI cost guardrail layer.
+- Multi-instance production still needs Redis-backed or gateway-backed rate limiting.
+- Commercial plans, billing, tenant quotas and admin quota management remain future work.

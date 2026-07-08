@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 from datetime import date, datetime, timedelta, timezone
 from time import perf_counter
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,7 +26,15 @@ from app.llm_usage import (
     usage_metering_enabled,
 )
 from app.models import EvaluationResult, Message, Question, QuestionTag, Session, SessionQuestion, User, UserTagStat, WrongBook
-from app.observability import log_event
+from app.observability import get_request_id, log_event
+from app.audit import record_audit_event
+from app.rate_limit import (
+    QuotaExceeded,
+    RateLimitExceeded,
+    check_answer_submit_rate_limit,
+    check_user_llm_quota,
+    rate_limit_http_exception,
+)
 from app.schemas import (
     AnswerRequest,
     CreateSessionOut,
@@ -565,6 +573,21 @@ async def get_report(
     return _report_out(session)
 
 
+def _estimate_answer_prompt_tokens(sq: SessionQuestion, answer: str) -> int:
+    history_rows = sorted(sq.messages, key=lambda item: item.id)
+    history = [ConversationMessage(role=m.role, content=m.content, msg_type=m.msg_type) for m in history_rows]
+    history.append(ConversationMessage(role="candidate", content=answer, msg_type="answer"))
+    depth = sum(1 for m in history_rows if m.role == "interviewer" and m.msg_type in {"followup", "hint"})
+    question = sq.question
+    interview_question = InterviewQuestion(
+        title=question.title,
+        answer_key=question.answer_key,
+        company=question.company.name if question.company else "鐩爣鍏徃",
+        position=question.position.name if question.position else "鐩爣宀椾綅",
+    )
+    return estimate_prompt_tokens(interview_question, history, answer, depth)
+
+
 async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) -> AsyncIterator[str]:
     yield _sse("eval_start", {"sq_id": request.sq_id})
     async with SessionLocal() as db:
@@ -597,13 +620,9 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
             yield _sse("error", {"message": "Question is not active"})
             return
 
-        now = _now()
-        sq.answer_text = request.content
-        sq.submitted_at = now
-        db.add(Message(sq_id=sq.id, role="candidate", content=request.content, msg_type="answer"))
-        await db.flush()
         history_rows = (await db.execute(select(Message).where(Message.sq_id == sq.id).order_by(Message.id))).scalars().all()
         history = [ConversationMessage(role=m.role, content=m.content, msg_type=m.msg_type) for m in history_rows]
+        history.append(ConversationMessage(role="candidate", content=request.content, msg_type="answer"))
         depth = sum(1 for m in history_rows if m.role == "interviewer" and m.msg_type in {"followup", "hint"})
 
         question = sq.question
@@ -617,6 +636,11 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
         prompt_tokens = estimate_prompt_tokens(interview_question, history, request.content, depth)
         provider = provider_from_llm(engine.llm)
         model_name = model_from_llm(engine.llm)
+        now = _now()
+        sq.answer_text = request.content
+        sq.submitted_at = now
+        db.add(Message(sq_id=sq.id, role="candidate", content=request.content, msg_type="answer"))
+        await db.flush()
         llm_started_at = perf_counter()
         try:
             result = await engine.evaluate_answer(
@@ -749,9 +773,14 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
 async def answer(
     session_id: int,
     request: AnswerRequest,
+    http_request: Request = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
+    try:
+        check_answer_submit_rate_limit(current_user.id, session_id)
+    except RateLimitExceeded as exc:
+        raise rate_limit_http_exception(exc) from exc
     row = (
         await db.execute(
             select(Session, SessionQuestion)
@@ -762,6 +791,9 @@ async def answer(
                 SessionQuestion.id == request.sq_id,
             )
             .options(selectinload(Session.questions))
+            .options(selectinload(SessionQuestion.messages))
+            .options(selectinload(SessionQuestion.question).selectinload(Question.company))
+            .options(selectinload(SessionQuestion.question).selectinload(Question.position))
         )
     )
     result = row.first()
@@ -781,5 +813,38 @@ async def answer(
     if sq.status != "answering":
         log_event("answer.submit", status="conflict", session_id=session_id, sq_id=request.sq_id, question_status=sq.status)
         raise HTTPException(status_code=409, detail="Question is not active")
+    request_id = getattr(http_request.state, "request_id", None) if http_request else get_request_id()
+    prompt_tokens = _estimate_answer_prompt_tokens(sq, request.content)
+    try:
+        await check_user_llm_quota(db, user_id=current_user.id, estimated_tokens=prompt_tokens)
+    except QuotaExceeded as exc:
+        log_event(
+            "quota_exceeded",
+            status="denied",
+            session_id=session_id,
+            quota_name=exc.quota_name,
+            limit=exc.limit,
+            current_usage=exc.current_usage,
+            requested=exc.requested,
+        )
+        await record_audit_event(
+            db,
+            action="quota_exceeded",
+            status="denied",
+            actor=current_user,
+            actor_role="user",
+            resource_type="session",
+            resource_id=session_id,
+            request=http_request,
+            request_id=request_id,
+            reason=exc.quota_name,
+            metadata={
+                "quota": exc.quota_name,
+                "limit": exc.limit,
+                "current_usage": exc.current_usage,
+                "requested": exc.requested,
+            },
+        )
+        raise rate_limit_http_exception(exc) from exc
     log_event("answer.submit", status="accepted", session_id=session_id, sq_id=request.sq_id)
     return StreamingResponse(_answer_stream(session_id, current_user.id, request), media_type="text/event-stream")

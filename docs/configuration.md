@@ -75,6 +75,7 @@ Production rejects:
 - default `JWT_SECRET_KEY` / `TOKEN_SECRET` / `JWT_SECRET`
 - default `AUTH_DEV_CODE=000000`
 - `AUTH_DEV_CODE_ENABLED=true`
+- `RATE_LIMIT_ENABLED=false`
 - missing `DATABASE_URL`
 - non-positive `ACCESS_TOKEN_EXPIRE_MINUTES`
 - missing `LLM_PRICING_VERSION`
@@ -93,6 +94,24 @@ Production rejects:
 - `AUTH_DEV_CODE` is never included
 
 The app logs this summary as `config.loaded` after observability is installed.
+
+## Rate Limit and Quota Configuration
+
+PR #39 adds rate limit and quota configuration:
+
+- `RATE_LIMIT_ENABLED`
+- `LOGIN_RATE_LIMIT_PER_MINUTE`
+- `AUTH_PHONE_RATE_LIMIT_PER_HOUR`
+- `ANSWER_SUBMIT_RATE_LIMIT_PER_MINUTE`
+- `LLM_DAILY_TOKEN_QUOTA`
+- `LLM_MONTHLY_TOKEN_QUOTA`
+- `LLM_DAILY_CALL_QUOTA`
+
+Development defaults are intentionally broad enough for local E2E and demos. Production must keep `RATE_LIMIT_ENABLED=true`.
+
+v1 uses in-process memory buckets for request rate limits. This protects a single backend process and keeps tests deterministic, but it is not a distributed limiter. A multi-instance production deployment should replace or back this with Redis, an API gateway, or another shared rate-limit store.
+
+LLM quota checks use `llm_usage_records` and are scoped by `current_user.id`. Quotas are internal cost-control guardrails only. They are not payment, subscription, billing, or plan enforcement.
 
 ## Troubleshooting Startup Failures
 

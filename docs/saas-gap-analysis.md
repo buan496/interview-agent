@@ -471,3 +471,31 @@ Suggested follow-up PRs:
 - RBAC and organization membership: replace phone allowlist with roles and resource scopes.
 - Audit coverage expansion: add report access, question review, data export and privacy request events.
 - Audit retention policy: define retention windows, archive flow and operator access rules.
+
+## PR #39 Update: Rate Limit and Quota v1
+
+Status: partially complete.
+
+Completed:
+
+- Added settings for auth rate limits, answer submission rate limits and LLM token/call quotas.
+- Added in-process rate limiter for IP, phone and user/session buckets.
+- Added user-scoped LLM quota checks backed by `llm_usage_records`.
+- Added 429 responses with `request_id` through the existing observability exception handler.
+- Added `quota_exceeded` observability and audit events for LLM quota refusals.
+- Added backend tests for login limits, phone limits, answer submit limits, user-isolated LLM quota and sensitive data non-disclosure.
+
+Still missing:
+
+- No Redis or distributed rate-limit store.
+- No API gateway limit integration.
+- No payment, subscription, billing or commercial plan enforcement.
+- No admin quota management UI.
+- No tenant-level quota aggregation.
+
+Suggested follow-up PRs:
+
+- Redis-backed rate limiter for multi-instance production.
+- Admin quota management and quota override workflow.
+- Tenant-level quota model after organization boundaries exist.
+- Cost anomaly alerts based on `llm_usage_records`.

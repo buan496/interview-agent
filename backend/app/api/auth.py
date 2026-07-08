@@ -16,6 +16,7 @@ from app.audit import record_audit_event
 from app.db import get_db
 from app.models import User
 from app.observability import log_event, mask_phone, set_user_context
+from app.rate_limit import RateLimitExceeded, check_auth_rate_limits, rate_limit_http_exception
 from app.settings import ConfigValidationError, DEFAULT_DEV_CODE, DEFAULT_JWT_SECRET, Settings, get_settings
 
 
@@ -178,9 +179,13 @@ async def require_admin(
 
 
 @router.post("/request-code")
-async def request_code(request: RequestCodeRequest) -> dict[str, str | int]:
+async def request_code(request: RequestCodeRequest, http_request: Request = None) -> dict[str, str | int]:
     settings = get_settings()
     _ensure_auth_config(settings)
+    try:
+        check_auth_rate_limits(http_request, request.phone, settings)
+    except RateLimitExceeded as exc:
+        raise rate_limit_http_exception(exc) from exc
     if settings.is_production and not settings.sms_provider_key:
         log_event("auth.request_code", status="failed", phone=mask_phone(request.phone), reason="sms_provider_missing")
         raise HTTPException(status_code=503, detail="SMS provider is not configured")
@@ -198,6 +203,10 @@ async def login(
     http_request: Request = None,
 ) -> dict[str, str | int]:
     settings = get_settings()
+    try:
+        check_auth_rate_limits(http_request, request.phone, settings)
+    except RateLimitExceeded as exc:
+        raise rate_limit_http_exception(exc) from exc
     if not verify_sms_code(request.phone, request.code, settings):
         log_event("auth.login", status="failed", phone=mask_phone(request.phone), reason="invalid_code")
         if isinstance(db, AsyncSession):
