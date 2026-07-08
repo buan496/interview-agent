@@ -17,7 +17,7 @@ from app.db import get_db
 from app.models import User
 from app.observability import log_event, mask_phone, set_user_context
 from app.rate_limit import RateLimitExceeded, check_auth_rate_limits, rate_limit_http_exception
-from app.rbac import ROLE_USER, admin_access_decision, get_user_role
+from app.rbac import ROLE_USER, can_manage_question_bank, admin_access_decision, get_user_role
 from app.settings import ConfigValidationError, DEFAULT_DEV_CODE, DEFAULT_JWT_SECRET, Settings, get_settings
 
 
@@ -178,6 +178,39 @@ async def require_admin(
             request=request,
             metadata=audit_metadata,
         )
+    return current_user
+
+
+async def require_content_operator_or_admin(
+    current_user: User = Depends(get_current_user),
+    request: Request = None,
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    settings = get_settings()
+    user_role = get_user_role(current_user)
+    allowed = can_manage_question_bank(current_user, settings)
+    access_source = "role" if user_role in {"admin", "content_operator"} else "admin_phone_fallback"
+    audit_metadata = {
+        "method": request.method if request else None,
+        "path": request.url.path if request else None,
+        "required_role": "admin_or_content_operator",
+        "user_role": user_role,
+        "access_source": access_source if allowed else None,
+    }
+    if not allowed:
+        if isinstance(db, AsyncSession):
+            await record_audit_event(
+                db,
+                action="question_bank_denied",
+                status="denied",
+                actor=current_user,
+                actor_role=user_role,
+                resource_type="question",
+                request=request,
+                reason="question_bank_rbac_denied",
+                metadata=audit_metadata,
+            )
+        raise HTTPException(status_code=403, detail="Question bank operator privileges required")
     return current_user
 
 

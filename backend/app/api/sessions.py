@@ -28,6 +28,7 @@ from app.llm_usage import (
 from app.models import EvaluationResult, Message, Question, QuestionTag, Session, SessionQuestion, User, UserTagStat, WrongBook
 from app.observability import get_request_id, log_event
 from app.audit import record_audit_event
+from app.question_bank import PUBLISHED_QUESTION_STATUSES
 from app.rate_limit import (
     QuotaExceeded,
     RateLimitExceeded,
@@ -127,7 +128,7 @@ def _first_question(question: Question, sq_id: int) -> FirstQuestionOut:
 
 
 def _question_filter_stmt(request: CreateSessionRequest):
-    stmt = select(Question).where(Question.status == "active")
+    stmt = select(Question).where(Question.status.in_(PUBLISHED_QUESTION_STATUSES))
     if request.question_id:
         stmt = stmt.where(Question.id == request.question_id)
     if request.company_id:

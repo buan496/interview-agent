@@ -527,3 +527,33 @@ Suggested follow-up PRs:
 - Role management API: admin-only user role update endpoint with audit coverage.
 - Organization/tenant membership model after single-user RBAC is stable.
 - Resource-scoped permission tests for future report export, question bank management and privacy workflows.
+
+## PR #41 Update: Question Bank Management Backend v1
+
+Status: partially complete.
+
+Completed:
+
+- Reused the existing question bank tables instead of adding a conflicting model.
+- Added question lifecycle management metadata: creator, updater, updated time, published time and archived time.
+- Added `/api/admin/questions` backend APIs for list, create, update, publish and archive.
+- Allowed `admin` and `content_operator` to manage question bank content.
+- Kept `content_operator` blocked from admin-only system APIs such as audit event querying.
+- Kept ordinary `/api/questions` and session selection scoped to published questions; legacy `active` remains treated as published for existing seed data.
+- Added audit events for question creation, update, publishing, archiving and management denial.
+- Added backend regression tests for lifecycle, filtering, role access, public visibility and audit coverage.
+
+Still missing:
+
+- No frontend question bank management page.
+- No organization or tenant-scoped question ownership.
+- No bulk import/review workflow in this PR.
+- No question version diffing or rollback.
+- No scoring rubric versioning.
+
+Suggested follow-up PRs:
+
+- Frontend question bank management console using the new backend APIs.
+- Question version history and rollback.
+- Scoring rubric versioning and rubric-to-question linkage.
+- Bulk import and review workflow for content operators.
