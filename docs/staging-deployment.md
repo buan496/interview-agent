@@ -33,7 +33,11 @@ Staging deliberately excludes:
 - `docker-compose.staging.yml`: staging compose topology.
 - `.env.staging.example`: staging environment template.
 - `scripts/staging-smoke.ps1`: staging smoke checks.
+- `scripts/backup-postgres.ps1`: staging PostgreSQL backup.
+- `scripts/restore-postgres.ps1`: staging/local PostgreSQL restore.
+- `scripts/verify-postgres-backup.ps1`: backup artifact verification.
 - `docs/release-evidence-template.md`: evidence record after release candidate validation.
+- `docs/backup-evidence-template.md`: backup artifact evidence.
 
 ## Prepare Environment Variables
 
@@ -96,11 +100,30 @@ alembic upgrade head
 Before production approval:
 
 1. Confirm release workflow migration gate passed.
-2. Confirm staging boot applied migrations successfully.
-3. Record Alembic head in release evidence.
-4. Review rollback strategy before production migration.
+2. Create a staging PostgreSQL backup before applying or rehearsing migration.
+3. Verify backup checksum and file size.
+4. Confirm staging boot applied migrations successfully.
+5. Record backup evidence and Alembic head in release evidence.
+6. Review rollback strategy before production migration.
 
-If staging migration fails, stop the release candidate.
+If staging backup, verification, or migration fails, stop the release candidate.
+
+Example staging backup:
+
+```powershell
+.\scripts\backup-postgres.ps1 `
+  -Environment staging `
+  -EnvFile .env.staging `
+  -OutputDir backups
+```
+
+Verify:
+
+```powershell
+.\scripts\verify-postgres-backup.ps1 `
+  -BackupFile .\backups\interview-agent-staging-20260708T120000Z.sql `
+  -ExpectedTables users,sessions,questions
+```
 
 ## Health and Readiness
 
@@ -150,6 +173,7 @@ After staging validation, update `docs/release-evidence-template.md` fields in t
 
 - target environment: `staging`
 - image tags
+- backup file, size and SHA256
 - migration result
 - smoke test result
 - observed request id
@@ -193,7 +217,8 @@ docker compose --env-file .env.staging -f docker-compose.staging.yml down
 
 3. Re-run the previous known-good immutable image tag.
 4. Re-run `scripts/staging-smoke.ps1`.
-5. Attach failure notes to the release evidence.
+5. If database restore is required, use `scripts/restore-postgres.ps1` only after confirming the target environment and backup checksum.
+6. Attach failure notes to the release evidence.
 
 ## Common Failures
 
@@ -202,7 +227,8 @@ docker compose --env-file .env.staging -f docker-compose.staging.yml down
 - frontend calls the wrong API: check `NEXT_PUBLIC_API_BASE_URL` at build time.
 - auth request-code returns `development_code`: staging env is using development auth and must be fixed.
 - migrations fail: stop release and review Alembic revision history.
+- backup verification fails: discard the artifact and create a new backup before migration.
 
 ## Production Boundary
 
-Do not reuse staging as production. Production needs its own secrets, data, backups, release evidence, migration approval and rollback plan.
+Do not reuse staging as production. Production needs its own secrets, data, encrypted backups, release evidence, migration approval and rollback plan.

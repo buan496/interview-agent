@@ -50,10 +50,15 @@ Use this template for every staging or production release candidate.
 - Alembic current revision:
 - Alembic target head:
 - Migration mode:
+- Pre-migration backup required: yes / no
+- Pre-migration backup evidence:
+- Backup file:
+- Backup SHA256:
 - Staging migration result:
 - Staging smoke result:
 - Staging observed request_id:
 - Production backup completed:
+- Production backup evidence:
 - Production migration approved by:
 - Production migration result:
 - Notes:
@@ -81,6 +86,8 @@ Use this template for every staging or production release candidate.
 - Code rollback command or process:
 - Database rollback strategy:
 - Backup location:
+- Backup checksum:
+- Restore approval required:
 - Rollback owner:
 - Rollback approval required:
 

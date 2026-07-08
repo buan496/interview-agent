@@ -162,6 +162,17 @@ PR #44 also adds the cache backend switch:
 
 This is only a foundation switch and prefix. The PR does not add a broad application cache, distributed lock, task queue or Agent Memory. If `CACHE_BACKEND=redis`, `/ready` checks Redis connectivity.
 
+## Backup and Restore Configuration
+
+Backup scripts use the same Compose and environment files as the target environment:
+
+- local: `docker-compose.yml`
+- staging: `docker-compose.staging.yml` plus `.env.staging`
+
+PostgreSQL backup and restore parameters can be overridden through script arguments for service name, database name and database user. The scripts do not print database passwords and do not support production by default. Production backup configuration must be managed outside the repository with encrypted storage and human approval.
+
+Backup artifacts belong in `backups/`, which is ignored by git.
+
 ## Troubleshooting Startup Failures
 
 If the app fails during production startup:

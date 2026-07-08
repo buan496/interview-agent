@@ -104,6 +104,27 @@ Invoke-Step "Staging Docker Compose config" {
   }
 }
 
+Invoke-Step "PowerShell script syntax" {
+  Push-Location $root
+  try {
+    $scripts = @(
+      "scripts\staging-smoke.ps1",
+      "scripts\backup-postgres.ps1",
+      "scripts\restore-postgres.ps1",
+      "scripts\verify-postgres-backup.ps1"
+    )
+    foreach ($script in $scripts) {
+      $errors = $null
+      [System.Management.Automation.PSParser]::Tokenize((Get-Content -Raw $script), [ref]$errors) | Out-Null
+      if ($errors.Count -gt 0) {
+        throw "PowerShell syntax check failed for ${script}: $($errors[0].Message)"
+      }
+    }
+  } finally {
+    Pop-Location
+  }
+}
+
 if (-not $SkipSecretScan) {
   Invoke-Step "Secret scan" {
     Push-Location $root
