@@ -16,6 +16,10 @@ dist/
 coverage/
 frontend/playwright-report/
 frontend/test-results/
+backups/
+*.dump
+*.sql.gz
+*.backup
 
 .idea/
 .vscode/

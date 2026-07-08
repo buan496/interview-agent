@@ -53,6 +53,7 @@ For staging release candidates, use `docs/staging-deployment.md` after this work
 - The release candidate workflow has completed successfully.
 - For production approval, staging deployment evidence and smoke test results are complete.
 - The release evidence template has been filled in.
+- Database backup evidence is complete when a migration is planned.
 - Known risks and rollback plan are documented.
 - A human approver has approved the release.
 
@@ -84,7 +85,9 @@ Before release:
 - Run `alembic heads` and confirm there is one expected head unless a multi-head migration is intentional.
 - Run `alembic upgrade head` against CI and staging databases.
 - Review migration files for destructive operations.
-- Back up production before any production migration.
+- Create and verify a PostgreSQL backup before staging migration rehearsal.
+- Back up production before any production migration, with separate approval and encrypted storage.
+- Record backup path, file size, SHA256, operator and reason using `docs/backup-evidence-template.md`.
 - Confirm rollback strategy before applying production migration.
 
 During release:
@@ -97,7 +100,7 @@ Rollback:
 
 - Prefer code rollback first when schema is backward compatible.
 - Treat database rollback separately from code rollback.
-- Do not run downgrade on production without a reviewed backup and data-loss assessment.
+- Do not restore or downgrade production without reviewed backup evidence, approval, and data-loss assessment.
 
 ## Docker Image Version Strategy
 
@@ -131,7 +134,7 @@ Rules:
 5. Check structured logs for `http_request`, `http_request_exception`, auth events, session events, report events, and LLM usage events.
 6. Check `GET /api/me/usage/summary` or internal usage ledger queries for abnormal LLM cost or failure spikes.
 7. If the database schema is compatible, roll back app images to the previous immutable tag.
-8. If schema rollback is required, restore from backup or run reviewed downgrade steps only after explicit approval.
+8. If schema rollback is required, restore from a verified backup or run reviewed downgrade steps only after explicit approval.
 9. Run post-rollback smoke checks.
 10. Document root cause and prevention follow-ups.
 
@@ -156,6 +159,7 @@ The evidence must include:
 - config checklist
 - test results
 - migration status
+- backup evidence
 - Docker image tag
 - approver
 - rollback plan
@@ -167,10 +171,11 @@ The evidence must include:
 1. Run the manual release workflow with `target_environment=staging`.
 2. Prepare `.env.staging` from `.env.staging.example` outside git.
 3. Start staging with `docker compose --env-file .env.staging -f docker-compose.staging.yml up -d`.
-4. Confirm `/health` and `/ready`; readiness should include Redis when Redis-backed rate limit or cache is enabled.
-5. Run `scripts/staging-smoke.ps1`.
-6. Record image tags, migration result, smoke result and observed request id in release evidence.
-7. Only after staging evidence is complete should production approval be considered.
+4. Before migration rehearsal, create a PostgreSQL backup with `scripts/backup-postgres.ps1` and verify it with `scripts/verify-postgres-backup.ps1`.
+5. Confirm `/health` and `/ready`; readiness should include Redis when Redis-backed rate limit or cache is enabled.
+6. Run `scripts/staging-smoke.ps1`.
+7. Record image tags, backup evidence, migration result, smoke result and observed request id in release evidence.
+8. Only after staging evidence is complete should production approval be considered.
 
 ## Troubleshooting After Release
 
@@ -189,3 +194,4 @@ The evidence must include:
 - No external CD platform.
 - No registry push from the release candidate workflow.
 - No automated production database migration.
+- No automated production database backup or restore.

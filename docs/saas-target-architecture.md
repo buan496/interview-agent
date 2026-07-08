@@ -110,6 +110,12 @@ PR #45 adds a staging deployment foundation for release-candidate rehearsal. The
 
 Staging is production-shaped but not production: it uses PostgreSQL, Redis, backend and frontend services, Redis-backed rate limit/cache settings, immutable image tags, health/readiness checks and smoke evidence. It does not deploy production, does not require real cloud secrets, does not introduce Kubernetes and does not hard-code personal server IPs.
 
+### Backup and Restore Layer
+
+PR #46 adds a PostgreSQL backup and restore foundation for local and staging. The repository now includes `scripts/backup-postgres.ps1`, `scripts/restore-postgres.ps1`, `scripts/verify-postgres-backup.ps1`, `docs/backup-and-restore.md`, and `docs/backup-evidence-template.md`.
+
+This layer covers migration pre-backup, checksum verification, restore drills, release evidence and staging rehearsal. It does not run production backup automatically, does not upload to cloud storage, does not schedule backups, and does not commit database dump artifacts.
+
 ### Audit Layer
 
 PR #38 adds a persistent `audit_events` ledger for selected security and admin events. Login success, login failure, admin access and admin denial are recorded with `request_id`, masked actor identity, status, reason and sanitized metadata.

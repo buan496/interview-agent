@@ -497,3 +497,20 @@ Next roadmap implications:
 - Phase 6 now has a release-candidate rehearsal environment design.
 - A real staging host, registry publishing and post-deploy smoke automation remain future work.
 - Production deployment remains manual-gated and out of scope for this PR.
+
+## PR #46 Update: Backup and Restore Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added local/staging PostgreSQL backup, restore and verification scripts.
+- Added backup and restore SOP plus backup evidence template.
+- Integrated migration pre-backup and backup checksum evidence into release/staging docs.
+- Documented Redis as rate-limit/cache infrastructure, not the durable source of truth.
+
+Next roadmap implications:
+
+- Phase 6 now has a recoverability foundation for staging rehearsal and migration safety.
+- Production still needs encrypted offsite backup storage, scheduled backup policy, restore approval workflow and RPO/RTO targets.
+- Backup scripts remain operator-run tools; no production automation or cloud storage was introduced.

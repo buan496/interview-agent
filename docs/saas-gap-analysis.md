@@ -668,11 +668,40 @@ Still missing:
 - No registry push or SSH deployment is automated.
 - No production deployment is performed.
 - No Kubernetes or external CD platform.
-- No backup/restore automation for staging data.
+- Backup/restore foundation is now covered by PR #46 at script and SOP level; production automation remains future work.
 
 Suggested follow-up PRs:
 
 - Registry publishing workflow for immutable staging release images.
 - Staging host provisioning runbook once the runtime target is chosen.
 - Post-deploy smoke workflow after a real staging endpoint exists.
-- Backup and restore runbook for staging and production.
+- Production offsite backup automation and restore approval workflow.
+
+## PR #46 Update: Backup and Restore Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added `scripts/backup-postgres.ps1` for local/staging PostgreSQL backups.
+- Added `scripts/restore-postgres.ps1` for confirmed local/staging restores.
+- Added `scripts/verify-postgres-backup.ps1` for file existence, size, SHA256 and optional table-marker verification.
+- Added `docs/backup-and-restore.md` with PostgreSQL scope, Redis backup policy, restore drill, migration pre-backup flow, retention guidance and production requirements.
+- Added `docs/backup-evidence-template.md` for release and migration backup evidence.
+- Updated release, staging, configuration, README and SaaS architecture docs to require backup evidence before migration rehearsal.
+
+Still missing:
+
+- No production backup is executed by this repository.
+- No cloud object storage integration.
+- No scheduled backup job.
+- No encrypted offsite storage automation.
+- No RPO/RTO target enforcement.
+- Redis backup remains documented as non-source-of-truth operational data only.
+
+Suggested follow-up PRs:
+
+- Production backup automation after the production runtime is chosen.
+- Encrypted offsite backup storage policy and restore approval workflow.
+- Periodic restore drill workflow for staging.
+- Data retention and privacy deletion policy.
