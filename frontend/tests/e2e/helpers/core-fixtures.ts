@@ -1,5 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 
+import type { AdminQuestion, Rubric } from "@/lib/admin-console-types";
 import type { AbilityProfile, PracticePlan, SessionDetail, SessionReport, TrainingHistoryItem } from "@/lib/types";
 
 export const metadata = {
@@ -229,6 +230,46 @@ export const abilityProfile: AbilityProfile = {
   ],
 };
 
+export const adminQuestion: AdminQuestion = {
+  ...question,
+  qtype: "knowledge",
+  answer_reference: "Redis is fast because it uses memory, efficient data structures, a single-threaded event loop, and IO multiplexing.",
+  status: "draft",
+  default_rubric_version_id: 1,
+  created_by_user_id: 1,
+  updated_by_user_id: 1,
+  created_at: "2026-07-06T00:00:00Z",
+  updated_at: "2026-07-06T00:00:00Z",
+  published_at: null,
+  archived_at: null,
+};
+
+export const adminRubric: Rubric = {
+  id: 1,
+  name: "Agent Engineer Rubric",
+  description: "Scores Agent engineering interview answers.",
+  status: "published",
+  created_by_user_id: 1,
+  updated_by_user_id: 1,
+  created_at: "2026-07-06T00:00:00Z",
+  updated_at: "2026-07-06T00:00:00Z",
+  versions: [
+    {
+      id: 1,
+      rubric_id: 1,
+      version: "v1",
+      dimensions_json: [{ name: "Correctness", weight: 40 }],
+      prompt_template: "Score the answer by correctness, completeness, expression, and engineering depth.",
+      scoring_scale: "0-100",
+      status: "published",
+      created_by_user_id: 1,
+      created_at: "2026-07-06T00:00:00Z",
+      published_at: "2026-07-06T00:00:00Z",
+      archived_at: null,
+    },
+  ],
+};
+
 export async function mockBaseApis(page: Page, options?: { wrongBookEmpty?: boolean }) {
   await page.route("**/api/questions/meta", async (route) => route.fulfill({ json: metadata }));
   await page.route("**/api/me/wrong-book", async (route) => route.fulfill({ json: options?.wrongBookEmpty ? [] : wrongBookItems }));
@@ -239,6 +280,184 @@ export async function mockBaseApis(page: Page, options?: { wrongBookEmpty?: bool
   await page.route("**/api/questions?**", async (route) => route.fulfill({ json: { items: [question], total: 1 } }));
   await page.route("**/api/me/practice-plan/today", async (route) => route.fulfill({ json: practicePlan }));
   await page.route("**/api/sessions/42/report", async (route) => route.fulfill({ json: sessionReport }));
+}
+
+export async function mockAdminApis(page: Page, options?: { forbidden?: boolean }) {
+  let questions: AdminQuestion[] = [adminQuestion];
+  let rubrics: Rubric[] = [adminRubric];
+
+  await page.route("**/api/admin/questions**", async (route) => {
+    if (options?.forbidden) {
+      await route.fulfill({ status: 403, json: { detail: "Forbidden", request_id: "admin-denied" } });
+      return;
+    }
+
+    const request = route.request();
+    const url = new URL(request.url());
+    const method = request.method();
+
+    if (method === "GET") {
+      const status = url.searchParams.get("status");
+      const difficulty = url.searchParams.get("difficulty");
+      const tag = url.searchParams.get("tag");
+      const position = url.searchParams.get("position");
+      const items = questions.filter((item) => {
+        if (status && item.status !== status) return false;
+        if (difficulty && String(item.difficulty) !== difficulty) return false;
+        if (tag && !item.tags.some((value) => value.name === tag)) return false;
+        if (position && item.position?.name !== position) return false;
+        return true;
+      });
+      await route.fulfill({ json: { items, total: items.length } });
+      return;
+    }
+
+    if (method === "POST" && url.pathname.endsWith("/publish")) {
+      const id = Number(url.pathname.split("/").at(-2));
+      const item = questions.find((value) => value.id === id) ?? questions[0];
+      item.status = "published";
+      item.published_at = "2026-07-06T00:05:00Z";
+      await route.fulfill({ json: item });
+      return;
+    }
+
+    if (method === "POST" && url.pathname.endsWith("/archive")) {
+      const id = Number(url.pathname.split("/").at(-2));
+      const item = questions.find((value) => value.id === id) ?? questions[0];
+      item.status = "archived";
+      item.archived_at = "2026-07-06T00:06:00Z";
+      await route.fulfill({ json: item });
+      return;
+    }
+
+    if (method === "POST") {
+      const payload = request.postDataJSON();
+      const created: AdminQuestion = {
+        id: 200 + questions.length,
+        title: payload.title,
+        body: payload.prompt,
+        answer_reference: payload.answer_reference,
+        difficulty: payload.difficulty,
+        qtype: payload.qtype,
+        source_type: "managed",
+        source_note: payload.source_note,
+        status: payload.status ?? "draft",
+        default_rubric_version_id: payload.default_rubric_version_id,
+        company: payload.company_name ? { id: 11, name: payload.company_name, region: "CN" } : null,
+        position: payload.position_name ? { id: 12, name: payload.position_name } : null,
+        tags: (payload.tags ?? []).map((name: string, index: number) => ({ id: 300 + index, name, category: "managed" })),
+        created_by_user_id: 1,
+        updated_by_user_id: 1,
+        created_at: "2026-07-06T00:10:00Z",
+        updated_at: "2026-07-06T00:10:00Z",
+        published_at: null,
+        archived_at: null,
+      };
+      questions = [created, ...questions];
+      await route.fulfill({ json: created });
+      return;
+    }
+
+    if (method === "PATCH") {
+      const id = Number(url.pathname.split("/").at(-1));
+      const payload = request.postDataJSON();
+      const item = questions.find((value) => value.id === id) ?? questions[0];
+      Object.assign(item, {
+        title: payload.title ?? item.title,
+        body: payload.prompt ?? item.body,
+        answer_reference: payload.answer_reference ?? item.answer_reference,
+        difficulty: payload.difficulty ?? item.difficulty,
+        qtype: payload.qtype ?? item.qtype,
+        source_note: payload.source_note ?? item.source_note,
+        default_rubric_version_id: payload.default_rubric_version_id ?? item.default_rubric_version_id,
+      });
+      await route.fulfill({ json: item });
+      return;
+    }
+
+    await route.fallback();
+  });
+
+  await page.route("**/api/admin/rubrics**", async (route) => {
+    if (options?.forbidden) {
+      await route.fulfill({ status: 403, json: { detail: "Forbidden", request_id: "admin-denied" } });
+      return;
+    }
+
+    const request = route.request();
+    const url = new URL(request.url());
+    const method = request.method();
+
+    if (method === "GET") {
+      const status = url.searchParams.get("status");
+      const items = status ? rubrics.filter((item) => item.status === status) : rubrics;
+      await route.fulfill({ json: { items, total: items.length } });
+      return;
+    }
+
+    if (method === "POST" && /\/versions$/.test(url.pathname)) {
+      const rubricId = Number(url.pathname.split("/").at(-2));
+      const payload = request.postDataJSON();
+      const rubric = rubrics.find((item) => item.id === rubricId) ?? rubrics[0];
+      const created = {
+        id: 50 + rubric.versions.length,
+        rubric_id: rubric.id,
+        version: payload.version,
+        dimensions_json: payload.dimensions_json,
+        prompt_template: payload.prompt_template,
+        scoring_scale: payload.scoring_scale,
+        status: "draft" as const,
+        created_by_user_id: 1,
+        created_at: "2026-07-06T00:12:00Z",
+        published_at: null,
+        archived_at: null,
+      };
+      rubric.versions = [created, ...rubric.versions];
+      await route.fulfill({ json: created });
+      return;
+    }
+
+    if (method === "POST") {
+      const payload = request.postDataJSON();
+      const created: Rubric = {
+        id: 20 + rubrics.length,
+        name: payload.name,
+        description: payload.description,
+        status: payload.status ?? "draft",
+        created_by_user_id: 1,
+        updated_by_user_id: 1,
+        created_at: "2026-07-06T00:11:00Z",
+        updated_at: "2026-07-06T00:11:00Z",
+        versions: [],
+      };
+      rubrics = [created, ...rubrics];
+      await route.fulfill({ json: created });
+      return;
+    }
+
+    await route.fallback();
+  });
+
+  await page.route("**/api/admin/rubric-versions/**", async (route) => {
+    if (options?.forbidden) {
+      await route.fulfill({ status: 403, json: { detail: "Forbidden", request_id: "admin-denied" } });
+      return;
+    }
+
+    const request = route.request();
+    const url = new URL(request.url());
+    const versionId = Number(url.pathname.split("/").at(-2));
+    const version = rubrics.flatMap((item) => item.versions).find((item) => item.id === versionId) ?? rubrics[0].versions[0];
+    if (url.pathname.endsWith("/publish")) {
+      version.status = "published";
+      version.published_at = "2026-07-06T00:13:00Z";
+    }
+    if (url.pathname.endsWith("/archive")) {
+      version.status = "archived";
+      version.archived_at = "2026-07-06T00:14:00Z";
+    }
+    await route.fulfill({ json: version });
+  });
 }
 
 export function fulfillCreateSession(route: Route, sessionId = 42) {

@@ -95,7 +95,16 @@
 - v1 基于 `UserTagStat`、`Session`、`EvaluationResult` 和 `WrongBook` 做规则聚合，展示总体分、优势项、薄弱项、标签训练次数和错题次数。
 - 这不是 Agent Memory，也不是复杂预测模型，而是后续个性化训练和 Memory 的数据地基。
 
-### 9. 工程质量
+### 9. Admin Console `/admin`
+
+讲解重点：
+
+- Admin Console v1 只面向 `admin` 和 `content_operator`，普通用户访问后台会看到无权限提示，真实权限以后端 RBAC 为准。
+- `/admin/questions` 可以创建、编辑、发布和归档题目，并可选择已发布的 Rubric Version 作为题目默认评分标准。
+- `/admin/rubrics` 可以创建 Rubric、创建 Version、发布和归档 Version，用于保证后续评分和历史报告可追溯。
+- 该版本不做用户管理、租户模型、支付账单或 Agent Memory。
+
+### 10. 工程质量
 
 讲解重点：
 
@@ -156,5 +165,8 @@
 - `/history` 能进入报告或继续训练。
 - `/ability` 能展示能力画像或空状态。
 - `/wrong-book` 能进入复盘。
+- `/admin` 能展示后台管理入口，普通用户能看到无权限提示。
+- `/admin/questions` 能展示题库管理列表和创建表单。
+- `/admin/rubrics` 能展示 Rubric 管理列表和版本创建表单。
 - `npm run test:e2e` 通过。
 - `npm run test:e2e:visual` 能生成截图。

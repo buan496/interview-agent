@@ -193,6 +193,7 @@ Rate limit and quota v1 are documented in [Configuration](docs/configuration.md)
 RBAC v1 adds `User.role` based admin authorization with `ADMIN_PHONES` retained as a bootstrap/fallback path; it does not add organization tenancy or a frontend admin console.
 Question bank management backend v1 adds admin/content-operator APIs for creating, updating, publishing, archiving and querying managed questions.
 Scoring rubric versioning backend v1 adds admin/content-operator rubric APIs and stores the actual `rubric_version_id` used by new evaluations and generated reports; it does not add a frontend admin page or a complex replay engine.
+Admin Console v1 adds frontend pages at `/admin`, `/admin/questions`, and `/admin/rubrics` for admin/content-operator question bank and rubric operations. It does not add user management, tenant management, billing, or Agent Memory.
 
 ## 工程亮点
 
@@ -209,6 +210,7 @@ Scoring rubric versioning backend v1 adds admin/content-operator rubric APIs and
 - RBAC v1: admin APIs authorize from the database user role first, support `user` / `admin` / `content_operator`, and keep `ADMIN_PHONES` only as an early-stage bootstrap fallback.
 - Question bank management backend v1: `admin` and `content_operator` can manage question lifecycle through backend APIs, while ordinary users and training flows only see published questions.
 - Scoring rubric versioning backend v1: rubric definitions and versions are managed through backend APIs, questions can point at a default published rubric version, and new `EvaluationResult` / report items retain the actual version used for scoring.
+- Admin Console v1: `/admin`, `/admin/questions`, and `/admin/rubrics` expose the backend question bank and rubric workflows to `admin` and `content_operator` users, while ordinary users receive a forbidden state from backend RBAC.
 - 生产可观测性地基：每个请求返回 `X-Request-ID`，后端输出结构化 JSON 日志，关键训练链路有业务事件日志。
 - 核心链路 E2E：覆盖 practice -> session -> report -> practice、wrong-book 回流、mock 创建等路径。
 - 视觉 QA：为核心页面生成桌面端和移动端截图，并检查无横向溢出。
@@ -239,7 +241,7 @@ docs                   产品设计、视觉验收和演示文档
 - `/ability`：能力画像工作台。
 - `/wrong-book`：错题复盘和重新训练。
 - `/contribute`：用户投稿。
-- `/admin`：题目生成和人工审核。
+- `/admin`：后台管理控制台；`/admin/questions` 管理题库，`/admin/rubrics` 管理评分标准版本。
 
 ## 面试讲解建议
 

@@ -439,3 +439,23 @@ Next roadmap implications:
 - Phase 4 now has traceable scoring standards for new evaluations.
 - Historical evaluations before PR #42 may remain unversioned and should be handled explicitly in future analytics.
 - The next scoring-system steps are rubric UI, rubric diff/rollback, evaluation replay and rollout policy.
+
+## PR #43 Update: Admin Console v1
+
+Status: partially complete.
+
+Completed:
+
+- Added frontend routes `/admin`, `/admin/questions`, and `/admin/rubrics`.
+- Added a minimal Admin Console overview for content operations.
+- Added question bank management UI for list filtering, creation, editing, publishing and archiving.
+- Added Rubric management UI for rubric creation, rubric-version creation, publishing and archiving.
+- Added forbidden-state handling driven by backend RBAC 403 responses.
+- Added admin E2E and visual smoke coverage.
+
+Next roadmap implications:
+
+- Phase 4 now has an operator-facing workflow, not only backend APIs.
+- Content governance still needs question version history, bulk import/export and richer review workflow.
+- Scoring governance still needs rubric diff, rollback, evaluation replay and rollout policy.
+- User management, tenant management, billing and Agent Memory remain separate future phases.
