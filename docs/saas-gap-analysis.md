@@ -549,11 +549,45 @@ Still missing:
 - No organization or tenant-scoped question ownership.
 - No bulk import/review workflow in this PR.
 - No question version diffing or rollback.
-- No scoring rubric versioning.
+- No frontend question bank management page integration with rubric selection.
 
 Suggested follow-up PRs:
 
 - Frontend question bank management console using the new backend APIs.
 - Question version history and rollback.
-- Scoring rubric versioning and rubric-to-question linkage.
+- Frontend rubric selection for managed questions.
 - Bulk import and review workflow for content operators.
+
+## PR #42 Update: Scoring Rubric Versioning Backend v1
+
+Status: partially complete.
+
+Completed:
+
+- Added `scoring_rubrics` and `scoring_rubric_versions` data models.
+- Added optional `questions.default_rubric_version_id` for question-level default scoring standards.
+- Added `evaluation_results.rubric_version_id` so new scoring results can be traced to the rubric version actually used.
+- Added report question payload `rubric_version_id` so generated reports remain explainable after later rubric changes.
+- Added `/api/admin/rubrics` and `/api/admin/rubric-versions/{id}/publish|archive` backend APIs.
+- Allowed `admin` and `content_operator` to manage rubrics.
+- Kept ordinary users blocked from rubric writes and added `rubric_denied` audit events.
+- Added audit events for rubric creation, version creation, publishing and archiving.
+- Added `system_default` rubric v1 fallback for questions without a published default rubric version.
+- Ensured archived rubric versions are not selected for new scoring.
+- Added backend regression tests for RBAC, audit, scoring traceability and historical report stability.
+
+Still missing:
+
+- No frontend rubric management page.
+- No rubric diff, replay or rollback workflow.
+- No complex scoring-engine rewrite or separate rubric execution engine.
+- No gray-release or A/B rollout of rubric versions.
+- Existing historical evaluations before PR #42 may have `rubric_version_id = null`.
+- No tenant or organization-scoped rubric ownership.
+
+Suggested follow-up PRs:
+
+- Frontend rubric management console for admin/content operators.
+- Rubric diff and rollback view.
+- Evaluation replay using a selected rubric version.
+- Rubric rollout policy once organization/tenant boundaries exist.

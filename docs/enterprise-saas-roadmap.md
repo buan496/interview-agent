@@ -418,4 +418,24 @@ Next roadmap implications:
 
 - Phase 4 now has a backend foundation for content operations.
 - The next content-ops step should be a frontend management console or version history, depending on whether operator workflow or governance is the priority.
-- Rubric versioning remains a separate scoring-system PR.
+- Rubric versioning is now covered by PR #42 at backend v1 depth; frontend management, replay and rollout remain separate follow-ups.
+
+## PR #42 Update: Scoring Rubric Versioning Backend v1
+
+Status: partially complete.
+
+Completed:
+
+- Added backend scoring rubric and rubric version models.
+- Added admin/content-operator APIs for rubric creation, version creation, publishing and archiving.
+- Added rubric audit events and ordinary-user denial audit coverage.
+- Connected questions to optional default published rubric versions.
+- Connected new evaluation results and generated report question payloads to the actual `rubric_version_id` used during scoring.
+- Added system default rubric v1 fallback for questions without a usable published rubric version.
+- Added regression tests for RBAC, audit, archived-version exclusion and historical report stability.
+
+Next roadmap implications:
+
+- Phase 4 now has traceable scoring standards for new evaluations.
+- Historical evaluations before PR #42 may remain unversioned and should be handled explicitly in future analytics.
+- The next scoring-system steps are rubric UI, rubric diff/rollback, evaluation replay and rollout policy.

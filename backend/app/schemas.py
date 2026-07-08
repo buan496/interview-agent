@@ -60,6 +60,7 @@ class QuestionListOut(BaseModel):
 class QuestionBankQuestionOut(QuestionOut):
     answer_reference: str
     status: str
+    default_rubric_version_id: int | None = None
     created_by_user_id: int | None = None
     updated_by_user_id: int | None = None
     created_at: datetime
@@ -86,6 +87,7 @@ class QuestionBankCreateRequest(BaseModel):
     tags: list[str] = Field(default_factory=list, max_length=10)
     source_note: str | None = Field(default=None, max_length=1000)
     status: Literal["draft", "published"] = "draft"
+    default_rubric_version_id: int | None = Field(default=None, ge=1)
 
 
 class QuestionBankUpdateRequest(BaseModel):
@@ -100,6 +102,55 @@ class QuestionBankUpdateRequest(BaseModel):
     position_name: str | None = Field(default=None, min_length=2, max_length=50)
     tags: list[str] | None = Field(default=None, max_length=10)
     source_note: str | None = Field(default=None, max_length=1000)
+    default_rubric_version_id: int | None = Field(default=None, ge=1)
+
+
+class RubricVersionOut(BaseModel):
+    id: int
+    rubric_id: int
+    version: str
+    dimensions_json: list[dict[str, Any]] = Field(default_factory=list)
+    prompt_template: str
+    scoring_scale: str
+    status: str
+    created_by_user_id: int | None = None
+    created_at: datetime
+    published_at: datetime | None = None
+    archived_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RubricOut(BaseModel):
+    id: int
+    name: str
+    description: str | None = None
+    status: str
+    created_by_user_id: int | None = None
+    updated_by_user_id: int | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+    versions: list[RubricVersionOut] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RubricListOut(BaseModel):
+    items: list[RubricOut]
+    total: int
+
+
+class RubricCreateRequest(BaseModel):
+    name: str = Field(min_length=3, max_length=120)
+    description: str | None = Field(default=None, max_length=2000)
+    status: Literal["draft", "published"] = "draft"
+
+
+class RubricVersionCreateRequest(BaseModel):
+    version: str = Field(min_length=1, max_length=40)
+    dimensions_json: list[dict[str, Any]] = Field(default_factory=list, max_length=20)
+    prompt_template: str = Field(min_length=20, max_length=8000)
+    scoring_scale: str = Field(default="0-100", min_length=3, max_length=40)
 
 
 class CreateSessionRequest(BaseModel):
@@ -187,6 +238,7 @@ class ReportQuestionOut(BaseModel):
     expression_issues: list[str] = Field(default_factory=list)
     action_items: list[str] = Field(default_factory=list)
     recommended_questions: list[dict[str, Any]] = Field(default_factory=list)
+    rubric_version_id: int | None = None
     tags: list[TagOut] = Field(default_factory=list)
 
 

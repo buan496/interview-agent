@@ -5,7 +5,7 @@ import unittest
 from app.api.sessions import _build_report, _evaluation_result_row
 from app.core.interviewer import EvaluationResult as EngineEvaluationResult
 from app.core.interviewer import Verdict
-from app.models import EvaluationResult, Message, Question, QuestionTag, Session, SessionQuestion, Tag
+from app.models import EvaluationResult, Message, Question, QuestionTag, ScoringRubricVersion, Session, SessionQuestion, Tag
 
 
 class ReportBuilderTest(unittest.TestCase):
@@ -108,7 +108,17 @@ class ReportBuilderTest(unittest.TestCase):
             verdict=Verdict(score=70, mastery="weak", feedback="Needs event loop detail.", ideal_answer="Mention event loop."),
         )
 
-        row = _evaluation_result_row(session, sq, result, "mock-model")
+        rubric_version = ScoringRubricVersion(
+            id=42,
+            rubric_id=7,
+            version="v1",
+            dimensions_json=[{"key": "correctness", "weight": 100}],
+            prompt_template="Score with a test rubric.",
+            scoring_scale="0-100",
+            status="published",
+        )
+
+        row = _evaluation_result_row(session, sq, result, "mock-model", rubric_version)
 
         self.assertEqual(row.user_id, 3)
         self.assertEqual(row.session_id, 9)
@@ -118,6 +128,8 @@ class ReportBuilderTest(unittest.TestCase):
         self.assertEqual(row.missing_points, ["event loop"])
         self.assertEqual(row.expression_issues, ["claimed multi-threading"])
         self.assertEqual(row.model_name, "mock-model")
+        self.assertEqual(row.rubric_version_id, 42)
+        self.assertEqual(row.raw_model_output["rubric"]["version"], "v1")
 
 
 if __name__ == "__main__":
