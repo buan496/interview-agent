@@ -114,7 +114,21 @@ This is audit foundation v1. It does not add tenant scoping, frontend admin page
 
 PR #39 adds rate limit and quota foundation v1. Auth endpoints are protected by IP and phone buckets, answer submission is protected by user/session buckets, and LLM scoring checks user-scoped token/call quotas against `llm_usage_records` before model evaluation.
 
-This layer is intentionally simple. It uses in-process rate-limit buckets, not Redis or an external limiter. Quota is cost-control metadata, not payment, subscription, billing, or commercial plan enforcement.
+PR #44 upgrades this layer to a configurable rate-limit backend. Local/test can keep memory buckets, while staging/production should use Redis-backed counters with TTL so multiple backend instances share auth and answer-submit limits. Production fail-fast validation rejects the memory backend when rate limiting is enabled.
+
+Quota is still cost-control metadata, not payment, subscription, billing, or commercial plan enforcement. The Redis foundation does not add an external gateway, distributed locks, task queues or Agent Memory.
+
+### Redis-Backed Rate Limit and Cache Foundation
+
+PR #44 adds a shared infrastructure foundation:
+
+- `RATE_LIMIT_BACKEND=memory|redis`
+- Redis-backed counters using `INCR`, `EXPIRE` and `TTL`
+- hashed Redis limiter keys so raw phone numbers and tokens are not stored in keys
+- `CACHE_BACKEND=memory|redis` as a foundation switch only
+- `/ready` Redis checks when Redis-backed rate limit or cache is enabled
+
+This is the minimum multi-instance safety baseline for request throttling. A future gateway limiter or Redis Lua/token-bucket implementation can replace the fixed-window v1 without changing the API-level abuse-protection contract.
 
 ### RBAC Layer
 

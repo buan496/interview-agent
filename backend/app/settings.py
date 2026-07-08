@@ -29,6 +29,8 @@ class Settings(BaseSettings):
         validation_alias="DATABASE_URL",
     )
     redis_url: str = Field(default="redis://localhost:6379/0", validation_alias="REDIS_URL")
+    redis_connect_timeout_seconds: float = Field(default=2.0, validation_alias="REDIS_CONNECT_TIMEOUT_SECONDS")
+    redis_socket_timeout_seconds: float = Field(default=2.0, validation_alias="REDIS_SOCKET_TIMEOUT_SECONDS")
 
     # LLM config
     llm_provider: str = Field(default="deepseek", validation_alias="LLM_PROVIDER")
@@ -70,12 +72,18 @@ class Settings(BaseSettings):
 
     # Rate limit / quota config
     rate_limit_enabled: bool = Field(default=True, validation_alias="RATE_LIMIT_ENABLED")
+    rate_limit_backend: str = Field(default="memory", validation_alias="RATE_LIMIT_BACKEND")
+    redis_rate_limit_prefix: str = Field(default="interview-agent:rate-limit", validation_alias="REDIS_RATE_LIMIT_PREFIX")
     login_rate_limit_per_minute: int = Field(default=600, validation_alias="LOGIN_RATE_LIMIT_PER_MINUTE")
     auth_phone_rate_limit_per_hour: int = Field(default=600, validation_alias="AUTH_PHONE_RATE_LIMIT_PER_HOUR")
     answer_submit_rate_limit_per_minute: int = Field(default=600, validation_alias="ANSWER_SUBMIT_RATE_LIMIT_PER_MINUTE")
     llm_daily_token_quota: int = Field(default=1_000_000, validation_alias="LLM_DAILY_TOKEN_QUOTA")
     llm_monthly_token_quota: int = Field(default=10_000_000, validation_alias="LLM_MONTHLY_TOKEN_QUOTA")
     llm_daily_call_quota: int = Field(default=1_000, validation_alias="LLM_DAILY_CALL_QUOTA")
+
+    # Cache foundation config
+    cache_backend: str = Field(default="memory", validation_alias="CACHE_BACKEND")
+    cache_prefix: str = Field(default="interview-agent:cache", validation_alias="CACHE_PREFIX")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", populate_by_name=True)
 
@@ -92,6 +100,21 @@ class Settings(BaseSettings):
         if value <= 0:
             raise ValueError("LLM_TIMEOUT_SECONDS must be positive")
         return value
+
+    @field_validator("redis_connect_timeout_seconds", "redis_socket_timeout_seconds")
+    @classmethod
+    def _validate_redis_timeouts(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("Redis timeout values must be positive")
+        return value
+
+    @field_validator("rate_limit_backend", "cache_backend")
+    @classmethod
+    def _validate_backend_name(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"memory", "redis"}:
+            raise ValueError("Backend must be memory or redis")
+        return normalized
 
     @field_validator(
         "login_rate_limit_per_minute",
@@ -127,6 +150,18 @@ class Settings(BaseSettings):
     def uses_real_llm_provider(self) -> bool:
         return self.normalized_llm_provider not in {"", "mock", "local", "local-fallback", "none"}
 
+    @property
+    def normalized_rate_limit_backend(self) -> str:
+        return self.rate_limit_backend.strip().lower() or "memory"
+
+    @property
+    def normalized_cache_backend(self) -> str:
+        return self.cache_backend.strip().lower() or "memory"
+
+    @property
+    def redis_required(self) -> bool:
+        return (self.rate_limit_enabled and self.normalized_rate_limit_backend == "redis") or self.normalized_cache_backend == "redis"
+
     def validate_production_config(self) -> None:
         errors: list[str] = []
         if not self.database_url.strip():
@@ -139,6 +174,12 @@ class Settings(BaseSettings):
         if self.is_production:
             if not self.rate_limit_enabled:
                 errors.append("RATE_LIMIT_ENABLED must be true in production")
+            if self.rate_limit_enabled and self.normalized_rate_limit_backend == "memory":
+                errors.append("RATE_LIMIT_BACKEND=redis is required in production when rate limiting is enabled")
+            if self.rate_limit_enabled and self.normalized_rate_limit_backend == "redis" and not self.redis_url.strip():
+                errors.append("REDIS_URL is required when production rate limiting uses Redis")
+            if self.normalized_cache_backend == "redis" and not self.redis_url.strip():
+                errors.append("REDIS_URL is required when CACHE_BACKEND=redis")
             if self.jwt_secret == DEFAULT_JWT_SECRET:
                 errors.append("JWT_SECRET_KEY/TOKEN_SECRET/JWT_SECRET must be configured for production")
             if self.auth_dev_code == DEFAULT_DEV_CODE:
@@ -162,6 +203,8 @@ class Settings(BaseSettings):
             "database": {
                 "database_url": _mask_url(self.database_url),
                 "redis_url": _mask_url(self.redis_url),
+                "redis_connect_timeout_seconds": self.redis_connect_timeout_seconds,
+                "redis_socket_timeout_seconds": self.redis_socket_timeout_seconds,
             },
             "auth": {
                 "dev_code_enabled": self.auth_dev_code_enabled,
@@ -193,12 +236,18 @@ class Settings(BaseSettings):
             },
             "rate_limit": {
                 "enabled": self.rate_limit_enabled,
+                "backend": self.normalized_rate_limit_backend,
+                "redis_prefix": self.redis_rate_limit_prefix,
                 "login_per_minute": self.login_rate_limit_per_minute,
                 "auth_phone_per_hour": self.auth_phone_rate_limit_per_hour,
                 "answer_submit_per_minute": self.answer_submit_rate_limit_per_minute,
                 "llm_daily_token_quota": self.llm_daily_token_quota,
                 "llm_monthly_token_quota": self.llm_monthly_token_quota,
                 "llm_daily_call_quota": self.llm_daily_call_quota,
+            },
+            "cache": {
+                "backend": self.normalized_cache_backend,
+                "prefix": self.cache_prefix,
             },
         }
 

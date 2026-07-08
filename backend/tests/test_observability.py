@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from types import SimpleNamespace
 import time
 import unittest
+from unittest.mock import patch
 
 from fastapi import FastAPI, Request
 import httpx
@@ -87,6 +88,40 @@ class ObservabilityTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(health_response.json()["status"], "ok")
         self.assertEqual(ready_response.status_code, 200)
         self.assertEqual(ready_response.json()["status"], "ready")
+
+    async def test_ready_checks_redis_when_required(self) -> None:
+        async def override_get_db() -> AsyncIterator[_ReadyDb]:
+            yield _ReadyDb()
+
+        app.dependency_overrides[get_db] = override_get_db
+        redis_settings = SimpleNamespace(app_name="Interview Agent", environment="test", redis_required=True)
+
+        with (
+            patch("app.main.settings", redis_settings),
+            patch("app.main.ping_redis", return_value=True) as ping,
+        ):
+            response = await self.client.get("/ready")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["redis"], "ok")
+        ping.assert_called_once_with(redis_settings)
+
+    async def test_ready_returns_503_when_required_redis_is_unavailable(self) -> None:
+        async def override_get_db() -> AsyncIterator[_ReadyDb]:
+            yield _ReadyDb()
+
+        app.dependency_overrides[get_db] = override_get_db
+        redis_settings = SimpleNamespace(app_name="Interview Agent", environment="test", redis_required=True)
+
+        with (
+            patch("app.main.settings", redis_settings),
+            patch("app.main.ping_redis", return_value=False),
+        ):
+            response = await self.client.get("/ready", headers={"X-Request-ID": "redis-not-ready"})
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["request_id"], "redis-not-ready")
+        self.assertEqual(response.json()["detail"]["redis"], "failed")
 
     async def test_http_exception_response_contains_request_id(self) -> None:
         response = await self.client.get("/api/auth/me", headers={"X-Request-ID": "missing-auth"})

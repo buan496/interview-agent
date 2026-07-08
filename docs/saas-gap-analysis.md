@@ -618,3 +618,33 @@ Next recommended PRs:
 - Question version history and bulk import/export.
 - Rubric diff/rollback and evaluation replay.
 - Role management API and admin UI after tenant boundaries are designed.
+
+## PR #44 Update: Redis-Backed Rate Limit and Cache Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added configurable request rate-limit backend: `memory` for local/test and `redis` for staging/production.
+- Added Redis limiter counters with TTL for login IP, phone auth and answer-submit buckets.
+- Added production fail-fast validation so production cannot run enabled request rate limits on the memory backend.
+- Added Redis configuration governance, masked config summary fields and `.env.example` documentation.
+- Added `/ready` Redis checks when Redis-backed rate limiting or Redis cache backend is enabled.
+- Kept LLM token/call quotas user-scoped through `llm_usage_records`.
+- Added backend tests for Redis limiter TTL, 429 headers, production fail-fast, Redis readiness and fallback behavior.
+
+Still missing:
+
+- No API gateway integration.
+- No Redis Lua script or token-bucket algorithm; v1 uses simple fixed-window counters.
+- No tenant-level quota policy.
+- No admin quota management UI.
+- No payment, subscription, billing or commercial plan enforcement.
+- `CACHE_BACKEND` is only a foundation switch; broad application caching is not implemented.
+
+Suggested follow-up PRs:
+
+- Tenant-level quota model after organization boundaries exist.
+- Redis Lua/token-bucket limiter if burst handling becomes a production issue.
+- Admin quota override and usage review workflow.
+- Cache strategy for low-risk read models only after cache invalidation rules are explicit.
