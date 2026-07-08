@@ -128,7 +128,15 @@ PR #41 adds question bank management backend v1. The system reuses the existing 
 
 `admin` and `content_operator` can create, update, publish, archive and query managed questions through `/api/admin/questions`. Ordinary `/api/questions` and training session selection only expose published questions. Legacy `active` questions remain readable and trainable for seed-data compatibility.
 
-This layer does not add a frontend admin page, organization/tenant scoping, complex permission matrices, bulk operations, question version diffing, or scoring rubric versioning.
+This layer does not add a frontend admin page, organization/tenant scoping, complex permission matrices, bulk operations, or question version diffing.
+
+### Scoring Rubric Versioning Layer
+
+PR #42 adds scoring rubric versioning backend v1. The data model introduces `scoring_rubrics` and `scoring_rubric_versions`, and `questions.default_rubric_version_id` can point at a published rubric version for future scoring. New `evaluation_results` rows store the actual `rubric_version_id` used by scoring, and generated report question payloads include the same id so historical reports remain traceable after later rubric changes.
+
+`admin` and `content_operator` can manage rubrics and rubric versions through `/api/admin/rubrics` and `/api/admin/rubric-versions`. Ordinary users cannot write rubric data. If a question points at an archived rubric version, new scoring falls back to `system_default` rubric v1 instead of using the archived version.
+
+This layer does not add a frontend admin page, Agent Memory, a complex scoring engine rewrite, rubric replay, rubric diffing, or production-grade rollout controls.
 
 ## 前端架构
 
@@ -171,7 +179,8 @@ This layer does not add a frontend admin page, organization/tenant scoping, comp
 - `users`、`sessions`、`session_questions`、`messages`、`evaluation_results`、`wrong_book`、`user_tag_stats`、`practice_plans` 等核心训练表。
 - `questions`、`question_tags`、`companies`、`positions`、`tags` 支撑题库。
 - `question_submissions` 支撑投稿与审核。
-- `EvaluationResult` 已保存 `model_name`、`prompt_version` 和结构化反馈字段。
+- `EvaluationResult` 已保存 `model_name`、`prompt_version`、`rubric_version_id` 和结构化反馈字段。
+- `scoring_rubrics` and `scoring_rubric_versions` support rubric versioning for new scoring results.
 - PostgreSQL + pgvector 在 Docker Compose 和 migration 中配置。
 
 目标形态：
@@ -180,7 +189,7 @@ This layer does not add a frontend admin page, organization/tenant scoping, comp
 - 所有用户私有数据增加租户维度，形成 `tenant_id + user_id` 双层隔离。
 - 增加 `training_history` 或以查询视图聚合 Session、Report、WrongBook、PracticePlan。
 - 增加 `agent_memories`、`memory_events`、`ability_profiles`。
-- 增加 `scoring_rubrics`、`rubric_versions`，让评分体系可版本化。
+- Enhance rubric versioning with replay, diff, rollout, gray release and frontend administration.
 - 扩展 `audit_events` 覆盖报告访问、题库审核、数据导出和隐私请求；增加 `data_exports`、`privacy_requests`。
 - 增加备份、恢复、归档和数据保留策略。
 
@@ -190,7 +199,7 @@ This layer does not add a frontend admin page, organization/tenant scoping, comp
 
 - `backend/app/core/interviewer.py` 提供追问和评分引擎。
 - `backend/app/core/llm.py` 提供 DeepSeek LLM 和本地 MockLLM/fallback。
-- `EvaluationResult` 沉淀分数、掌握度、优点、缺失点、表达问题、行动项、模型名和 prompt 版本。
+- `EvaluationResult` 沉淀分数、掌握度、优点、缺失点、表达问题、行动项、模型名、prompt 版本和 rubric version。
 - PracticePlan 会使用错题、弱标签和最近报告行动项生成下一步任务。
 
 目标形态：

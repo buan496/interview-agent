@@ -26,6 +26,14 @@ Extended in PR #41:
 - `question_archived`: an admin or content operator archives a question so it no longer appears in ordinary reads or training selection.
 - `question_bank_denied`: a non-operator attempts to call a question bank management API.
 
+Extended in PR #42:
+
+- `rubric_created`: an admin or content operator creates a scoring rubric.
+- `rubric_version_created`: an admin or content operator creates a rubric version.
+- `rubric_version_published`: an admin or content operator publishes a rubric version for future scoring.
+- `rubric_version_archived`: an admin or content operator archives a rubric version so it is no longer selected for new scoring.
+- `rubric_denied`: a non-operator attempts to call a rubric management API.
+
 Not covered in v1:
 
 - Organization or tenant-level audit scopes.
@@ -88,6 +96,8 @@ Audit metadata must not store:
 - Model completion text
 
 Question bank audit metadata stores only field summaries such as question id, status, difficulty, qtype, tag count, title length, prompt length, answer reference length, and changed field names. It does not store full prompt or answer reference text.
+
+Rubric audit metadata stores only rubric ids, version ids, status, dimension count, scoring scale and prompt template length. It does not store full prompt templates, user answers, model prompts or completions.
 
 The audit helper masks metadata keys that contain sensitive terms such as `token`, `secret`, `code`, `authorization`, `phone`, `prompt`, `completion`, and `answer`.
 

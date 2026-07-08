@@ -10,9 +10,10 @@ from sqlalchemy.orm import selectinload
 from app.api.auth import require_content_operator_or_admin
 from app.audit import record_audit_event
 from app.db import get_db
-from app.models import Company, Position, Question, QuestionTag, Tag, User
+from app.models import Company, Position, Question, QuestionTag, ScoringRubricVersion, Tag, User
 from app.observability import log_event
 from app.question_bank import QUESTION_BANK_STATUSES, QUESTION_STATUS_PUBLISHED
+from app.rubrics import RUBRIC_STATUS_PUBLISHED
 from app.schemas import (
     CompanyOut,
     PositionOut,
@@ -42,6 +43,7 @@ def _question_out(question: Question) -> QuestionBankQuestionOut:
         source_type=question.source_type,
         source_note=question.source_note,
         status=question.status,
+        default_rubric_version_id=question.default_rubric_version_id,
         company=CompanyOut.model_validate(question.company) if question.company else None,
         position=PositionOut.model_validate(question.position) if question.position else None,
         tags=[TagOut.model_validate(link.tag) for link in question.tag_links],
@@ -120,6 +122,17 @@ async def _resolve_tag(db: AsyncSession, name: str) -> Tag:
     return item
 
 
+async def _resolve_published_rubric_version(db: AsyncSession, rubric_version_id: int | None) -> ScoringRubricVersion | None:
+    if rubric_version_id is None:
+        return None
+    item = await db.get(ScoringRubricVersion, rubric_version_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Rubric version not found")
+    if item.status != RUBRIC_STATUS_PUBLISHED:
+        raise HTTPException(status_code=422, detail="Question default rubric version must be published")
+    return item
+
+
 async def _replace_tags(db: AsyncSession, question: Question, tag_names: list[str]) -> None:
     normalized = []
     seen = set()
@@ -182,6 +195,7 @@ async def _record_question_audit(
             "status": question.status,
             "difficulty": question.difficulty,
             "qtype": question.qtype,
+            "default_rubric_version_id": question.default_rubric_version_id,
             "tag_count": len(question.tag_links),
             "title_length": len(question.title),
             "prompt_length": len(question.body or ""),
@@ -232,6 +246,7 @@ async def create_managed_question(
     now = _now()
     company = await _resolve_company(db, payload.company_id, payload.company_name)
     position = await _resolve_position(db, payload.position_id, payload.position_name)
+    rubric_version = await _resolve_published_rubric_version(db, payload.default_rubric_version_id)
     question = Question(
         title=payload.title,
         body=payload.prompt,
@@ -243,6 +258,7 @@ async def create_managed_question(
         company_id=company.id if company else None,
         position_id=position.id if position else None,
         status=payload.status,
+        default_rubric_version_id=rubric_version.id if rubric_version else None,
         created_by_user_id=operator.id,
         updated_by_user_id=operator.id,
         updated_at=now,
@@ -281,6 +297,9 @@ async def update_managed_question(
         question.qtype = payload.qtype
     if "source_note" in payload.model_fields_set:
         question.source_note = payload.source_note
+    if "default_rubric_version_id" in payload.model_fields_set:
+        rubric_version = await _resolve_published_rubric_version(db, payload.default_rubric_version_id)
+        question.default_rubric_version_id = rubric_version.id if rubric_version else None
     if "company_id" in payload.model_fields_set or "company_name" in payload.model_fields_set:
         company = await _resolve_company(db, payload.company_id, payload.company_name)
         question.company_id = company.id if company else None

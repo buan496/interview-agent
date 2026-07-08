@@ -25,7 +25,7 @@ from app.llm_usage import (
     record_llm_usage,
     usage_metering_enabled,
 )
-from app.models import EvaluationResult, Message, Question, QuestionTag, Session, SessionQuestion, User, UserTagStat, WrongBook
+from app.models import EvaluationResult, Message, Question, QuestionTag, ScoringRubricVersion, Session, SessionQuestion, User, UserTagStat, WrongBook
 from app.observability import get_request_id, log_event
 from app.audit import record_audit_event
 from app.question_bank import PUBLISHED_QUESTION_STATUSES
@@ -36,6 +36,7 @@ from app.rate_limit import (
     check_user_llm_quota,
     rate_limit_http_exception,
 )
+from app.rubrics import select_scoring_rubric_version
 from app.schemas import (
     AnswerRequest,
     CreateSessionOut,
@@ -432,9 +433,23 @@ def _action_items_from_points(missing_points: list[str]) -> list[str]:
     return [f"Review and restate: {point}" for point in missing_points[:5]]
 
 
-def _evaluation_result_row(session: Session, sq: SessionQuestion, result, model_name: str) -> EvaluationResult:
+def _evaluation_result_row(
+    session: Session,
+    sq: SessionQuestion,
+    result,
+    model_name: str,
+    rubric_version: ScoringRubricVersion,
+) -> EvaluationResult:
     assert result.verdict is not None
     missing_points = list(result.missing_points or [])
+    raw_model_output = result.as_dict()
+    raw_model_output["rubric"] = {
+        "rubric_version_id": rubric_version.id,
+        "rubric_id": rubric_version.rubric_id,
+        "version": rubric_version.version,
+        "scoring_scale": rubric_version.scoring_scale,
+        "dimension_count": len(rubric_version.dimensions_json or []),
+    }
     return EvaluationResult(
         user_id=session.user_id,
         session_id=session.id,
@@ -449,9 +464,10 @@ def _evaluation_result_row(session: Session, sq: SessionQuestion, result, model_
         followup_failures=[],
         action_items=_action_items_from_points(missing_points),
         recommended_questions=[],
-        raw_model_output=result.as_dict(),
+        raw_model_output=raw_model_output,
         model_name=model_name,
         prompt_version=PROMPT_VERSION,
+        rubric_version_id=rubric_version.id,
     )
 
 
@@ -468,6 +484,7 @@ def _verdict_payload(sq: SessionQuestion) -> dict:
             "expression_issues": evaluation.expression_issues,
             "action_items": evaluation.action_items,
             "recommended_questions": evaluation.recommended_questions,
+            "rubric_version_id": evaluation.rubric_version_id,
         }
 
     verdict_message = next(
@@ -485,6 +502,7 @@ def _verdict_payload(sq: SessionQuestion) -> dict:
         "expression_issues": list(eval_json.get("wrong_points") or []),
         "action_items": _action_items_from_points(missing_points),
         "recommended_questions": [],
+        "rubric_version_id": eval_json.get("rubric_version_id"),
     }
 
 
@@ -513,6 +531,7 @@ def _build_report(session: Session) -> dict:
                 "expression_issues": details["expression_issues"],
                 "action_items": details["action_items"],
                 "recommended_questions": details["recommended_questions"],
+                "rubric_version_id": details["rubric_version_id"],
                 "tags": tags,
             }
         )
@@ -627,6 +646,7 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
         depth = sum(1 for m in history_rows if m.role == "interviewer" and m.msg_type in {"followup", "hint"})
 
         question = sq.question
+        rubric_version = await select_scoring_rubric_version(db, question)
         engine = InterviewerEngine()
         interview_question = InterviewQuestion(
             title=question.title,
@@ -695,7 +715,7 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
             sq.verdict = result.verdict.as_dict()
             sq.scored_at = now
             sq.finished_at = now
-            db.add(_evaluation_result_row(sq.session, sq, result, model_name))
+            db.add(_evaluation_result_row(sq.session, sq, result, model_name, rubric_version))
             await _update_retention_tables(db, sq.session, sq, result.verdict.score, result.verdict.mastery)
             next_sq = next(
                 (

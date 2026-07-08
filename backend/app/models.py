@@ -82,6 +82,7 @@ class Question(Base):
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
     published_at: Mapped[datetime | None]
     archived_at: Mapped[datetime | None]
+    default_rubric_version_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("scoring_rubric_versions.id"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     company: Mapped[Company | None] = relationship(back_populates="questions")
@@ -89,6 +90,7 @@ class Question(Base):
     tag_links: Mapped[list[QuestionTag]] = relationship(back_populates="question", cascade="all, delete-orphan")
     session_questions: Mapped[list[SessionQuestion]] = relationship(back_populates="question")
     evaluation_results: Mapped[list[EvaluationResult]] = relationship(back_populates="question")
+    default_rubric_version: Mapped[ScoringRubricVersion | None] = relationship(back_populates="default_questions")
 
 
 class QuestionTag(Base):
@@ -117,6 +119,59 @@ class User(Base):
     practice_plans: Mapped[list[PracticePlan]] = relationship(back_populates="user")
     evaluation_results: Mapped[list[EvaluationResult]] = relationship(back_populates="user")
     llm_usage_records: Mapped[list[LLMUsageRecord]] = relationship(back_populates="user")
+    created_rubrics: Mapped[list[ScoringRubric]] = relationship(
+        back_populates="created_by",
+        foreign_keys="ScoringRubric.created_by_user_id",
+    )
+    created_rubric_versions: Mapped[list[ScoringRubricVersion]] = relationship(
+        back_populates="created_by",
+        foreign_keys="ScoringRubricVersion.created_by_user_id",
+    )
+
+
+class ScoringRubric(Base):
+    __tablename__ = "scoring_rubrics"
+    __table_args__ = (
+        Index("idx_scoring_rubrics_status", "status"),
+        Index("idx_scoring_rubrics_name", "name"),
+    )
+
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(15), nullable=False, default="draft")
+    created_by_user_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("users.id"))
+    updated_by_user_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+    versions: Mapped[list[ScoringRubricVersion]] = relationship(back_populates="rubric", cascade="all, delete-orphan")
+    created_by: Mapped[User | None] = relationship(back_populates="created_rubrics", foreign_keys=[created_by_user_id])
+
+
+class ScoringRubricVersion(Base):
+    __tablename__ = "scoring_rubric_versions"
+    __table_args__ = (
+        Index("idx_rubric_versions_rubric_status", "rubric_id", "status"),
+        Index("idx_rubric_versions_status_created", "status", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
+    rubric_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("scoring_rubrics.id"), nullable=False)
+    version: Mapped[str] = mapped_column(String(40), nullable=False)
+    dimensions_json: Mapped[list[dict[str, Any]]] = mapped_column(jsonb_type, default=list)
+    prompt_template: Mapped[str] = mapped_column(Text, nullable=False)
+    scoring_scale: Mapped[str] = mapped_column(String(40), nullable=False, default="0-100")
+    status: Mapped[str] = mapped_column(String(15), nullable=False, default="draft")
+    created_by_user_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    published_at: Mapped[datetime | None]
+    archived_at: Mapped[datetime | None]
+
+    rubric: Mapped[ScoringRubric] = relationship(back_populates="versions")
+    created_by: Mapped[User | None] = relationship(back_populates="created_rubric_versions", foreign_keys=[created_by_user_id])
+    default_questions: Mapped[list[Question]] = relationship(back_populates="default_rubric_version")
+    evaluation_results: Mapped[list[EvaluationResult]] = relationship(back_populates="rubric_version")
 
 
 class Session(Base):
@@ -196,12 +251,14 @@ class EvaluationResult(Base):
     raw_model_output: Mapped[dict[str, Any]] = mapped_column(jsonb_type, default=dict)
     model_name: Mapped[str] = mapped_column(String(80), nullable=False, default="local-fallback")
     prompt_version: Mapped[str] = mapped_column(String(40), nullable=False, default="interviewer-v1")
+    rubric_version_id: Mapped[int | None] = mapped_column(bigint_type, ForeignKey("scoring_rubric_versions.id"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     user: Mapped[User] = relationship(back_populates="evaluation_results")
     session: Mapped[Session] = relationship(back_populates="evaluation_results")
     session_question: Mapped[SessionQuestion] = relationship(back_populates="evaluation_results")
     question: Mapped[Question] = relationship(back_populates="evaluation_results")
+    rubric_version: Mapped[ScoringRubricVersion | None] = relationship(back_populates="evaluation_results")
 
 
 class LLMUsageRecord(Base):

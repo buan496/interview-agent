@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import admin, admin_questions, audio, auth, practice_plan, questions, sessions, stats, submissions
+from app.api import admin, admin_questions, admin_rubrics, audio, auth, practice_plan, questions, sessions, stats, submissions
 from app.db import get_db
 from app.observability import install_observability, log_event
 from app.settings import get_settings
@@ -32,6 +32,8 @@ app.include_router(sessions.router, prefix=settings.api_prefix)
 app.include_router(stats.router, prefix=settings.api_prefix)
 app.include_router(practice_plan.router, prefix=settings.api_prefix)
 app.include_router(admin_questions.router, prefix=settings.api_prefix)
+app.include_router(admin_rubrics.router, prefix=settings.api_prefix)
+app.include_router(admin_rubrics.version_router, prefix=settings.api_prefix)
 app.include_router(admin.router, prefix=settings.api_prefix)
 app.include_router(submissions.router, prefix=settings.api_prefix)
 app.include_router(audio.router, prefix=settings.api_prefix)
