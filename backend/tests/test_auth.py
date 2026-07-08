@@ -21,6 +21,7 @@ from app.api.auth import (
     verify_sms_code,
 )
 from app.models import User
+from app.rbac import ROLE_ADMIN, ROLE_CONTENT_OPERATOR, ROLE_USER
 
 
 class _ScalarResult:
@@ -106,6 +107,17 @@ class AuthTokenTest(unittest.TestCase):
 
         asyncio.run(run())
 
+    def test_current_user_does_not_trust_token_role_claim(self) -> None:
+        async def run() -> None:
+            token = _encode({"sub": "13800000000", "uid": 1, "role": ROLE_ADMIN, "exp": int(time.time()) + 60})
+            user = User(id=1, phone="13800000000", role=ROLE_USER)
+            result = await get_current_user(f"Bearer {token}", _FakeDb(user))  # type: ignore[arg-type]
+            self.assertEqual(result.role, ROLE_USER)
+
+        import asyncio
+
+        asyncio.run(run())
+
     def test_get_or_create_user_reuses_existing_user(self) -> None:
         async def run() -> None:
             user = User(id=1, phone="13800000000")
@@ -124,6 +136,7 @@ class AuthTokenTest(unittest.TestCase):
             db = _FakeDb()
             result = await _get_or_create_user(db, "13800000000")  # type: ignore[arg-type]
             self.assertEqual(result.phone, "13800000000")
+            self.assertEqual(result.role, ROLE_USER)
             self.assertEqual(len(db.added), 1)
             self.assertTrue(db.committed)
             self.assertIs(db.refreshed, result)
@@ -225,11 +238,31 @@ class AuthTokenTest(unittest.TestCase):
 
         asyncio.run(run())
 
+    def test_require_admin_allows_admin_role_without_phone_fallback(self) -> None:
+        async def run() -> None:
+            with patch("app.api.auth.get_settings", return_value=SimpleNamespace(admin_phone_set=set())):
+                user = User(id=1, phone="13900000000", role=ROLE_ADMIN)
+                self.assertIs(await require_admin(user), user)
+
+        import asyncio
+
+        asyncio.run(run())
+
     def test_require_admin_rejects_normal_user(self) -> None:
         async def run() -> None:
             with patch("app.api.auth.get_settings", return_value=SimpleNamespace(admin_phone_set={"13800000000"})):
                 with self.assertRaises(HTTPException):
                     await require_admin(User(id=2, phone="13900000000"))
+
+        import asyncio
+
+        asyncio.run(run())
+
+    def test_require_admin_rejects_content_operator_without_phone_fallback(self) -> None:
+        async def run() -> None:
+            with patch("app.api.auth.get_settings", return_value=SimpleNamespace(admin_phone_set=set())):
+                with self.assertRaises(HTTPException):
+                    await require_admin(User(id=2, phone="13900000000", role=ROLE_CONTENT_OPERATOR))
 
         import asyncio
 

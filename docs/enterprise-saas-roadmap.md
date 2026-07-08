@@ -383,3 +383,21 @@ Next roadmap implications:
 - The project now has a basic abuse-protection and AI cost guardrail layer.
 - Multi-instance production still needs Redis-backed or gateway-backed rate limiting.
 - Commercial plans, billing, tenant quotas and admin quota management remain future work.
+
+## PR #40 Update: RBAC v1
+
+Status: partially complete.
+
+Completed:
+
+- Added a single `users.role` field for RBAC v1.
+- Added role-aware admin authorization with `user`, `admin`, and `content_operator`.
+- Kept `ADMIN_PHONES` as bootstrap/fallback for local and early production setup.
+- Connected RBAC decisions to audit events for admin access and denial.
+- Added regression tests for role-based admin access, fallback access and content-operator denial.
+
+Next roadmap implications:
+
+- Phase 5 now has a basic RBAC foundation.
+- Organization membership, tenant isolation, role management UI/API and resource-level permissions remain future work.
+- `content_operator` should be activated only after content review route boundaries and audit rules are explicit.

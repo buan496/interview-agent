@@ -31,6 +31,8 @@ Admin config:
 
 - `ADMIN_PHONES`
 
+RBAC v1 uses `users.role` as the primary admin authorization source. `ADMIN_PHONES` is retained as a bootstrap/fallback mechanism for local development and early production setup, not as the long-term permission model.
+
 LLM config:
 
 - `LLM_PROVIDER`
@@ -81,7 +83,7 @@ Production rejects:
 - missing `LLM_PRICING_VERSION`
 - missing `DEEPSEEK_API_KEY` when a real production LLM provider is enabled
 
-`ADMIN_PHONES` can be empty. That is not fatal, but it means no phone is allowed through the current v1 admin allowlist.
+`ADMIN_PHONES` can be empty. That is not fatal. Admin access can still be granted by setting `users.role='admin'`. If configured, `ADMIN_PHONES` only grants fallback admin access for bootstrap users.
 
 ## Sanitized Config Summary
 

@@ -15,7 +15,8 @@ from sqlalchemy.pool import StaticPool
 from app.audit import mask_audit_metadata, record_audit_event
 from app.db import get_db
 from app.main import app
-from app.models import AuditEvent, Base
+from app.models import AuditEvent, Base, User
+from app.rbac import ROLE_ADMIN, ROLE_CONTENT_OPERATOR
 
 
 def _auth_settings(admin_phone_set: set[str] | None = None) -> SimpleNamespace:
@@ -80,6 +81,12 @@ class AuditLogTest(unittest.IsolatedAsyncioTestCase):
     async def _audit_events(self) -> list[AuditEvent]:
         async with self.sessionmaker() as db:
             return (await db.execute(select(AuditEvent).order_by(AuditEvent.id))).scalars().all()
+
+    async def _set_user_role(self, phone: str, role: str) -> None:
+        async with self.sessionmaker() as db:
+            user = (await db.execute(select(User).where(User.phone == phone))).scalar_one()
+            user.role = role
+            await db.commit()
 
     async def test_login_success_and_failure_write_audit_without_sensitive_values(self) -> None:
         with patch("app.api.auth.get_settings", return_value=_auth_settings()):
@@ -154,6 +161,41 @@ class AuditLogTest(unittest.IsolatedAsyncioTestCase):
         serialized = json.dumps(denied_events + access_events, ensure_ascii=False)
         self.assertNotIn("18800000999", serialized)
         self.assertNotIn("18800000888", serialized)
+
+    async def test_admin_role_can_query_without_admin_phone_fallback(self) -> None:
+        admin_token = await self._login("18800000666", "audit-role-admin-login")
+        await self._set_user_role("18800000666", ROLE_ADMIN)
+
+        with patch("app.api.auth.get_settings", return_value=_auth_settings(set())):
+            response = await self.client.get(
+                "/api/admin/audit-events",
+                headers={"Authorization": f"Bearer {admin_token}", "X-Request-ID": "audit-role-admin-query"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        events = await self._audit_events()
+        access_event = next(event for event in events if event.request_id == "audit-role-admin-query")
+        self.assertEqual(access_event.action, "admin_access")
+        self.assertEqual(access_event.actor_role, ROLE_ADMIN)
+        self.assertEqual(access_event.metadata_json["access_source"], "role")
+
+    async def test_content_operator_is_denied_and_audited(self) -> None:
+        operator_token = await self._login("18800000667", "audit-content-operator-login")
+        await self._set_user_role("18800000667", ROLE_CONTENT_OPERATOR)
+
+        with patch("app.api.auth.get_settings", return_value=_auth_settings(set())):
+            response = await self.client.get(
+                "/api/admin/audit-events",
+                headers={"Authorization": f"Bearer {operator_token}", "X-Request-ID": "audit-content-operator-denied"},
+            )
+
+        self.assertEqual(response.status_code, 403)
+        events = await self._audit_events()
+        denied_event = next(event for event in events if event.request_id == "audit-content-operator-denied")
+        self.assertEqual(denied_event.action, "admin_denied")
+        self.assertEqual(denied_event.actor_role, ROLE_CONTENT_OPERATOR)
+        self.assertEqual(denied_event.reason, "content_operator_not_admin")
+        self.assertEqual(denied_event.metadata_json["required_role"], "admin")
 
     async def test_non_admin_cannot_query_audit_events(self) -> None:
         user_token = await self._login("18800000777", "audit-normal-login")

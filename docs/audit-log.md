@@ -13,9 +13,13 @@ Recorded in PR #38:
 - `admin_access`: an allowlisted admin enters an admin API route.
 - `admin_denied`: a non-admin attempts to enter an admin API route.
 
+Extended in PR #40:
+
+- `admin_access`: also records RBAC role-based admin access. Metadata includes `required_role`, `user_role`, and `access_source`.
+- `admin_denied`: also records RBAC denial reasons such as `rbac_denied` and `content_operator_not_admin`.
+
 Not covered in v1:
 
-- Full RBAC permission decisions.
 - Organization or tenant-level audit scopes.
 - Frontend admin audit console.
 - Full report access audit.
@@ -28,7 +32,7 @@ Not covered in v1:
 - `id`: audit event id.
 - `actor_user_id`: authenticated actor id when available.
 - `actor_phone_masked`: masked actor phone, for example `188****0001`.
-- `actor_role`: `anonymous`, `user`, or `admin`.
+- `actor_role`: `anonymous`, `user`, `admin`, or `content_operator`.
 - `action`: event name such as `login_success`.
 - `resource_type`: coarse resource domain, such as `auth` or `admin`.
 - `resource_id`: optional resource id as a string.
@@ -59,7 +63,7 @@ Supported filters:
 - `limit`
 - `offset`
 
-The endpoint is protected by the current admin allowlist guard. Non-admin users receive `403` and the denied attempt is itself audited.
+The endpoint is protected by RBAC v1. `User.role=admin` can query it. `ADMIN_PHONES` remains a bootstrap/fallback path. Non-admin users receive `403` and the denied attempt is itself audited.
 
 ## Sensitive Data Rules
 
