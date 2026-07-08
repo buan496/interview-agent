@@ -479,3 +479,21 @@ Next roadmap implications:
 - The project still needs tenant-level quotas after organization boundaries exist.
 - Cache use should be introduced only where invalidation is explicit.
 - This PR does not introduce Agent Memory, task queues, payments, subscriptions or billing.
+
+## PR #45 Update: Staging Deployment Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added a staging Docker Compose topology for PostgreSQL, Redis, API and frontend.
+- Added a staging env template with placeholders only and no real secrets.
+- Added staging smoke script for `/health`, `/ready`, frontend login and staging auth-code safety.
+- Added staging deployment SOP and release evidence updates.
+- Added staging compose config validation to release workflow and local CI.
+
+Next roadmap implications:
+
+- Phase 6 now has a release-candidate rehearsal environment design.
+- A real staging host, registry publishing and post-deploy smoke automation remain future work.
+- Production deployment remains manual-gated and out of scope for this PR.

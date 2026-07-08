@@ -17,6 +17,9 @@ Use this template for every staging or production release candidate.
 ## Configuration Checklist
 
 - [ ] `APP_ENV` matches target environment.
+- [ ] Staging uses `.env.staging` generated from `.env.staging.example`.
+- [ ] Staging uses `RATE_LIMIT_BACKEND=redis` and `CACHE_BACKEND=redis`.
+- [ ] Staging has `AUTH_DEV_CODE_ENABLED=false`.
 - [ ] Production does not use default JWT secret.
 - [ ] Production does not use default development verification code.
 - [ ] Production has `AUTH_DEV_CODE_ENABLED=false`.
@@ -38,6 +41,7 @@ Use this template for every staging or production release candidate.
 | Playwright E2E |  |  |
 | Visual smoke |  |  |
 | Docker Compose config |  |  |
+| Staging Docker Compose config |  |  |
 | Docker build |  |  |
 | Secret scan |  |  |
 
@@ -47,6 +51,8 @@ Use this template for every staging or production release candidate.
 - Alembic target head:
 - Migration mode:
 - Staging migration result:
+- Staging smoke result:
+- Staging observed request_id:
 - Production backup completed:
 - Production migration approved by:
 - Production migration result:
@@ -56,6 +62,7 @@ Use this template for every staging or production release candidate.
 
 - API image:
 - Frontend image:
+- Immutable image tag:
 - Registry push performed: yes / no
 - Production deploy performed: yes / no
 
@@ -88,6 +95,7 @@ Use this template for every staging or production release candidate.
 - `/wrong-book` smoke:
 - `/history` smoke:
 - `/ability` smoke:
+- Staging smoke script:
 - Observed request_id for smoke:
 
 ## Incident Follow-Up

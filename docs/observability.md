@@ -211,3 +211,9 @@ PR #44 adds Redis-backed rate limiting and a cache backend switch:
 - `/ready` returns 503 with a `request_id` when Redis is required but unavailable
 
 Redis limiter keys hash request identities before writing them to Redis. Logs and keys must not contain bearer tokens, verification codes, prompt text, answer text or full phone numbers.
+
+## Staging Smoke Evidence
+
+PR #45 adds `scripts/staging-smoke.ps1` for release-candidate validation. The script checks `/health`, `/ready`, `X-Request-ID`, the frontend login page, and the staging auth code path.
+
+When staging uses `RATE_LIMIT_BACKEND=redis` or `CACHE_BACKEND=redis`, `/ready` should return Redis readiness. Record the smoke request id in release evidence so staging failures can be traced through structured logs.

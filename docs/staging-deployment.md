@@ -1,0 +1,208 @@
+# Staging Deployment Foundation
+
+This document defines the staging deployment baseline for Interview Agent. Staging is a production-like rehearsal environment for release candidates. It is not production, must not contain production user data, and must not use real production secrets.
+
+## Goals
+
+- Validate release candidates before production approval.
+- Exercise production-shaped configuration from PR #36.
+- Exercise the release candidate process from PR #37.
+- Exercise Redis-backed rate limit and cache readiness from PR #44.
+- Provide repeatable smoke evidence for release records.
+
+## Environment Model
+
+Staging contains:
+
+- `frontend`: Next.js production build.
+- `api`: FastAPI backend.
+- `postgres`: PostgreSQL with pgvector.
+- `redis`: Redis for shared rate-limit counters and cache foundation.
+
+Staging deliberately excludes:
+
+- Kubernetes.
+- Real production deployment.
+- Production secrets.
+- Production user data.
+- Public database or Redis ports by default.
+- External CD platforms.
+
+## Files
+
+- `docker-compose.staging.yml`: staging compose topology.
+- `.env.staging.example`: staging environment template.
+- `scripts/staging-smoke.ps1`: staging smoke checks.
+- `docs/release-evidence-template.md`: evidence record after release candidate validation.
+
+## Prepare Environment Variables
+
+Create a local or server-side `.env.staging` from the template:
+
+```powershell
+Copy-Item .env.staging.example .env.staging
+```
+
+Replace every `__CHANGE_ME__` value before running staging.
+
+Required staging values:
+
+- `IMAGE_TAG`
+- `POSTGRES_PASSWORD`
+- `DATABASE_URL`
+- `JWT_SECRET_KEY`
+- `NEXT_PUBLIC_API_BASE_URL`
+- `CORS_ORIGINS`
+
+Optional but recommended:
+
+- `DEEPSEEK_API_KEY`
+- `SMS_PROVIDER_KEY`
+- `ADMIN_PHONES`
+- `WHISPER_API_KEY`
+
+Staging auth should keep:
+
+```text
+AUTH_DEV_CODE_ENABLED=false
+AUTH_DEV_CODE=__DISABLED_IN_STAGING__
+```
+
+## Start Staging
+
+Build and start the staging stack:
+
+```powershell
+docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build
+```
+
+Use immutable release tags when the images are available:
+
+```powershell
+docker compose --env-file .env.staging -f docker-compose.staging.yml pull
+docker compose --env-file .env.staging -f docker-compose.staging.yml up -d
+```
+
+Do not use `latest` as the only staging image reference.
+
+## Migration Gate
+
+The staging `api` command runs:
+
+```text
+alembic upgrade head
+```
+
+Before production approval:
+
+1. Confirm release workflow migration gate passed.
+2. Confirm staging boot applied migrations successfully.
+3. Record Alembic head in release evidence.
+4. Review rollback strategy before production migration.
+
+If staging migration fails, stop the release candidate.
+
+## Health and Readiness
+
+Check API liveness:
+
+```powershell
+Invoke-WebRequest http://localhost:8000/health
+```
+
+Check readiness:
+
+```powershell
+Invoke-WebRequest http://localhost:8000/ready
+```
+
+Expected readiness in staging:
+
+```json
+{"status":"ready","db":"ok","redis":"ok"}
+```
+
+If `redis` is not `ok`, inspect Redis container health and backend logs before continuing.
+
+## Smoke Test
+
+Run:
+
+```powershell
+.\scripts\staging-smoke.ps1 `
+  -BaseUrl "http://localhost:3000" `
+  -ApiBaseUrl "http://localhost:8000/api"
+```
+
+The smoke test checks:
+
+- `/health`
+- `/ready`
+- `X-Request-ID` response header
+- frontend `/login`
+- `/api/auth/request-code` does not expose `development_code` or `000000`
+
+Record the observed request id in release evidence.
+
+## Release Evidence
+
+After staging validation, update `docs/release-evidence-template.md` fields in the actual release record:
+
+- target environment: `staging`
+- image tags
+- migration result
+- smoke test result
+- observed request id
+- known risks
+- rollback plan
+
+Production approval should not happen until staging evidence is complete.
+
+## Logs and Troubleshooting
+
+Useful commands:
+
+```powershell
+docker compose --env-file .env.staging -f docker-compose.staging.yml ps
+docker compose --env-file .env.staging -f docker-compose.staging.yml logs api
+docker compose --env-file .env.staging -f docker-compose.staging.yml logs redis
+docker compose --env-file .env.staging -f docker-compose.staging.yml logs frontend
+```
+
+Troubleshooting flow:
+
+1. Start with `X-Request-ID`.
+2. Search API structured logs for that request id.
+3. If `/ready` fails, check database and Redis health.
+4. If auth smoke exposes a development code, stop the release and fix config.
+5. If migration fails, stop the release and do not proceed to production.
+6. If LLM failures spike, inspect `llm_usage_records` and provider config.
+
+Never paste secrets, full phone numbers, prompt text, answer text, database passwords or provider keys into release evidence.
+
+## Rollback
+
+If staging validation fails:
+
+1. Record the failing request id and logs.
+2. Stop the candidate:
+
+```powershell
+docker compose --env-file .env.staging -f docker-compose.staging.yml down
+```
+
+3. Re-run the previous known-good immutable image tag.
+4. Re-run `scripts/staging-smoke.ps1`.
+5. Attach failure notes to the release evidence.
+
+## Common Failures
+
+- `api` exits on startup: check `JWT_SECRET_KEY`, `DATABASE_URL`, `AUTH_DEV_CODE_ENABLED`, and LLM provider config.
+- `/ready` returns 503: check database or Redis health.
+- frontend calls the wrong API: check `NEXT_PUBLIC_API_BASE_URL` at build time.
+- auth request-code returns `development_code`: staging env is using development auth and must be fixed.
+- migrations fail: stop release and review Alembic revision history.
+
+## Production Boundary
+
+Do not reuse staging as production. Production needs its own secrets, data, backups, release evidence, migration approval and rollback plan.
