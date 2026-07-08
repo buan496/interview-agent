@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi import Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import admin, admin_questions, admin_rubrics, audio, auth, practice_plan, questions, sessions, stats, submissions
 from app.db import get_db
 from app.observability import install_observability, log_event
+from app.redis_client import ping_redis
 from app.settings import get_settings
 
 
@@ -47,4 +48,13 @@ async def health() -> dict[str, str]:
 @app.get("/ready")
 async def ready(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
     await db.execute(text("SELECT 1"))
-    return {"service": settings.app_name, "status": "ready", "environment": settings.environment}
+    redis_status = "skipped"
+    if settings.redis_required:
+        try:
+            redis_status = "ok" if ping_redis(settings) else "failed"
+        except Exception as exc:
+            redis_status = "failed"
+            log_event("readiness.redis", status="error", error_type=exc.__class__.__name__)
+        if redis_status != "ok":
+            raise HTTPException(status_code=503, detail={"message": "Redis is not ready", "redis": redis_status})
+    return {"service": settings.app_name, "status": "ready", "environment": settings.environment, "db": "ok", "redis": redis_status}

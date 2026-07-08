@@ -18,6 +18,8 @@ def _production_settings(**overrides):
         "deepseek_api_key": "prod-deepseek-test-key",
         "llm_pricing_version": "llm-pricing-v1-test",
         "admin_phones": "",
+        "rate_limit_backend": "redis",
+        "redis_url": "redis://redis.example.com:6379/0",
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)
@@ -86,6 +88,22 @@ class SettingsGovernanceTest(unittest.TestCase):
             settings.validate_production_config()
 
         self.assertIn("RATE_LIMIT_ENABLED", str(ctx.exception))
+
+    def test_production_rejects_memory_rate_limit_backend(self) -> None:
+        settings = _production_settings(rate_limit_backend="memory")
+
+        with self.assertRaises(ConfigValidationError) as ctx:
+            settings.validate_production_config()
+
+        self.assertIn("RATE_LIMIT_BACKEND", str(ctx.exception))
+
+    def test_production_requires_redis_url_for_redis_rate_limit_backend(self) -> None:
+        settings = _production_settings(redis_url="")
+
+        with self.assertRaises(ConfigValidationError) as ctx:
+            settings.validate_production_config()
+
+        self.assertIn("REDIS_URL", str(ctx.exception))
 
     def test_missing_pricing_version_fails(self) -> None:
         settings = _production_settings(llm_pricing_version="")

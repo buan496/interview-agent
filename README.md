@@ -32,6 +32,7 @@
 - 答题 Session：支持单题训练和模拟面试，展示题号、状态、倒计时、作答区、评分反馈和下一步操作。
 - AI 追问与评分：后端通过 LLM 抽象层生成追问和评分；未配置真实模型时使用本地 fallback 便于跑通闭环。
 - LLM usage metering v1: records provider, model, feature, tokens, estimated cost, latency, status, request_id, user_id and session_id, with a current-user usage summary API; no payment, plans or quotas.
+- Redis-backed rate limit foundation: local/test uses memory buckets; staging/production can use Redis shared counters with `/ready` Redis checks. This is not payment, subscription or billing.
 - 报告复盘：展示综合得分、能力诊断、题目复盘、参考答案和下一步训练建议。
 - 训练历史中心：按当前登录用户汇总历史 Session、状态、分数、报告入口和继续训练入口。
 - 能力画像：按当前登录用户聚合长期标签表现、优势项、薄弱项、训练次数和错题次数。
@@ -85,7 +86,7 @@ flowchart LR
   Frontend["Next.js Frontend<br/>页面、设计系统、E2E UI"]
   API["FastAPI Backend<br/>认证、题库、Session、报告"]
   DB["PostgreSQL + pgvector<br/>题库、用户、会话、报告"]
-  Redis["Redis<br/>Worker Queue / Cache"]
+  Redis["Redis<br/>Worker Queue / Rate Limit / Cache Foundation"]
   Worker["ARQ Worker<br/>异步任务"]
   LLM["LLM Provider<br/>DeepSeek 或本地 fallback"]
   CI["GitHub Actions<br/>Lint / Typecheck / Build / Tests / Docker"]
@@ -190,6 +191,7 @@ Production configuration governance is documented in [Configuration](docs/config
 Release/CD management is documented in [Release Management](docs/release-management.md), with evidence template in [Release Evidence Template](docs/release-evidence-template.md).
 Audit log v1 is documented in [Audit Log](docs/audit-log.md).
 Rate limit and quota v1 are documented in [Configuration](docs/configuration.md) and [Observability Foundation](docs/observability.md).
+Redis-backed rate limit and cache foundation is documented in [Configuration](docs/configuration.md), [Observability Foundation](docs/observability.md), and [SaaS Target Architecture](docs/saas-target-architecture.md).
 RBAC v1 adds `User.role` based admin authorization with `ADMIN_PHONES` retained as a bootstrap/fallback path; it does not add organization tenancy or a frontend admin console.
 Question bank management backend v1 adds admin/content-operator APIs for creating, updating, publishing, archiving and querying managed questions.
 Scoring rubric versioning backend v1 adds admin/content-operator rubric APIs and stores the actual `rubric_version_id` used by new evaluations and generated reports; it does not add a frontend admin page or a complex replay engine.
@@ -207,6 +209,7 @@ Admin Console v1 adds frontend pages at `/admin`, `/admin/questions`, and `/admi
 - Release/CD management v1: manual release candidate workflow, release evidence template, migration gate, immutable image tag policy, and rollback SOP; it does not deploy production directly.
 - Audit log v1: login success/failure and admin access/denial are persisted with `request_id`, masked actor identity and sanitized metadata.
 - Rate limit and quota v1: login, verification-code and answer scoring paths have basic IP/user limits, and LLM usage is checked against user-scoped token/call quotas before scoring.
+- Redis-backed rate limit foundation: production can use Redis shared counters for multi-instance request throttling, while local/test keep deterministic memory buckets.
 - RBAC v1: admin APIs authorize from the database user role first, support `user` / `admin` / `content_operator`, and keep `ADMIN_PHONES` only as an early-stage bootstrap fallback.
 - Question bank management backend v1: `admin` and `content_operator` can manage question lifecycle through backend APIs, while ordinary users and training flows only see published questions.
 - Scoring rubric versioning backend v1: rubric definitions and versions are managed through backend APIs, questions can point at a default published rubric version, and new `EvaluationResult` / report items retain the actual version used for scoring.
@@ -267,6 +270,7 @@ docs                   产品设计、视觉验收和演示文档
 - 训练历史中心 v1：当前用户历史 Session、报告入口和继续训练入口。
 - 能力画像 v1：当前用户标签平均分、优势项、薄弱项、训练次数和错题次数。
 - LLM usage metering v1: records current-user LLM call metadata and estimated cost, with aggregation through `/api/me/usage/summary`.
+- Redis-backed rate limit/cache foundation v1: configurable memory/Redis limiter backend, production fail-fast for unsafe memory limits, and `/ready` Redis checks.
 - 核心路径 E2E、视觉 QA 截图和 CI artifact。
 - Docker Compose 本地完整链路。
 

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import hashlib
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException, Request
+from redis.exceptions import RedisError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import redis_client
 from app.models import LLMUsageRecord
 from app.observability import log_event, mask_phone
 from app.settings import Settings, get_settings
@@ -28,6 +31,13 @@ class RateLimitExceeded(Exception):
     retry_after_seconds: int
     window_seconds: int
     scope: str
+
+
+@dataclass(frozen=True)
+class RateLimitBackendUnavailable(Exception):
+    scope: str
+    backend: str
+    retry_after_seconds: int = 1
 
 
 @dataclass(frozen=True)
@@ -59,6 +69,115 @@ def build_rate_limit_key(*parts: Any) -> str:
     return ":".join(normalized) or "unknown"
 
 
+class MemoryRateLimiterBackend:
+    def check(
+        self,
+        key: str,
+        *,
+        limit: int,
+        window_seconds: int,
+        scope: str,
+        now: float | None = None,
+    ) -> None:
+        current = now if now is not None else datetime.now(timezone.utc).timestamp()
+        bucket = _rate_limit_buckets[key]
+        cutoff = current - window_seconds
+        while bucket and bucket[0] <= cutoff:
+            bucket.popleft()
+
+        if len(bucket) >= limit:
+            retry_after = max(1, int(bucket[0] + window_seconds - current) + 1)
+            log_event(
+                "rate_limit_exceeded",
+                status="denied",
+                backend="memory",
+                scope=scope,
+                limit=limit,
+                window_seconds=window_seconds,
+                retry_after_seconds=retry_after,
+            )
+            raise RateLimitExceeded(
+                limit=limit,
+                remaining=0,
+                retry_after_seconds=retry_after,
+                window_seconds=window_seconds,
+                scope=scope,
+            )
+
+        bucket.append(current)
+
+
+class RedisRateLimiterBackend:
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+
+    def _redis_key(self, key: str, scope: str) -> str:
+        prefix = getattr(self.settings, "redis_rate_limit_prefix", "interview-agent:rate-limit").strip().rstrip(":")
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+        return f"{prefix}:{scope}:{digest}"
+
+    def check(
+        self,
+        key: str,
+        *,
+        limit: int,
+        window_seconds: int,
+        scope: str,
+        now: float | None = None,
+    ) -> None:
+        del now
+        client = redis_client.get_redis_client(self.settings)
+        redis_key = self._redis_key(key, scope)
+        count = int(client.incr(redis_key))
+        if count == 1:
+            client.expire(redis_key, window_seconds)
+        ttl = int(client.ttl(redis_key))
+        if ttl < 0:
+            client.expire(redis_key, window_seconds)
+            ttl = window_seconds
+
+        if count > limit:
+            retry_after = max(1, ttl)
+            log_event(
+                "rate_limit_exceeded",
+                status="denied",
+                backend="redis",
+                scope=scope,
+                limit=limit,
+                window_seconds=window_seconds,
+                retry_after_seconds=retry_after,
+            )
+            raise RateLimitExceeded(
+                limit=limit,
+                remaining=0,
+                retry_after_seconds=retry_after,
+                window_seconds=window_seconds,
+                scope=scope,
+            )
+
+
+def _rate_limit_backend_name(settings: Settings) -> str:
+    normalized = getattr(settings, "normalized_rate_limit_backend", None)
+    if isinstance(normalized, str):
+        return normalized
+    return str(getattr(settings, "rate_limit_backend", "memory")).strip().lower() or "memory"
+
+
+def _is_production(settings: Settings) -> bool:
+    return bool(getattr(settings, "is_production", False))
+
+
+def _check_memory_rate_limit(
+    key: str,
+    *,
+    limit: int,
+    window_seconds: int,
+    scope: str,
+    now: float | None = None,
+) -> None:
+    MemoryRateLimiterBackend().check(key, limit=limit, window_seconds=window_seconds, scope=scope, now=now)
+
+
 def check_rate_limit(
     key: str,
     *,
@@ -72,34 +191,33 @@ def check_rate_limit(
     if not getattr(active_settings, "rate_limit_enabled", True):
         return
 
-    current = now if now is not None else datetime.now(timezone.utc).timestamp()
-    bucket = _rate_limit_buckets[key]
-    cutoff = current - window_seconds
-    while bucket and bucket[0] <= cutoff:
-        bucket.popleft()
+    backend_name = _rate_limit_backend_name(active_settings)
+    if backend_name == "redis":
+        try:
+            RedisRateLimiterBackend(active_settings).check(
+                key,
+                limit=limit,
+                window_seconds=window_seconds,
+                scope=scope,
+                now=now,
+            )
+            return
+        except RedisError as exc:
+            log_event(
+                "rate_limit_backend_unavailable",
+                status="error",
+                backend="redis",
+                scope=scope,
+                error_type=exc.__class__.__name__,
+            )
+            if _is_production(active_settings):
+                raise RateLimitBackendUnavailable(scope=scope, backend="redis") from exc
+            log_event("rate_limit_backend_fallback", status="warning", backend="memory", failed_backend="redis", scope=scope)
 
-    if len(bucket) >= limit:
-        retry_after = max(1, int(bucket[0] + window_seconds - current) + 1)
-        log_event(
-            "rate_limit_exceeded",
-            status="denied",
-            scope=scope,
-            limit=limit,
-            window_seconds=window_seconds,
-            retry_after_seconds=retry_after,
-        )
-        raise RateLimitExceeded(
-            limit=limit,
-            remaining=0,
-            retry_after_seconds=retry_after,
-            window_seconds=window_seconds,
-            scope=scope,
-        )
-
-    bucket.append(current)
+    _check_memory_rate_limit(key, limit=limit, window_seconds=window_seconds, scope=scope, now=now)
 
 
-def rate_limit_http_exception(exc: RateLimitExceeded | QuotaExceeded) -> HTTPException:
+def rate_limit_http_exception(exc: RateLimitExceeded | RateLimitBackendUnavailable | QuotaExceeded) -> HTTPException:
     if isinstance(exc, RateLimitExceeded):
         detail = {
             "message": "Too many requests",
@@ -112,6 +230,15 @@ def rate_limit_http_exception(exc: RateLimitExceeded | QuotaExceeded) -> HTTPExc
             "X-RateLimit-Remaining": str(exc.remaining),
         }
         return HTTPException(status_code=429, detail=detail, headers=headers)
+
+    if isinstance(exc, RateLimitBackendUnavailable):
+        detail = {
+            "message": "Rate limit backend unavailable",
+            "scope": exc.scope,
+            "backend": exc.backend,
+            "retry_after_seconds": exc.retry_after_seconds,
+        }
+        return HTTPException(status_code=503, detail=detail, headers={"Retry-After": str(exc.retry_after_seconds)})
 
     detail = {
         "message": "Quota exceeded",

@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 
 import httpx
+from redis.exceptions import ConnectionError as RedisConnectionError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -18,7 +19,14 @@ from app.core.interviewer import Verdict
 from app.db import get_db
 from app.main import app
 from app.models import Base, Company, LLMUsageRecord, Position, Question, QuestionTag, Tag, User
-from app.rate_limit import reset_rate_limit_state
+from app.rate_limit import (
+    RateLimitBackendUnavailable,
+    RateLimitExceeded,
+    build_rate_limit_key,
+    check_rate_limit,
+    rate_limit_http_exception,
+    reset_rate_limit_state,
+)
 
 
 class FakeRateLimitInterviewerEngine:
@@ -55,6 +63,9 @@ def _settings(**overrides) -> SimpleNamespace:
         "access_token_expire_minutes": 60,
         "admin_phone_set": set(),
         "rate_limit_enabled": True,
+        "rate_limit_backend": "memory",
+        "redis_url": "redis://localhost:6379/0",
+        "redis_rate_limit_prefix": "test:rate-limit",
         "login_rate_limit_per_minute": 100,
         "auth_phone_rate_limit_per_hour": 100,
         "answer_submit_rate_limit_per_minute": 100,
@@ -66,6 +77,30 @@ def _settings(**overrides) -> SimpleNamespace:
     }
     values.update(overrides)
     return SimpleNamespace(**values)
+
+
+class FakeRedis:
+    def __init__(self) -> None:
+        self.counts: dict[str, int] = {}
+        self.expirations: dict[str, int] = {}
+        self.keys: list[str] = []
+
+    def incr(self, key: str) -> int:
+        self.keys.append(key)
+        self.counts[key] = self.counts.get(key, 0) + 1
+        return self.counts[key]
+
+    def expire(self, key: str, seconds: int) -> bool:
+        self.expirations[key] = seconds
+        return True
+
+    def ttl(self, key: str) -> int:
+        return self.expirations.get(key, -1)
+
+
+class BrokenRedis:
+    def incr(self, _key: str) -> int:
+        raise RedisConnectionError("redis unavailable")
 
 
 class RateLimitTest(unittest.IsolatedAsyncioTestCase):
@@ -182,6 +217,45 @@ class RateLimitTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(second.json()["request_id"], "phone-limited")
         self.assertNotIn("654321", second.text)
         self.assertNotIn("18800000003", second.text)
+
+    async def test_redis_backend_sets_ttl_and_returns_429_headers(self) -> None:
+        fake_redis = FakeRedis()
+        settings = _settings(rate_limit_backend="redis", redis_rate_limit_prefix="test:rl")
+        raw_key = build_rate_limit_key("auth", "phone", "18800000030")
+
+        with patch("app.rate_limit.redis_client.get_redis_client", return_value=fake_redis):
+            check_rate_limit(raw_key, limit=1, window_seconds=60, scope="auth_phone_per_hour", settings=settings)
+            with self.assertRaises(RateLimitExceeded) as ctx:
+                check_rate_limit(raw_key, limit=1, window_seconds=60, scope="auth_phone_per_hour", settings=settings)
+
+        self.assertEqual(list(fake_redis.expirations.values()), [60])
+        self.assertTrue(fake_redis.keys)
+        self.assertNotIn("18800000030", fake_redis.keys[0])
+        response = rate_limit_http_exception(ctx.exception)
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.headers["Retry-After"], "60")
+        self.assertEqual(response.headers["X-RateLimit-Limit"], "1")
+        self.assertEqual(response.headers["X-RateLimit-Remaining"], "0")
+
+    async def test_redis_backend_fails_closed_in_production_when_unavailable(self) -> None:
+        settings = _settings(environment="production", is_production=True, rate_limit_backend="redis")
+
+        with patch("app.rate_limit.redis_client.get_redis_client", return_value=BrokenRedis()):
+            with self.assertRaises(RateLimitBackendUnavailable) as ctx:
+                check_rate_limit("auth:ip:127.0.0.1", limit=1, window_seconds=60, scope="auth_ip_per_minute", settings=settings)
+
+        response = rate_limit_http_exception(ctx.exception)
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.headers["Retry-After"], "1")
+        self.assertEqual(response.detail["backend"], "redis")
+
+    async def test_redis_backend_falls_back_to_memory_outside_production(self) -> None:
+        settings = _settings(rate_limit_backend="redis")
+
+        with patch("app.rate_limit.redis_client.get_redis_client", return_value=BrokenRedis()):
+            check_rate_limit("answer:user:1:session:1", limit=1, window_seconds=60, scope="answer_submit_per_minute", settings=settings)
+            with self.assertRaises(RateLimitExceeded):
+                check_rate_limit("answer:user:1:session:1", limit=1, window_seconds=60, scope="answer_submit_per_minute", settings=settings)
 
     async def test_answer_submit_rate_limit_returns_429(self) -> None:
         headers, _ = await self._auth_headers("18800000004")

@@ -31,6 +31,7 @@ from app.audit import record_audit_event
 from app.question_bank import PUBLISHED_QUESTION_STATUSES
 from app.rate_limit import (
     QuotaExceeded,
+    RateLimitBackendUnavailable,
     RateLimitExceeded,
     check_answer_submit_rate_limit,
     check_user_llm_quota,
@@ -800,7 +801,7 @@ async def answer(
 ) -> StreamingResponse:
     try:
         check_answer_submit_rate_limit(current_user.id, session_id)
-    except RateLimitExceeded as exc:
+    except (RateLimitExceeded, RateLimitBackendUnavailable) as exc:
         raise rate_limit_http_exception(exc) from exc
     row = (
         await db.execute(

@@ -459,3 +459,23 @@ Next roadmap implications:
 - Content governance still needs question version history, bulk import/export and richer review workflow.
 - Scoring governance still needs rubric diff, rollback, evaluation replay and rollout policy.
 - User management, tenant management, billing and Agent Memory remain separate future phases.
+
+## PR #44 Update: Redis-Backed Rate Limit and Cache Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added `RATE_LIMIT_BACKEND=memory|redis` and Redis connection governance.
+- Kept memory limiter for local/test while requiring Redis-backed rate limiting for production when rate limits are enabled.
+- Added Redis counter TTL behavior for auth and answer-submit hot paths.
+- Added `/ready` Redis readiness checks when Redis rate limiting or Redis cache backend is enabled.
+- Added `CACHE_BACKEND=memory|redis` as a future cache foundation switch.
+- Added regression tests for Redis limiter behavior, production fail-fast and Redis readiness.
+
+Next roadmap implications:
+
+- Phase 5 now has a multi-instance abuse-protection foundation.
+- The project still needs tenant-level quotas after organization boundaries exist.
+- Cache use should be introduced only where invalidation is explicit.
+- This PR does not introduce Agent Memory, task queues, payments, subscriptions or billing.

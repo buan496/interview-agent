@@ -15,6 +15,8 @@ Database / infrastructure config:
 
 - `DATABASE_URL`
 - `REDIS_URL`
+- `REDIS_CONNECT_TIMEOUT_SECONDS`
+- `REDIS_SOCKET_TIMEOUT_SECONDS`
 
 Auth config:
 
@@ -45,6 +47,13 @@ LLM config:
 Usage metering config:
 
 - `LLM_USAGE_METERING_ENABLED`
+
+Rate limit / cache backend config:
+
+- `RATE_LIMIT_BACKEND`
+- `REDIS_RATE_LIMIT_PREFIX`
+- `CACHE_BACKEND`
+- `CACHE_PREFIX`
 
 Observability config:
 
@@ -78,6 +87,9 @@ Production rejects:
 - default `AUTH_DEV_CODE=000000`
 - `AUTH_DEV_CODE_ENABLED=true`
 - `RATE_LIMIT_ENABLED=false`
+- `RATE_LIMIT_ENABLED=true` with `RATE_LIMIT_BACKEND=memory`
+- `RATE_LIMIT_BACKEND=redis` without `REDIS_URL`
+- `CACHE_BACKEND=redis` without `REDIS_URL`
 - missing `DATABASE_URL`
 - non-positive `ACCESS_TOKEN_EXPIRE_MINUTES`
 - missing `LLM_PRICING_VERSION`
@@ -102,6 +114,8 @@ The app logs this summary as `config.loaded` after observability is installed.
 PR #39 adds rate limit and quota configuration:
 
 - `RATE_LIMIT_ENABLED`
+- `RATE_LIMIT_BACKEND`
+- `REDIS_RATE_LIMIT_PREFIX`
 - `LOGIN_RATE_LIMIT_PER_MINUTE`
 - `AUTH_PHONE_RATE_LIMIT_PER_HOUR`
 - `ANSWER_SUBMIT_RATE_LIMIT_PER_MINUTE`
@@ -111,9 +125,24 @@ PR #39 adds rate limit and quota configuration:
 
 Development defaults are intentionally broad enough for local E2E and demos. Production must keep `RATE_LIMIT_ENABLED=true`.
 
-v1 uses in-process memory buckets for request rate limits. This protects a single backend process and keeps tests deterministic, but it is not a distributed limiter. A multi-instance production deployment should replace or back this with Redis, an API gateway, or another shared rate-limit store.
+PR #44 upgrades request rate limits to a configurable backend:
+
+- `RATE_LIMIT_BACKEND=memory`: local/test default. It is deterministic and has no external dependency, but only protects one backend process.
+- `RATE_LIMIT_BACKEND=redis`: staging/production default. It uses Redis counters with TTL so multiple backend processes share the same auth and answer-submit buckets.
+
+Production rejects `RATE_LIMIT_BACKEND=memory` when `RATE_LIMIT_ENABLED=true`. Redis-backed limits require `REDIS_URL`, `REDIS_RATE_LIMIT_PREFIX`, and positive Redis timeout values. Redis keys use hashed request identities, so raw phone numbers and bearer tokens are not written into limiter keys.
 
 LLM quota checks use `llm_usage_records` and are scoped by `current_user.id`. Quotas are internal cost-control guardrails only. They are not payment, subscription, billing, or plan enforcement.
+
+## Cache Foundation Configuration
+
+PR #44 also adds the cache backend switch:
+
+- `CACHE_BACKEND=memory`
+- `CACHE_BACKEND=redis`
+- `CACHE_PREFIX`
+
+This is only a foundation switch and prefix. The PR does not add a broad application cache, distributed lock, task queue or Agent Memory. If `CACHE_BACKEND=redis`, `/ready` checks Redis connectivity.
 
 ## Troubleshooting Startup Failures
 
