@@ -17,6 +17,7 @@ from app.db import get_db
 from app.models import User
 from app.observability import log_event, mask_phone, set_user_context
 from app.rate_limit import RateLimitExceeded, check_auth_rate_limits, rate_limit_http_exception
+from app.rbac import ROLE_USER, admin_access_decision, get_user_role
 from app.settings import ConfigValidationError, DEFAULT_DEV_CODE, DEFAULT_JWT_SECRET, Settings, get_settings
 
 
@@ -116,7 +117,7 @@ async def _get_or_create_user(db: AsyncSession, phone: str) -> User:
     user = (await db.execute(select(User).where(User.phone == phone))).scalar_one_or_none()
     if user:
         return user
-    user = User(phone=phone, nickname=f"用户{phone[-4:]}")
+    user = User(phone=phone, nickname=f"用户{phone[-4:]}", role=ROLE_USER)
     db.add(user)
     await db.commit()
     await db.refresh(user)
@@ -144,21 +145,26 @@ async def require_admin(
     request: Request = None,
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    if current_user.phone not in get_settings().admin_phone_set:
+    decision = admin_access_decision(current_user, get_settings())
+    audit_metadata = {
+        "method": request.method if request else None,
+        "path": request.url.path if request else None,
+        "required_role": "admin",
+        "user_role": decision.user_role,
+        "access_source": decision.access_source,
+    }
+    if not decision.allowed:
         if isinstance(db, AsyncSession):
             await record_audit_event(
                 db,
                 action="admin_denied",
                 status="denied",
                 actor=current_user,
-                actor_role="user",
+                actor_role=decision.user_role,
                 resource_type="admin",
                 request=request,
-                reason="admin_phone_not_allowlisted",
-                metadata={
-                    "method": request.method if request else None,
-                    "path": request.url.path if request else None,
-                },
+                reason=decision.reason,
+                metadata=audit_metadata,
             )
         raise HTTPException(status_code=403, detail="Admin privileges required")
     if isinstance(db, AsyncSession):
@@ -167,13 +173,10 @@ async def require_admin(
             action="admin_access",
             status="success",
             actor=current_user,
-            actor_role="admin",
+            actor_role=decision.user_role,
             resource_type="admin",
             request=request,
-            metadata={
-                "method": request.method if request else None,
-                "path": request.url.path if request else None,
-            },
+            metadata=audit_metadata,
         )
     return current_user
 
@@ -235,7 +238,7 @@ async def login(
             action="login_success",
             status="success",
             actor=user,
-            actor_role="user",
+            actor_role=get_user_role(user),
             resource_type="auth",
             request=http_request,
             metadata={"auth_method": "sms_code"},

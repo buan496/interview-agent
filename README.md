@@ -190,6 +190,7 @@ Production configuration governance is documented in [Configuration](docs/config
 Release/CD management is documented in [Release Management](docs/release-management.md), with evidence template in [Release Evidence Template](docs/release-evidence-template.md).
 Audit log v1 is documented in [Audit Log](docs/audit-log.md).
 Rate limit and quota v1 are documented in [Configuration](docs/configuration.md) and [Observability Foundation](docs/observability.md).
+RBAC v1 adds `User.role` based admin authorization with `ADMIN_PHONES` retained as a bootstrap/fallback path; it does not add organization tenancy or a frontend admin console.
 
 ## 工程亮点
 
@@ -203,6 +204,7 @@ Rate limit and quota v1 are documented in [Configuration](docs/configuration.md)
 - Release/CD management v1: manual release candidate workflow, release evidence template, migration gate, immutable image tag policy, and rollback SOP; it does not deploy production directly.
 - Audit log v1: login success/failure and admin access/denial are persisted with `request_id`, masked actor identity and sanitized metadata.
 - Rate limit and quota v1: login, verification-code and answer scoring paths have basic IP/user limits, and LLM usage is checked against user-scoped token/call quotas before scoring.
+- RBAC v1: admin APIs authorize from the database user role first, support `user` / `admin` / `content_operator`, and keep `ADMIN_PHONES` only as an early-stage bootstrap fallback.
 - 生产可观测性地基：每个请求返回 `X-Request-ID`，后端输出结构化 JSON 日志，关键训练链路有业务事件日志。
 - 核心链路 E2E：覆盖 practice -> session -> report -> practice、wrong-book 回流、mock 创建等路径。
 - 视觉 QA：为核心页面生成桌面端和移动端截图，并检查无横向溢出。

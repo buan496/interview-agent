@@ -499,3 +499,31 @@ Suggested follow-up PRs:
 - Admin quota management and quota override workflow.
 - Tenant-level quota model after organization boundaries exist.
 - Cost anomaly alerts based on `llm_usage_records`.
+
+## PR #40 Update: RBAC v1
+
+Status: partially complete.
+
+Completed:
+
+- Added `users.role` with default `user`.
+- Added `user`, `admin`, and `content_operator` role constants and helper logic.
+- Updated admin authorization to allow `role=admin` before checking `ADMIN_PHONES`.
+- Kept `ADMIN_PHONES` as a bootstrap/fallback mechanism for local development and early deployments.
+- Added audit metadata for admin access source, required role, user role, and RBAC denial reason.
+- Added backend tests for default role, role-based admin access, fallback access, content-operator denial, and audit linkage.
+
+Still missing:
+
+- No organization or tenant model.
+- No multi-role membership table.
+- No resource-level permission matrix.
+- No role management API or frontend admin role console.
+- `content_operator` is reserved but does not yet unlock content-specific routes.
+
+Suggested follow-up PRs:
+
+- Content operator workflow: allow `content_operator` only for question review routes once that boundary is designed.
+- Role management API: admin-only user role update endpoint with audit coverage.
+- Organization/tenant membership model after single-user RBAC is stable.
+- Resource-scoped permission tests for future report export, question bank management and privacy workflows.

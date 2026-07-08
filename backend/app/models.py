@@ -105,6 +105,7 @@ class User(Base):
     target_company_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("companies.id"))
     target_position_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("positions.id"))
     level: Mapped[str] = mapped_column(String(20), default="junior")
+    role: Mapped[str] = mapped_column(String(30), nullable=False, default="user")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     sessions: Mapped[list[Session]] = relationship(back_populates="user")

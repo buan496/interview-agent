@@ -108,13 +108,19 @@ This layer is governance only. It does not deploy production, does not require p
 
 PR #38 adds a persistent `audit_events` ledger for selected security and admin events. Login success, login failure, admin access and admin denial are recorded with `request_id`, masked actor identity, status, reason and sanitized metadata.
 
-This is audit foundation v1. It does not add RBAC, tenant scoping, frontend admin pages, full report access audit, data export audit or privacy request workflows.
+This is audit foundation v1. It does not add tenant scoping, frontend admin pages, full report access audit, data export audit or privacy request workflows.
 
 ### Abuse Protection and Quota Layer
 
 PR #39 adds rate limit and quota foundation v1. Auth endpoints are protected by IP and phone buckets, answer submission is protected by user/session buckets, and LLM scoring checks user-scoped token/call quotas against `llm_usage_records` before model evaluation.
 
 This layer is intentionally simple. It uses in-process rate-limit buckets, not Redis or an external limiter. Quota is cost-control metadata, not payment, subscription, billing, or commercial plan enforcement.
+
+### RBAC Layer
+
+PR #40 adds RBAC foundation v1. `users.role` supports `user`, `admin`, and `content_operator`. Admin routes authorize `role=admin` first and keep `ADMIN_PHONES` as a bootstrap/fallback path. `content_operator` is reserved for future content workflows and cannot access admin-only routes in v1.
+
+This is not an organization or tenant model. It does not include resource-level permissions, a full permission matrix, role management UI, or frontend admin user management.
 
 ## 前端架构
 
@@ -138,7 +144,7 @@ This layer is intentionally simple. It uses in-process rate-limit buckets, not R
 
 - FastAPI 路由拆分：`auth`、`questions`、`sessions`、`stats`、`practice_plan`、`submissions`、`admin`、`audio`。
 - `get_current_user` 解析 Bearer token 并通过手机号创建或读取用户。
-- `require_admin` 基于 `ADMIN_PHONES` 保护 `/admin` 路由。
+- `require_admin` 基于 `users.role=admin` 保护 `/admin` 路由，并保留 `ADMIN_PHONES` 作为 bootstrap/fallback。
 - Session API 按 `Session.user_id == current_user.id` 做读取和提交隔离。
 - WrongBook、UserTagStat、PracticePlan 均按 `user_id` 存储或查询。
 
@@ -231,7 +237,7 @@ This layer is intentionally simple. It uses in-process rate-limit buckets, not R
 
 - Bearer token 认证。
 - 开发验证码已通过 `APP_ENV`、`AUTH_DEV_CODE_ENABLED`、`AUTH_DEV_CODE` 配置隔离；生产环境会拒绝默认 `000000` 和默认 `JWT_SECRET`。
-- 管理接口通过 `require_admin` 和 `ADMIN_PHONES` 限制。
+- 管理接口通过 `require_admin` 和 `users.role=admin` 限制，`ADMIN_PHONES` 仅作为 bootstrap/fallback。
 - 用户训练数据大多通过 `user_id` 过滤。
 - CI 有 Secret Scan。
 
@@ -240,8 +246,8 @@ This layer is intentionally simple. It uses in-process rate-limit buckets, not R
 - Token 是自定义 HMAC 格式，不是标准 JWT 库实现。
 - 真实短信服务商、验证码存储、过期校验、错误次数限制和重放保护仍未接入。
 - 没有 refresh token、设备管理和会话撤销；登录审计已有 v1 但仍缺验证码生命周期和设备维度。
-- 权限模型只有 admin phone allowlist，没有角色/权限表。
-- 没有租户隔离、完整 RBAC、完整资源审计、数据导出/删除、隐私合规流程。
+- RBAC v1 只有单一 `users.role` 字段，没有多角色表或复杂权限矩阵。
+- 没有租户隔离、资源级 RBAC、完整资源审计、数据导出/删除、隐私合规流程。
 
 目标形态：
 
