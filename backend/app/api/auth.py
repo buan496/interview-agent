@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit import record_audit_event
 from app.db import get_db
 from app.models import User
 from app.observability import log_event, mask_phone, set_user_context
@@ -137,9 +138,42 @@ async def get_current_user(
     return user
 
 
-async def require_admin(current_user: User = Depends(get_current_user)) -> User:
+async def require_admin(
+    current_user: User = Depends(get_current_user),
+    request: Request = None,
+    db: AsyncSession = Depends(get_db),
+) -> User:
     if current_user.phone not in get_settings().admin_phone_set:
+        if isinstance(db, AsyncSession):
+            await record_audit_event(
+                db,
+                action="admin_denied",
+                status="denied",
+                actor=current_user,
+                actor_role="user",
+                resource_type="admin",
+                request=request,
+                reason="admin_phone_not_allowlisted",
+                metadata={
+                    "method": request.method if request else None,
+                    "path": request.url.path if request else None,
+                },
+            )
         raise HTTPException(status_code=403, detail="Admin privileges required")
+    if isinstance(db, AsyncSession):
+        await record_audit_event(
+            db,
+            action="admin_access",
+            status="success",
+            actor=current_user,
+            actor_role="admin",
+            resource_type="admin",
+            request=request,
+            metadata={
+                "method": request.method if request else None,
+                "path": request.url.path if request else None,
+            },
+        )
     return current_user
 
 
@@ -166,6 +200,18 @@ async def login(
     settings = get_settings()
     if not verify_sms_code(request.phone, request.code, settings):
         log_event("auth.login", status="failed", phone=mask_phone(request.phone), reason="invalid_code")
+        if isinstance(db, AsyncSession):
+            await record_audit_event(
+                db,
+                action="login_failed",
+                status="failed",
+                actor_phone=request.phone,
+                actor_role="anonymous",
+                resource_type="auth",
+                request=http_request,
+                reason="invalid_code",
+                metadata={"auth_method": "sms_code"},
+            )
         raise HTTPException(status_code=401, detail="Invalid verification code")
     user = await _get_or_create_user(db, request.phone)
     set_user_context(user.id)
@@ -174,6 +220,17 @@ async def login(
     expires_in = settings.access_token_expire_minutes * 60
     token = _encode({"sub": request.phone, "uid": user.id, "exp": int(time.time()) + expires_in})
     log_event("auth.login", status="success", phone=mask_phone(request.phone), user_id=user.id)
+    if isinstance(db, AsyncSession):
+        await record_audit_event(
+            db,
+            action="login_success",
+            status="success",
+            actor=user,
+            actor_role="user",
+            resource_type="auth",
+            request=http_request,
+            metadata={"auth_method": "sms_code"},
+        )
     return {"access_token": token, "token_type": "bearer", "expires_in": expires_in}
 
 

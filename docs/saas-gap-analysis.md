@@ -444,3 +444,30 @@ Suggested follow-up PRs:
 - Production deployment blueprint for the chosen runtime.
 - Registry publishing policy with protected tags and environment approvals.
 - Post-release smoke workflow for staging.
+
+## PR #38 Update: Audit Log and Admin Operation Tracking
+
+Status: partially complete.
+
+Completed:
+
+- Added persistent `audit_events` ledger with actor, action, resource, target user, request id, status, reason, request context, sanitized metadata and creation time.
+- Added login success and login failure audit events.
+- Added admin access and admin denial audit events through the existing admin allowlist guard.
+- Added admin-only `GET /api/admin/audit-events` with action, actor, status, limit and offset filters.
+- Added sensitive metadata masking for token, secret, verification code, phone, prompt, completion and answer-related fields.
+- Added regression tests for login audit, admin audit, non-admin query denial, request id correlation and metadata redaction.
+
+Still missing:
+
+- No full RBAC model.
+- No organization or tenant-level audit scope.
+- No frontend admin audit console.
+- No full report access, data export, privacy request or question review audit coverage.
+- No audit retention or archive policy.
+
+Suggested follow-up PRs:
+
+- RBAC and organization membership: replace phone allowlist with roles and resource scopes.
+- Audit coverage expansion: add report access, question review, data export and privacy request events.
+- Audit retention policy: define retention windows, archive flow and operator access rules.

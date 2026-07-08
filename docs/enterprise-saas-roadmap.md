@@ -347,3 +347,21 @@ Still missing:
 - No automated rollback execution.
 - No backup and restore automation.
 - No Kubernetes or external CD platform.
+
+## PR #38 Update: Audit Log and Admin Operation Tracking
+
+Status: partially complete.
+
+Completed:
+
+- Added persistent `audit_events` table and Alembic migration.
+- Added audit helper with request context extraction, metadata redaction and best-effort write behavior.
+- Added security/admin event coverage for login success, login failure, admin access and admin denial.
+- Added admin-only audit event query endpoint.
+- Added backend tests for audit writes, admin query access control, redaction and request id correlation.
+
+Next roadmap implications:
+
+- Phase 5 now has an audit foundation tied to observability `request_id`.
+- RBAC, organization membership and tenant-scoped audit remain separate follow-up work.
+- Future audit coverage should include report access, question review, data export and privacy request events.
