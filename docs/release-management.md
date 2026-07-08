@@ -43,12 +43,15 @@ It does not:
 - require production secrets
 - create or modify infrastructure
 
+For staging release candidates, use `docs/staging-deployment.md` after this workflow succeeds. The workflow validates the staging compose configuration, but it does not SSH into a host and does not start staging services.
+
 ## Pre-Release Checklist
 
 - The target commit is on `main` or a reviewed release branch.
 - CI is green for Backend, Frontend, Migrations, Compose Config, Docker Build, and Secret Scan.
 - `docs/configuration.md` has been checked for the target environment.
 - The release candidate workflow has completed successfully.
+- For production approval, staging deployment evidence and smoke test results are complete.
 - The release evidence template has been filled in.
 - Known risks and rollback plan are documented.
 - A human approver has approved the release.
@@ -63,6 +66,16 @@ It does not:
 - LLM provider, model, timeout, and pricing version are documented.
 - If a real LLM provider is enabled, its API key is configured in the runtime secret store.
 - Logs and release evidence do not contain secret values, tokens, verification codes, database passwords, full phone numbers, or prompt text.
+
+Staging-specific config:
+
+- `APP_ENV=staging`
+- `RATE_LIMIT_BACKEND=redis`
+- `CACHE_BACKEND=redis`
+- `AUTH_DEV_CODE_ENABLED=false`
+- `JWT_SECRET_KEY` supplied outside git
+- `DATABASE_URL` and `REDIS_URL` supplied from `.env.staging`
+- `NEXT_PUBLIC_API_BASE_URL` points at the staging API URL
 
 ## Database Migration Gate
 
@@ -148,6 +161,16 @@ The evidence must include:
 - rollback plan
 - known risks
 - post-release smoke results
+
+## Staging Deployment Flow
+
+1. Run the manual release workflow with `target_environment=staging`.
+2. Prepare `.env.staging` from `.env.staging.example` outside git.
+3. Start staging with `docker compose --env-file .env.staging -f docker-compose.staging.yml up -d`.
+4. Confirm `/health` and `/ready`; readiness should include Redis when Redis-backed rate limit or cache is enabled.
+5. Run `scripts/staging-smoke.ps1`.
+6. Record image tags, migration result, smoke result and observed request id in release evidence.
+7. Only after staging evidence is complete should production approval be considered.
 
 ## Troubleshooting After Release
 

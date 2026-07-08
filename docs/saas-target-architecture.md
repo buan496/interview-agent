@@ -104,6 +104,12 @@ PR #37 adds the first release/CD management layer. The repository now has a manu
 
 This layer is governance only. It does not deploy production, does not require production secrets, does not introduce Kubernetes, and does not push release-candidate images to a registry. Existing CI remains the required quality gate before release candidate review.
 
+### Staging Deployment Layer
+
+PR #45 adds a staging deployment foundation for release-candidate rehearsal. The repository now includes `docker-compose.staging.yml`, `.env.staging.example`, `scripts/staging-smoke.ps1`, and `docs/staging-deployment.md`.
+
+Staging is production-shaped but not production: it uses PostgreSQL, Redis, backend and frontend services, Redis-backed rate limit/cache settings, immutable image tags, health/readiness checks and smoke evidence. It does not deploy production, does not require real cloud secrets, does not introduce Kubernetes and does not hard-code personal server IPs.
+
 ### Audit Layer
 
 PR #38 adds a persistent `audit_events` ledger for selected security and admin events. Login success, login failure, admin access and admin denial are recorded with `request_id`, masked actor identity, status, reason and sanitized metadata.

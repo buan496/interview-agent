@@ -154,6 +154,9 @@ jobs:
       - name: Docker Compose config
         run: docker compose -p interview-agent-release config --quiet
 
+      - name: Staging Docker Compose config
+        run: docker compose -p interview-agent-staging -f docker-compose.yml -f docker-compose.staging.yml config --quiet
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -192,6 +195,17 @@ jobs:
             echo "Built candidate images:"
             echo "- \`interview-agent-api:${IMAGE_TAG}\`"
             echo "- \`interview-agent-frontend:${IMAGE_TAG}\`"
+            echo ""
+            if [ "${{ inputs.target_environment }}" = "staging" ]; then
+              echo "Staging checklist:"
+              echo "- Prepare \`.env.staging\` from \`.env.staging.example\` outside git."
+              echo "- Run \`docker compose --env-file .env.staging -f docker-compose.staging.yml up -d\` on the staging host."
+              echo "- Run \`scripts/staging-smoke.ps1\` and record the observed request id."
+            else
+              echo "Production checklist:"
+              echo "- This workflow does not deploy production."
+              echo "- Production approval requires completed staging evidence and smoke results."
+            fi
             echo ""
             echo "Use \`docs/release-evidence-template.md\` to copy this evidence into a release record."
           } >> "$GITHUB_STEP_SUMMARY"

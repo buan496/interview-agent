@@ -189,6 +189,7 @@ GitHub Actions 当前包含：
 可观测性排障说明见 [Observability Foundation](docs/observability.md)。
 Production configuration governance is documented in [Configuration](docs/configuration.md).
 Release/CD management is documented in [Release Management](docs/release-management.md), with evidence template in [Release Evidence Template](docs/release-evidence-template.md).
+Staging deployment foundation is documented in [Staging Deployment](docs/staging-deployment.md), with `.env.staging.example`, `docker-compose.staging.yml`, and `scripts/staging-smoke.ps1`.
 Audit log v1 is documented in [Audit Log](docs/audit-log.md).
 Rate limit and quota v1 are documented in [Configuration](docs/configuration.md) and [Observability Foundation](docs/observability.md).
 Redis-backed rate limit and cache foundation is documented in [Configuration](docs/configuration.md), [Observability Foundation](docs/observability.md), and [SaaS Target Architecture](docs/saas-target-architecture.md).
@@ -207,6 +208,7 @@ Admin Console v1 adds frontend pages at `/admin`, `/admin/questions`, and `/admi
 - LLM cost metering foundation: `llm_usage_records` stores only call metadata, token estimates, estimated cost, latency and status; it does not store prompt, completion or answer text.
 - Production config governance: startup validation rejects unsafe production defaults, and `config.loaded` logs only a sanitized configuration summary.
 - Release/CD management v1: manual release candidate workflow, release evidence template, migration gate, immutable image tag policy, and rollback SOP; it does not deploy production directly.
+- Staging deployment foundation: staging compose topology, environment template, smoke script and release evidence flow for release-candidate rehearsal; it does not deploy production.
 - Audit log v1: login success/failure and admin access/denial are persisted with `request_id`, masked actor identity and sanitized metadata.
 - Rate limit and quota v1: login, verification-code and answer scoring paths have basic IP/user limits, and LLM usage is checked against user-scoped token/call quotas before scoring.
 - Redis-backed rate limit foundation: production can use Redis shared counters for multi-instance request throttling, while local/test keep deterministic memory buckets.
@@ -271,6 +273,7 @@ docs                   产品设计、视觉验收和演示文档
 - 能力画像 v1：当前用户标签平均分、优势项、薄弱项、训练次数和错题次数。
 - LLM usage metering v1: records current-user LLM call metadata and estimated cost, with aggregation through `/api/me/usage/summary`.
 - Redis-backed rate limit/cache foundation v1: configurable memory/Redis limiter backend, production fail-fast for unsafe memory limits, and `/ready` Redis checks.
+- Staging deployment foundation: `.env.staging.example`, `docker-compose.staging.yml`, staging smoke script and release evidence workflow.
 - 核心路径 E2E、视觉 QA 截图和 CI artifact。
 - Docker Compose 本地完整链路。
 

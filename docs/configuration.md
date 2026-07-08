@@ -77,6 +77,24 @@ These defaults are intentionally local-only and must not be used in production.
 
 Tests may use stable development-style configuration so auth and E2E flows are deterministic. Test fixtures should avoid real provider keys and external services.
 
+## Staging Environment
+
+Staging is configured through `.env.staging`, created from `.env.staging.example`, and deployed with `docker-compose.staging.yml`.
+
+Staging should use production-shaped settings without production user data:
+
+- `APP_ENV=staging`
+- `AUTH_DEV_CODE_ENABLED=false`
+- `RATE_LIMIT_BACKEND=redis`
+- `CACHE_BACKEND=redis`
+- `DATABASE_URL` points at the staging PostgreSQL service
+- `REDIS_URL` points at the staging Redis service
+- `JWT_SECRET_KEY` is supplied outside git
+- `NEXT_PUBLIC_API_BASE_URL` points at the staging API URL
+- `CORS_ORIGINS` points at the staging frontend origin
+
+Staging may leave `DEEPSEEK_API_KEY` empty to use fallback behavior for release rehearsal, but the release evidence must record whether the real provider was configured.
+
 ## Production Requirements
 
 Production fail-fast validation is implemented in `Settings.validate_production_config()` and is executed during `backend/app/main.py` import before the FastAPI app starts.
@@ -186,3 +204,5 @@ Release candidates must use this document as the configuration checklist source.
 - release evidence must record whether each required config group was checked
 
 The release workflow builds and validates release candidates, but it does not inject production secrets and does not deploy production.
+
+For staging deployment details, see `docs/staging-deployment.md`. Staging release candidates should run `scripts/staging-smoke.ps1` and record the observed request id in release evidence.

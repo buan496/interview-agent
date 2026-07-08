@@ -648,3 +648,31 @@ Suggested follow-up PRs:
 - Redis Lua/token-bucket limiter if burst handling becomes a production issue.
 - Admin quota override and usage review workflow.
 - Cache strategy for low-risk read models only after cache invalidation rules are explicit.
+
+## PR #45 Update: Staging Deployment Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added `docker-compose.staging.yml` with PostgreSQL, Redis, API and frontend topology.
+- Added `.env.staging.example` with placeholder-only staging configuration.
+- Added `scripts/staging-smoke.ps1` for health, readiness, request id, frontend and auth-code-path checks.
+- Added staging deployment SOP in `docs/staging-deployment.md`.
+- Updated release workflow, local CI, release management and release evidence docs with staging compose and smoke evidence.
+- Staging config aligns with Redis-backed rate limit/cache settings from PR #44.
+
+Still missing:
+
+- No real staging server is provisioned.
+- No registry push or SSH deployment is automated.
+- No production deployment is performed.
+- No Kubernetes or external CD platform.
+- No backup/restore automation for staging data.
+
+Suggested follow-up PRs:
+
+- Registry publishing workflow for immutable staging release images.
+- Staging host provisioning runbook once the runtime target is chosen.
+- Post-deploy smoke workflow after a real staging endpoint exists.
+- Backup and restore runbook for staging and production.

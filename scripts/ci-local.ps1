@@ -95,6 +95,15 @@ Invoke-Step "Docker Compose config" {
   }
 }
 
+Invoke-Step "Staging Docker Compose config" {
+  Push-Location $root
+  try {
+    docker compose -p interview-agent-staging -f docker-compose.yml -f docker-compose.staging.yml config --quiet
+  } finally {
+    Pop-Location
+  }
+}
+
 if (-not $SkipSecretScan) {
   Invoke-Step "Secret scan" {
     Push-Location $root
