@@ -56,6 +56,7 @@ Use this template for every staging or production release candidate.
 - Backup SHA256:
 - Staging migration result:
 - Staging smoke result:
+- Staging metrics result:
 - Staging observed request_id:
 - Production backup completed:
 - Production backup evidence:
@@ -95,6 +96,7 @@ Use this template for every staging or production release candidate.
 
 - `/health`:
 - `/ready`:
+- `/metrics`:
 - Login smoke:
 - `/practice` smoke:
 - `/session/{id}` smoke:

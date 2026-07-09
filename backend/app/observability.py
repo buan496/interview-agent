@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.metrics import normalize_route, record_http_request
 from app.settings import Settings
 
 
@@ -92,10 +93,15 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         request_token = _request_id.set(request_id)
         user_token = _user_id.set(None)
         started = time.perf_counter()
+        metrics_recorded = False
         try:
             response = await call_next(request)
         except Exception:
             duration_ms = round((time.perf_counter() - started) * 1000, 2)
+            route = _route_label(request)
+            if route != getattr(request.app.state, "metrics_path", "/metrics"):
+                record_http_request(request.method, route, 500, duration_ms / 1000)
+                metrics_recorded = True
             log_exception(
                 "http_request_exception",
                 method=request.method,
@@ -116,6 +122,9 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         else:
             request_status = "ok"
         request_user_id = getattr(request.state, "user_id", None)
+        route = _route_label(request)
+        if not metrics_recorded and route != getattr(request.app.state, "metrics_path", "/metrics"):
+            record_http_request(request.method, route, response.status_code, duration_ms / 1000)
         log_event(
             "http_request",
             status=request_status,
@@ -129,6 +138,12 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         _request_id.reset(request_token)
         _user_id.reset(user_token)
         return response
+
+
+def _route_label(request: Request) -> str:
+    route = request.scope.get("route")
+    path = getattr(route, "path", None) or request.url.path
+    return normalize_route(path)
 
 
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
@@ -146,3 +161,4 @@ def install_observability(app: FastAPI, settings: Settings) -> None:
     app.add_exception_handler(HTTPException, http_exception_handler)
     app.state.service_name = settings.app_name
     app.state.environment = settings.environment
+    app.state.metrics_path = getattr(settings, "metrics_path", "/metrics")

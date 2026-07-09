@@ -60,6 +60,10 @@ Observability config:
 - `LOG_LEVEL`
 - `LOG_FORMAT`
 - `REQUEST_ID_HEADER`
+- `METRICS_ENABLED`
+- `METRICS_PATH`
+- `METRICS_INCLUDE_READY_GAUGES`
+- `METRICS_PROTECT_IN_PRODUCTION`
 
 ## Local Development
 
@@ -126,6 +130,17 @@ Production rejects:
 - `AUTH_DEV_CODE` is never included
 
 The app logs this summary as `config.loaded` after observability is installed.
+
+## Metrics Configuration
+
+PR #47 adds Prometheus-compatible metrics configuration:
+
+- `METRICS_ENABLED=true`: enables the `/metrics` endpoint.
+- `METRICS_PATH=/metrics`: controls the endpoint path and must start with `/`.
+- `METRICS_INCLUDE_READY_GAUGES=true`: lets `/ready` update dependency gauges for database and Redis.
+- `METRICS_PROTECT_IN_PRODUCTION=true`: prevents direct production access to the metrics endpoint by returning 403.
+
+Local and test environments can read `/metrics` directly. Staging should expose it only to trusted operators or scrape jobs. Production should keep it behind an internal network, sidecar, gateway allowlist or equivalent deployment-level protection. Metrics must not contain request ids, user ids, session ids, phone numbers, tokens, secrets, verification codes, prompt text, completion text or answer text.
 
 ## Rate Limit and Quota Configuration
 

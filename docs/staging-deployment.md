@@ -18,6 +18,7 @@ Staging contains:
 - `api`: FastAPI backend.
 - `postgres`: PostgreSQL with pgvector.
 - `redis`: Redis for shared rate-limit counters and cache foundation.
+- `/metrics`: Prometheus-compatible backend metrics endpoint for staging operator checks or internal scrape jobs.
 
 Staging deliberately excludes:
 
@@ -147,6 +148,14 @@ Expected readiness in staging:
 
 If `redis` is not `ok`, inspect Redis container health and backend logs before continuing.
 
+Check metrics from a trusted operator path:
+
+```powershell
+Invoke-WebRequest http://localhost:8000/metrics
+```
+
+Expected staging metrics include HTTP counters, request duration histograms, dependency readiness gauges, rate-limit/quota counters and LLM usage counters. Do not expose `/metrics` to the public internet.
+
 ## Smoke Test
 
 Run:
@@ -161,6 +170,7 @@ The smoke test checks:
 
 - `/health`
 - `/ready`
+- `/metrics` endpoint availability when metrics are enabled
 - `X-Request-ID` response header
 - frontend `/login`
 - `/api/auth/request-code` does not expose `development_code` or `000000`

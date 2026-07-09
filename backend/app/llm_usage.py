@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.interviewer import ConversationMessage, EvaluationResult, InterviewQuestion
+from app.metrics import record_llm_usage_metrics
 from app.models import LLMUsageRecord
 from app.observability import get_request_id, log_event
 from app.settings import DEFAULT_LLM_PRICING_VERSION, Settings, get_settings
@@ -170,6 +171,17 @@ async def record_llm_usage(
         estimated_cost=str(record.estimated_cost),
         latency_ms=latency_ms,
         error_type=error_type,
+    )
+    record_llm_usage_metrics(
+        provider=provider,
+        model=model,
+        feature=feature,
+        status=status,
+        prompt_tokens=record.prompt_tokens,
+        completion_tokens=record.completion_tokens,
+        estimated_cost=record.estimated_cost,
+        currency=record.currency,
+        latency_ms=latency_ms,
     )
     return record
 

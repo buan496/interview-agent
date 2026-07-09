@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
     log_format: str = Field(default="json", validation_alias="LOG_FORMAT")
     request_id_header: str = Field(default="X-Request-ID", validation_alias="REQUEST_ID_HEADER")
+    metrics_enabled: bool = Field(default=True, validation_alias="METRICS_ENABLED")
+    metrics_path: str = Field(default="/metrics", validation_alias="METRICS_PATH")
+    metrics_include_ready_gauges: bool = Field(default=True, validation_alias="METRICS_INCLUDE_READY_GAUGES")
+    metrics_protect_in_production: bool = Field(default=True, validation_alias="METRICS_PROTECT_IN_PRODUCTION")
 
     # Usage metering config
     llm_usage_metering_enabled: bool = Field(default=True, validation_alias="LLM_USAGE_METERING_ENABLED")
@@ -114,6 +118,14 @@ class Settings(BaseSettings):
         normalized = value.strip().lower()
         if normalized not in {"memory", "redis"}:
             raise ValueError("Backend must be memory or redis")
+        return normalized
+
+    @field_validator("metrics_path")
+    @classmethod
+    def _validate_metrics_path(cls, value: str) -> str:
+        normalized = value.strip() or "/metrics"
+        if not normalized.startswith("/"):
+            raise ValueError("METRICS_PATH must start with /")
         return normalized
 
     @field_validator(
@@ -229,6 +241,10 @@ class Settings(BaseSettings):
                 "log_level": self.log_level,
                 "log_format": self.log_format,
                 "request_id_header": self.request_id_header,
+                "metrics_enabled": self.metrics_enabled,
+                "metrics_path": self.metrics_path,
+                "metrics_include_ready_gauges": self.metrics_include_ready_gauges,
+                "metrics_protect_in_production": self.metrics_protect_in_production,
             },
             "usage_metering": {
                 "enabled": self.llm_usage_metering_enabled,

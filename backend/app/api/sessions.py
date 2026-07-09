@@ -25,6 +25,7 @@ from app.llm_usage import (
     record_llm_usage,
     usage_metering_enabled,
 )
+from app.metrics import record_answer_submitted, record_report_generated, record_session_created
 from app.models import EvaluationResult, Message, Question, QuestionTag, ScoringRubricVersion, Session, SessionQuestion, User, UserTagStat, WrongBook
 from app.observability import get_request_id, log_event
 from app.audit import record_audit_event
@@ -242,6 +243,7 @@ async def create_session(
     db.add(Message(sq_id=first_sq.id, role="interviewer", content=questions[0].title, msg_type="question"))
     await db.commit()
     log_event("session.create", status="success", session_id=session.id, mode=session.mode, question_count=len(questions))
+    record_session_created(session.mode)
     return CreateSessionOut(
         session_id=session.id,
         first_question=_first_question(questions[0], first_sq.id),
@@ -777,6 +779,7 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
                 session_id=refreshed.id,
                 overall_score=refreshed.report.get("overall_score") if isinstance(refreshed.report, dict) else None,
             )
+            record_report_generated("success")
         await db.commit()
 
     for char in content:
@@ -869,4 +872,5 @@ async def answer(
         )
         raise rate_limit_http_exception(exc) from exc
     log_event("answer.submit", status="accepted", session_id=session_id, sq_id=request.sq_id)
+    record_answer_submitted(session.mode)
     return StreamingResponse(_answer_stream(session_id, current_user.id, request), media_type="text/event-stream")
