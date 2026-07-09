@@ -558,3 +558,24 @@ Next roadmap implications:
 - Personalization can now build on training history, ability profile and Agent Memory together.
 - LLM extraction, vector retrieval, memory evaluation and memory retention policies remain future PRs.
 - Tenant-level memory governance should wait until organization boundaries are designed.
+
+## PR #49 Update: LLM Gateway and Model Router v1
+
+Status: partially complete.
+
+Completed:
+
+- Added backend LLM Gateway and provider abstraction.
+- Added feature-based model routing.
+- Added primary/fallback provider policy through configuration.
+- Added bounded retry/timeout configuration.
+- Migrated interview scoring to the gateway.
+- Kept usage metering and Prometheus metrics aligned with actual provider/model attempts.
+- Added tests for routing, fallback, failure and usage-record behavior.
+
+Next roadmap implications:
+
+- Phase 4/5 now has a model governance foundation without adding a model-management UI.
+- Model registry, canary routing, A/B testing and cost-aware routing remain future work.
+- Tenant-specific model policy should wait for organization/tenant modeling.
+- Gateway telemetry can now support later model quality and cost comparison.

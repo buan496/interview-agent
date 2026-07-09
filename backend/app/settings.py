@@ -38,6 +38,17 @@ class Settings(BaseSettings):
     deepseek_base_url: str = Field(default="https://api.deepseek.com", validation_alias="DEEPSEEK_BASE_URL")
     deepseek_model: str = Field(default="deepseek-chat", validation_alias="DEEPSEEK_MODEL")
     llm_timeout_seconds: float = Field(default=45.0, validation_alias="LLM_TIMEOUT_SECONDS")
+    llm_gateway_enabled: bool = Field(default=True, validation_alias="LLM_GATEWAY_ENABLED")
+    llm_default_provider: str = Field(default="", validation_alias="LLM_DEFAULT_PROVIDER")
+    llm_default_model: str = Field(default="", validation_alias="LLM_DEFAULT_MODEL")
+    llm_fallback_provider: str = Field(default="mock", validation_alias="LLM_FALLBACK_PROVIDER")
+    llm_fallback_model: str = Field(default="local-fallback", validation_alias="LLM_FALLBACK_MODEL")
+    llm_route_interview_scoring: str = Field(default="", validation_alias="LLM_ROUTE_INTERVIEW_SCORING")
+    llm_route_report_summary: str = Field(default="", validation_alias="LLM_ROUTE_REPORT_SUMMARY")
+    llm_route_memory_refresh: str = Field(default="", validation_alias="LLM_ROUTE_MEMORY_REFRESH")
+    llm_route_rubric_validation: str = Field(default="", validation_alias="LLM_ROUTE_RUBRIC_VALIDATION")
+    llm_max_retries: int = Field(default=1, validation_alias="LLM_MAX_RETRIES")
+    llm_fallback_enabled: bool = Field(default=True, validation_alias="LLM_FALLBACK_ENABLED")
     llm_pricing_version: str = Field(default=DEFAULT_LLM_PRICING_VERSION, validation_alias="LLM_PRICING_VERSION")
 
     # Model / audio config
@@ -105,6 +116,13 @@ class Settings(BaseSettings):
             raise ValueError("LLM_TIMEOUT_SECONDS must be positive")
         return value
 
+    @field_validator("llm_max_retries")
+    @classmethod
+    def _validate_llm_max_retries(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("LLM_MAX_RETRIES must be positive")
+        return value
+
     @field_validator("redis_connect_timeout_seconds", "redis_socket_timeout_seconds")
     @classmethod
     def _validate_redis_timeouts(cls, value: float) -> float:
@@ -159,8 +177,29 @@ class Settings(BaseSettings):
         return self.llm_provider.strip().lower() or "unknown"
 
     @property
+    def normalized_llm_default_provider(self) -> str:
+        return (self.llm_default_provider.strip() or self.llm_provider).lower() or "unknown"
+
+    @property
+    def normalized_llm_default_model(self) -> str:
+        return self.llm_default_model.strip() or self.deepseek_model
+
+    @property
     def uses_real_llm_provider(self) -> bool:
-        return self.normalized_llm_provider not in {"", "mock", "local", "local-fallback", "none"}
+        providers = {self.normalized_llm_provider, self.normalized_llm_default_provider}
+        providers.update(_route_provider(value) for value in self.llm_route_values)
+        if self.llm_fallback_enabled:
+            providers.add(self.llm_fallback_provider.strip().lower())
+        return any(provider not in {"", "mock", "local", "local-fallback", "none"} for provider in providers)
+
+    @property
+    def llm_route_values(self) -> list[str]:
+        return [
+            self.llm_route_interview_scoring,
+            self.llm_route_report_summary,
+            self.llm_route_memory_refresh,
+            self.llm_route_rubric_validation,
+        ]
 
     @property
     def normalized_rate_limit_backend(self) -> str:
@@ -234,7 +273,18 @@ class Settings(BaseSettings):
                 "deepseek_api_key_configured": bool(self.deepseek_api_key),
                 "deepseek_base_url": self.deepseek_base_url,
                 "deepseek_model": self.deepseek_model,
+                "gateway_enabled": self.llm_gateway_enabled,
+                "default_provider": self.normalized_llm_default_provider,
+                "default_model": self.normalized_llm_default_model,
+                "fallback_enabled": self.llm_fallback_enabled,
+                "fallback_provider": self.llm_fallback_provider,
+                "fallback_model": self.llm_fallback_model,
+                "route_interview_scoring": _mask_route(self.llm_route_interview_scoring),
+                "route_report_summary": _mask_route(self.llm_route_report_summary),
+                "route_memory_refresh": _mask_route(self.llm_route_memory_refresh),
+                "route_rubric_validation": _mask_route(self.llm_route_rubric_validation),
                 "timeout_seconds": self.llm_timeout_seconds,
+                "max_retries": self.llm_max_retries,
                 "pricing_version": self.llm_pricing_version,
             },
             "observability": {
@@ -291,6 +341,27 @@ def _mask_url(value: str) -> str:
     port = f":{parsed.port}" if parsed.port else ""
     netloc = f"{username}:****@{host}{port}" if username else f"****@{host}{port}"
     return urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
+
+
+def _route_provider(value: str) -> str:
+    text = (value or "").strip().lower()
+    if not text:
+        return ""
+    if "/" in text:
+        return text.split("/", 1)[0]
+    if ":" in text:
+        return text.split(":", 1)[0]
+    return ""
+
+
+def _mask_route(value: str) -> str:
+    text = (value or "").strip()
+    if not text:
+        return ""
+    provider = _route_provider(text)
+    if provider:
+        return text
+    return f"default/{text}"
 
 
 @lru_cache

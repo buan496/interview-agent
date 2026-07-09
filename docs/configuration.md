@@ -42,6 +42,17 @@ LLM config:
 - `DEEPSEEK_BASE_URL`
 - `DEEPSEEK_MODEL`
 - `LLM_TIMEOUT_SECONDS`
+- `LLM_GATEWAY_ENABLED`
+- `LLM_DEFAULT_PROVIDER`
+- `LLM_DEFAULT_MODEL`
+- `LLM_FALLBACK_ENABLED`
+- `LLM_FALLBACK_PROVIDER`
+- `LLM_FALLBACK_MODEL`
+- `LLM_ROUTE_INTERVIEW_SCORING`
+- `LLM_ROUTE_REPORT_SUMMARY`
+- `LLM_ROUTE_MEMORY_REFRESH`
+- `LLM_ROUTE_RUBRIC_VALIDATION`
+- `LLM_MAX_RETRIES`
 - `LLM_PRICING_VERSION`
 
 Usage metering config:
@@ -97,7 +108,7 @@ Staging should use production-shaped settings without production user data:
 - `NEXT_PUBLIC_API_BASE_URL` points at the staging API URL
 - `CORS_ORIGINS` points at the staging frontend origin
 
-Staging may leave `DEEPSEEK_API_KEY` empty to use fallback behavior for release rehearsal, but the release evidence must record whether the real provider was configured.
+Staging may leave `DEEPSEEK_API_KEY` empty to use gateway fallback behavior for release rehearsal, but the release evidence must record whether the real provider was configured.
 
 ## Production Requirements
 
@@ -115,7 +126,7 @@ Production rejects:
 - missing `DATABASE_URL`
 - non-positive `ACCESS_TOKEN_EXPIRE_MINUTES`
 - missing `LLM_PRICING_VERSION`
-- missing `DEEPSEEK_API_KEY` when a real production LLM provider is enabled
+- missing `DEEPSEEK_API_KEY` when a real production LLM provider or gateway route is enabled
 
 `ADMIN_PHONES` can be empty. That is not fatal. Admin access can still be granted by setting `users.role='admin'`. If configured, `ADMIN_PHONES` only grants fallback admin access for bootstrap users.
 
@@ -130,6 +141,22 @@ Production rejects:
 - `AUTH_DEV_CODE` is never included
 
 The app logs this summary as `config.loaded` after observability is installed.
+
+## LLM Gateway Configuration
+
+PR #49 adds backend LLM Gateway configuration:
+
+- `LLM_GATEWAY_ENABLED=true`: routes model calls through the gateway.
+- `LLM_DEFAULT_PROVIDER` and `LLM_DEFAULT_MODEL`: default route when a feature-specific route is empty.
+- `LLM_FALLBACK_ENABLED=true`: enables fallback provider attempts.
+- `LLM_FALLBACK_PROVIDER` and `LLM_FALLBACK_MODEL`: fallback route, normally `mock/local-fallback` for local and staging resilience.
+- `LLM_ROUTE_INTERVIEW_SCORING`: route for answer evaluation.
+- `LLM_ROUTE_REPORT_SUMMARY`: reserved route for future report summarization.
+- `LLM_ROUTE_MEMORY_REFRESH`: reserved route for future LLM-assisted memory extraction.
+- `LLM_ROUTE_RUBRIC_VALIDATION`: reserved route for future rubric validation.
+- `LLM_MAX_RETRIES`: bounded retry count per route.
+
+Routes use `provider/model`, for example `deepseek/deepseek-chat` or `mock/local-fallback`. Production fail-fast validation treats any real provider route as requiring the corresponding API key. Config summaries show route names and whether keys are configured, but never print API key values.
 
 ## Metrics Configuration
 

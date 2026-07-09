@@ -769,3 +769,33 @@ Suggested follow-up PRs:
 - LLM-assisted memory extraction with strict redaction and evaluation tests.
 - Vector/RAG memory only after tenant/user boundaries and retrieval auditing are designed.
 - Frontend current-user memory workbench if user-facing control becomes part of the product experience.
+
+## PR #49 Update: LLM Gateway and Model Router v1
+
+Status: partially complete.
+
+Completed:
+
+- Added backend LLM Gateway and route policy.
+- Added feature route configuration for interview scoring, report summary, memory refresh and rubric validation.
+- Added primary/fallback provider support and bounded retry configuration.
+- Migrated answer scoring to use the gateway by default.
+- Kept usage records and metrics aligned with actual provider/model/feature/status attempts.
+- Added production config validation for real gateway routes without API keys.
+- Added backend tests for route selection, fallback behavior, failed fallback, usage records and sanitized config.
+
+Still missing:
+
+- No model registry database.
+- No frontend model management console.
+- No tenant-specific model routing.
+- No cost-aware routing.
+- No canary or A/B routing.
+- No circuit breaker or provider health scoring.
+
+Suggested follow-up PRs:
+
+- Model registry and admin route management after the admin governance surface stabilizes.
+- Cost-aware routing using `llm_usage_records`.
+- Provider health and circuit breaker once staging production traffic exists.
+- Tenant-specific model policy after organization/tenant boundaries are introduced.

@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from app.core.llm import ChatMessage, DeepSeekLLM, LLMClient, LLMConfigurationError, LLMResponseError
+from app.llm_gateway import GatewayLLMClient
+from app.settings import get_settings
 
 
 Action = Literal["followup_deeper", "followup_detail", "followup_hint", "verdict"]
@@ -165,10 +167,12 @@ def _normalize_result(raw: dict[str, Any], question: InterviewQuestion) -> Evalu
 
 class InterviewerEngine:
     def __init__(self, llm: LLMClient | None = None) -> None:
-        self.llm = llm or DeepSeekLLM()
+        settings = get_settings()
+        self.llm = llm or (GatewayLLMClient("interview_scoring") if settings.llm_gateway_enabled else DeepSeekLLM())
         self.last_llm_call_attempted = False
         self.last_llm_call_failed = False
         self.last_llm_error_type: str | None = None
+        self.last_llm_attempts: list[Any] = []
 
     async def evaluate_answer(
         self,
@@ -180,6 +184,7 @@ class InterviewerEngine:
         self.last_llm_call_attempted = False
         self.last_llm_call_failed = False
         self.last_llm_error_type = None
+        self.last_llm_attempts = []
         candidate_type = classify_candidate_input(answer)
         if any(word in answer.strip().lower() for word in SKIP_WORDS):
             return _fallback_verdict(question, 0.0, "候选人选择跳过。本题建议先掌握基础概念，再练习完整表达。")
@@ -200,8 +205,10 @@ class InterviewerEngine:
         try:
             self.last_llm_call_attempted = True
             raw = await self.llm.json_chat([ChatMessage(role="system", content=prompt)])
+            self.last_llm_attempts = list(getattr(self.llm, "last_attempts", []))
             result = _normalize_result(raw, question)
         except (LLMConfigurationError, LLMResponseError) as exc:
+            self.last_llm_attempts = list(getattr(self.llm, "last_attempts", []))
             self.last_llm_call_failed = True
             self.last_llm_error_type = exc.__class__.__name__
             result = self._local_fallback(question, answer, depth)

@@ -32,6 +32,7 @@
 - 答题 Session：支持单题训练和模拟面试，展示题号、状态、倒计时、作答区、评分反馈和下一步操作。
 - AI 追问与评分：后端通过 LLM 抽象层生成追问和评分；未配置真实模型时使用本地 fallback 便于跑通闭环。
 - LLM usage metering v1: records provider, model, feature, tokens, estimated cost, latency, status, request_id, user_id and session_id, with a current-user usage summary API; no payment, plans or quotas.
+- LLM Gateway v1: routes model calls by feature, supports primary/fallback providers, and keeps usage/metrics aligned without storing prompts, completions or answers.
 - Agent Memory v1: stores rule-based, current-user memories for weaknesses, strengths, recurring issues and recommendations from reports, wrong-book data and tag stats; no raw answers, prompts, completions, vector DB, RAG or Multi-Agent workflows.
 - Prometheus metrics foundation: exposes aggregate `/metrics` for HTTP traffic, training events, rate-limit/quota refusals, LLM calls/tokens/cost/latency, and dependency readiness; no Grafana or external monitoring SaaS is included.
 - Redis-backed rate limit foundation: local/test uses memory buckets; staging/production can use Redis shared counters with `/ready` Redis checks. This is not payment, subscription or billing.
@@ -205,6 +206,7 @@ Question bank management backend v1 adds admin/content-operator APIs for creatin
 Scoring rubric versioning backend v1 adds admin/content-operator rubric APIs and stores the actual `rubric_version_id` used by new evaluations and generated reports; it does not add a frontend admin page or a complex replay engine.
 Admin Console v1 adds frontend pages at `/admin`, `/admin/questions`, and `/admin/rubrics` for admin/content-operator question bank and rubric operations. It does not add user management, tenant management, billing, or Agent Memory.
 Agent Memory v1 is documented in [Agent Memory](docs/agent-memory.md). It is a backend foundation for user-scoped long-term training signals and intentionally does not include vector memory, RAG, Multi-Agent workflows or a frontend memory workbench.
+LLM Gateway v1 is documented in [LLM Gateway](docs/llm-gateway.md). It is a backend model-router foundation and does not add a model-management frontend or tenant-specific policy.
 
 ## 工程亮点
 
@@ -214,6 +216,7 @@ Agent Memory v1 is documented in [Agent Memory](docs/agent-memory.md). It is a b
 - 前后端分离：Next.js 前端通过 API client 调用 FastAPI 后端。
 - LLM 抽象层：支持真实 LLM 配置，也支持本地 fallback 保证演示和测试稳定。
 - LLM cost metering foundation: `llm_usage_records` stores only call metadata, token estimates, estimated cost, latency and status; it does not store prompt, completion or answer text.
+- LLM Gateway foundation: model calls route through feature-based primary/fallback policies before usage and metrics are recorded.
 - Agent Memory foundation: `agent_memories` stores deterministic, user-scoped long-term training signals and feeds active weak memories into PracticePlan without storing raw answers or prompts.
 - Prometheus metrics foundation: `/metrics` exposes aggregate low-cardinality operational metrics for HTTP traffic, training events, LLM usage, quota/rate-limit refusals and dependency readiness without request_id/user/session labels.
 - Production config governance: startup validation rejects unsafe production defaults, and `config.loaded` logs only a sanitized configuration summary.
@@ -283,6 +286,7 @@ docs                   产品设计、视觉验收和演示文档
 - 训练历史中心 v1：当前用户历史 Session、报告入口和继续训练入口。
 - 能力画像 v1：当前用户标签平均分、优势项、薄弱项、训练次数和错题次数。
 - LLM usage metering v1: records current-user LLM call metadata and estimated cost, with aggregation through `/api/me/usage/summary`.
+- LLM Gateway v1: feature-based model router for interview scoring with primary/fallback provider attempts.
 - Agent Memory v1: backend-only user memory ledger with list/archive/refresh APIs and rule-based refresh from reports, wrong-book records and tag stats.
 - Metrics foundation v1: Prometheus-compatible `/metrics` endpoint for low-cardinality aggregate runtime and LLM usage metrics.
 - Redis-backed rate limit/cache foundation v1: configurable memory/Redis limiter backend, production fail-fast for unsafe memory limits, and `/ready` Redis checks.
@@ -296,6 +300,7 @@ docs                   产品设计、视觉验收和演示文档
 - 更完整的用户体系和训练历史筛选 / 趋势分析。
 - LLM memory extraction, vector/RAG memory, 画像趋势、画像版本和更细粒度岗位能力模型。
 - 多模型评分对比。
+- Model registry, canary routing, cost-aware routing and tenant-specific model policy.
 - 报告导出和分享。
 - 题库管理体验增强。
 - 线上部署与监控。

@@ -160,6 +160,29 @@ Cost notes:
 - The current `pricing_version` is `llm-pricing-v1-2026-07`.
 - Unknown models still record tokens, but estimated cost is 0.
 
+## LLM Gateway Events
+
+PR #49 routes scoring model calls through the backend LLM Gateway. Gateway events are runtime logs; durable per-user call accounting still lives in `llm_usage_records`.
+
+Structured events:
+
+- `llm_gateway.call` with `status=success` or `status=failed`
+- `feature`
+- `provider`
+- `model`
+- `fallback_used`
+- `retry_index`
+- `error_type` for failures
+
+The event does not include prompt text, model completion text, user answer text, tokens, secrets, verification codes or full phone numbers.
+
+Troubleshooting:
+
+1. Start from `X-Request-ID`.
+2. Find `answer.submit`, then `llm_gateway.call`.
+3. If the primary provider failed, check whether a later event has `fallback_used=true`.
+4. Compare the same request with `llm_usage_records` and aggregate LLM metrics.
+
 ## Configuration Events
 
 PR #36 adds a `config.loaded` startup event. It is designed for operational debugging and production readiness checks, not for exposing secrets.

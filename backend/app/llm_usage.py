@@ -21,7 +21,19 @@ from app.settings import DEFAULT_LLM_PRICING_VERSION, Settings, get_settings
 LLM_PRICING_VERSION = DEFAULT_LLM_PRICING_VERSION
 USD_QUANT = Decimal("0.000001")
 
-UsageFeature = Literal["scoring", "follow_up", "report", "mock", "ability", "unknown"]
+UsageFeature = Literal[
+    "scoring",
+    "follow_up",
+    "report",
+    "mock",
+    "ability",
+    "interview_scoring",
+    "report_generation",
+    "memory_refresh",
+    "rubric_validation",
+    "admin_operation",
+    "unknown",
+]
 UsageStatus = Literal["success", "failed"]
 
 
@@ -99,6 +111,9 @@ def estimate_completion_tokens(result: EvaluationResult | None) -> int:
 
 
 def provider_from_llm(llm: Any) -> str:
+    provider = getattr(llm, "provider", None)
+    if provider:
+        return str(provider)
     name = llm.__class__.__name__.lower()
     if "deepseek" in name:
         return "deepseek"

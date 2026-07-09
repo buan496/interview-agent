@@ -19,7 +19,6 @@ from app.llm_usage import (
     elapsed_ms,
     estimate_completion_tokens,
     estimate_prompt_tokens,
-    feature_from_result,
     model_from_llm,
     provider_from_llm,
     record_llm_usage,
@@ -612,6 +611,96 @@ def _estimate_answer_prompt_tokens(sq: SessionQuestion, answer: str) -> int:
     return estimate_prompt_tokens(interview_question, history, answer, depth)
 
 
+async def _record_engine_llm_usage(
+    db: AsyncSession,
+    *,
+    engine: InterviewerEngine,
+    user_id: int,
+    session_id: int,
+    prompt_tokens: int,
+    result,
+    fallback_latency_ms: int,
+) -> None:
+    attempts = list(getattr(engine, "last_llm_attempts", []) or [])
+    if attempts:
+        success_recorded = False
+        for attempt in attempts:
+            is_success = getattr(attempt, "status", "failed") == "success"
+            await record_llm_usage(
+                db,
+                user_id=user_id,
+                session_id=session_id,
+                feature=getattr(attempt, "feature", "interview_scoring"),
+                provider=getattr(attempt, "provider", "unknown"),
+                model=getattr(attempt, "model", "unknown"),
+                prompt_tokens=prompt_tokens,
+                completion_tokens=estimate_completion_tokens(result) if is_success and not success_recorded else 0,
+                latency_ms=getattr(attempt, "latency_ms", None),
+                status="success" if is_success else "failed",
+                error_type=getattr(attempt, "error_type", None),
+            )
+            success_recorded = success_recorded or is_success
+        return
+
+    failed = bool(getattr(engine, "last_llm_call_failed", False))
+    await record_llm_usage(
+        db,
+        user_id=user_id,
+        session_id=session_id,
+        feature="interview_scoring",
+        provider=provider_from_llm(engine.llm),
+        model=model_from_llm(engine.llm),
+        prompt_tokens=prompt_tokens,
+        completion_tokens=0 if failed else estimate_completion_tokens(result),
+        latency_ms=fallback_latency_ms,
+        status="failed" if failed else "success",
+        error_type=getattr(engine, "last_llm_error_type", None),
+    )
+
+
+async def _record_failed_engine_llm_usage(
+    db: AsyncSession,
+    *,
+    engine: InterviewerEngine,
+    user_id: int,
+    session_id: int,
+    prompt_tokens: int,
+    latency_ms: int,
+    error_type: str,
+) -> None:
+    attempts = list(getattr(engine, "last_llm_attempts", []) or [])
+    if attempts:
+        for attempt in attempts:
+            await record_llm_usage(
+                db,
+                user_id=user_id,
+                session_id=session_id,
+                feature=getattr(attempt, "feature", "interview_scoring"),
+                provider=getattr(attempt, "provider", "unknown"),
+                model=getattr(attempt, "model", "unknown"),
+                prompt_tokens=prompt_tokens,
+                completion_tokens=0,
+                latency_ms=getattr(attempt, "latency_ms", None),
+                status="failed",
+                error_type=getattr(attempt, "error_type", None) or error_type,
+            )
+        return
+
+    await record_llm_usage(
+        db,
+        user_id=user_id,
+        session_id=session_id,
+        feature="interview_scoring",
+        provider=provider_from_llm(engine.llm),
+        model=model_from_llm(engine.llm),
+        prompt_tokens=prompt_tokens,
+        completion_tokens=0,
+        latency_ms=latency_ms,
+        status="failed",
+        error_type=error_type,
+    )
+
+
 async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) -> AsyncIterator[str]:
     yield _sse("eval_start", {"sq_id": request.sq_id})
     finished_session_id: int | None = None
@@ -660,8 +749,6 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
             position=question.position.name if question.position else "目标岗位",
         )
         prompt_tokens = estimate_prompt_tokens(interview_question, history, request.content, depth)
-        provider = provider_from_llm(engine.llm)
-        model_name = model_from_llm(engine.llm)
         now = _now()
         sq.answer_text = request.content
         sq.submitted_at = now
@@ -677,37 +764,28 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
             )
         except Exception as exc:
             if usage_metering_enabled():
-                await record_llm_usage(
+                await _record_failed_engine_llm_usage(
                     db,
+                    engine=engine,
                     user_id=sq.session.user_id,
                     session_id=sq.session.id,
-                    feature="scoring",
-                    provider=provider,
-                    model=model_name,
                     prompt_tokens=prompt_tokens,
-                    completion_tokens=0,
                     latency_ms=elapsed_ms(llm_started_at),
-                    status="failed",
                     error_type=exc.__class__.__name__,
                 )
                 await db.commit()
             raise
 
         llm_call_attempted = bool(getattr(engine, "last_llm_call_attempted", False))
-        llm_call_failed = bool(getattr(engine, "last_llm_call_failed", False))
         if llm_call_attempted and usage_metering_enabled():
-            await record_llm_usage(
+            await _record_engine_llm_usage(
                 db,
+                engine=engine,
                 user_id=sq.session.user_id,
                 session_id=sq.session.id,
-                feature=feature_from_result(result) if not llm_call_failed else "scoring",
-                provider=provider,
-                model=model_name,
                 prompt_tokens=prompt_tokens,
-                completion_tokens=0 if llm_call_failed else estimate_completion_tokens(result),
-                latency_ms=elapsed_ms(llm_started_at),
-                status="failed" if llm_call_failed else "success",
-                error_type=getattr(engine, "last_llm_error_type", None),
+                result=result,
+                fallback_latency_ms=elapsed_ms(llm_started_at),
             )
 
         if result.action == "verdict" and result.verdict:
@@ -720,7 +798,7 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
             sq.verdict = result.verdict.as_dict()
             sq.scored_at = now
             sq.finished_at = now
-            db.add(_evaluation_result_row(sq.session, sq, result, model_name, rubric_version))
+            db.add(_evaluation_result_row(sq.session, sq, result, model_from_llm(engine.llm), rubric_version))
             await _update_retention_tables(db, sq.session, sq, result.verdict.score, result.verdict.mastery)
             next_sq = next(
                 (
