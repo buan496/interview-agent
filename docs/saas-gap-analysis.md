@@ -705,3 +705,33 @@ Suggested follow-up PRs:
 - Encrypted offsite backup storage policy and restore approval workflow.
 - Periodic restore drill workflow for staging.
 - Data retention and privacy deletion policy.
+
+## PR #47 Update: Monitoring Metrics Endpoint and Prometheus Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added a Prometheus-compatible `/metrics` endpoint with config switches for enablement, path, readiness gauges and production protection.
+- Added aggregate HTTP request count, duration and exception metrics with normalized route labels.
+- Added training business counters for session creation, answer submission and report generation.
+- Added abuse-protection counters for rate-limit and quota refusals.
+- Added LLM call, token, estimated-cost and latency metrics linked to the existing LLM usage recording path.
+- Added database and Redis readiness gauges updated by `/ready`.
+- Added backend regression tests for metrics output, sensitive-label exclusion, disabled endpoint behavior, readiness gauges, rate-limit/quota counters and LLM usage metrics.
+- Added metrics documentation and staging smoke coverage for `/metrics`.
+
+Still missing:
+
+- No Grafana dashboard.
+- No alert rules.
+- No external monitoring SaaS integration.
+- No OpenTelemetry tracing.
+- No production scrape authentication in this repository; production exposure must be handled by internal networking or gateway controls.
+
+Suggested follow-up PRs:
+
+- Prometheus alert rule pack after a real staging endpoint exists.
+- Grafana dashboard templates after metric names stabilize.
+- Trace propagation once async worker and LLM spans are designed.
+- Production monitoring runbook after deployment target selection.

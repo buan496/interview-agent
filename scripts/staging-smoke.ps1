@@ -79,6 +79,11 @@ if ($readyBody.PSObject.Properties.Name -contains "redis" -and $readyBody.redis 
   throw "API readiness returned unexpected Redis status: $($ready.Content)"
 }
 
+$metrics = Invoke-SmokeRequest -Name "API metrics" -Uri "$apiRoot/metrics"
+if ($metrics.Content -notmatch "interview_agent_http_requests_total") {
+  throw "API metrics response did not include expected HTTP request counter"
+}
+
 $loginPage = Invoke-SmokeRequest -Name "Frontend login page" -Uri "$base/login"
 if ($loginPage.Content -notmatch "<html") {
   throw "Frontend login page did not return HTML"

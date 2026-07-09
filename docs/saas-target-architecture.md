@@ -122,6 +122,14 @@ PR #38 adds a persistent `audit_events` ledger for selected security and admin e
 
 This is audit foundation v1. It does not add tenant scoping, frontend admin pages, full report access audit, data export audit or privacy request workflows.
 
+### Metrics Layer
+
+PR #47 adds a Prometheus-compatible metrics foundation. The backend exposes `/metrics` when `METRICS_ENABLED=true` and records aggregate telemetry for HTTP traffic, request latency, exceptions, training events, rate-limit and quota refusals, LLM calls/tokens/estimated cost/latency, and dependency readiness gauges.
+
+Metrics are designed for low-cardinality operational monitoring. Labels intentionally exclude `request_id`, `user_id`, `session_id`, phone numbers, tokens, secrets, verification codes, prompt text, completion text and user answer text. Request-level debugging still uses `X-Request-ID` and structured logs, while security reconstruction uses `audit_events`.
+
+This layer does not add Grafana, alert rules, external monitoring SaaS or OpenTelemetry tracing. Production metrics access should be protected by internal networking, a gateway allowlist or equivalent deployment controls.
+
 ### Abuse Protection and Quota Layer
 
 PR #39 adds rate limit and quota foundation v1. Auth endpoints are protected by IP and phone buckets, answer submission is protected by user/session buckets, and LLM scoring checks user-scoped token/call quotas against `llm_usage_records` before model evaluation.
@@ -320,3 +328,25 @@ Target state:
 
 - The ledger can later support plans, quota checks, model cost dashboards, quality/cost comparison and abnormal usage alerts.
 - Enterprise usage still needs tenant-level aggregation, quota policy, real billing and audit logs. PR #35 does not include those capabilities.
+
+## PR #47 Update: Monitoring Metrics Endpoint and Prometheus Foundation
+
+PR #47 completes the first metrics layer in the target architecture.
+
+Completed in v1:
+
+- Added a Prometheus-compatible `/metrics` endpoint controlled by `METRICS_ENABLED` and `METRICS_PATH`.
+- Added HTTP request count, request duration and exception metrics with normalized route labels.
+- Added training event metrics for session creation, answer submission and report generation.
+- Added rate-limit and quota refusal counters.
+- Added LLM call, token, estimated-cost and latency metrics from the same path that writes `llm_usage_records`.
+- Added database and Redis readiness gauges updated by `/ready`.
+- Added label-safety tests so metrics do not expose `request_id`, `user_id`, `session_id`, phone numbers, tokens, secrets, prompts, completions or answer text.
+
+Still out of scope:
+
+- No Grafana dashboard.
+- No alert rules.
+- No external monitoring SaaS.
+- No OpenTelemetry tracing.
+- No public production metrics exposure.

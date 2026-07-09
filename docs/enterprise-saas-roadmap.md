@@ -514,3 +514,25 @@ Next roadmap implications:
 - Phase 6 now has a recoverability foundation for staging rehearsal and migration safety.
 - Production still needs encrypted offsite backup storage, scheduled backup policy, restore approval workflow and RPO/RTO targets.
 - Backup scripts remain operator-run tools; no production automation or cloud storage was introduced.
+
+## PR #47 Update: Monitoring Metrics Endpoint and Prometheus Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added Prometheus-compatible `/metrics` for aggregate backend telemetry.
+- Added HTTP count, duration and exception metrics.
+- Added training event metrics for sessions, answers and reports.
+- Added rate-limit and quota refusal metrics.
+- Added LLM call, token, estimated-cost and latency metrics.
+- Added database and Redis readiness gauges updated by `/ready`.
+- Added label-safety rules and tests to prevent high-cardinality or sensitive labels.
+- Added metrics docs and staging smoke coverage.
+
+Next roadmap implications:
+
+- Phase 5 now has logs, request ids, audit logs and aggregate metrics.
+- Alert rules, dashboards and trace propagation remain future operational maturity work.
+- Production metrics access still needs deployment-level protection through internal networking or a gateway.
+- No Grafana, external monitoring SaaS or OpenTelemetry tracing was introduced.

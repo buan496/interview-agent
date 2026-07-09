@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import redis_client
+from app.metrics import record_quota_exceeded, record_rate_limit_exceeded
 from app.models import LLMUsageRecord
 from app.observability import log_event, mask_phone
 from app.settings import Settings, get_settings
@@ -219,6 +220,7 @@ def check_rate_limit(
 
 def rate_limit_http_exception(exc: RateLimitExceeded | RateLimitBackendUnavailable | QuotaExceeded) -> HTTPException:
     if isinstance(exc, RateLimitExceeded):
+        record_rate_limit_exceeded(exc.scope)
         detail = {
             "message": "Too many requests",
             "scope": exc.scope,
@@ -240,6 +242,7 @@ def rate_limit_http_exception(exc: RateLimitExceeded | RateLimitBackendUnavailab
         }
         return HTTPException(status_code=503, detail=detail, headers={"Retry-After": str(exc.retry_after_seconds)})
 
+    record_quota_exceeded(exc.quota_name)
     detail = {
         "message": "Quota exceeded",
         "quota": exc.quota_name,

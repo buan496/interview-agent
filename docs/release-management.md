@@ -172,9 +172,9 @@ The evidence must include:
 2. Prepare `.env.staging` from `.env.staging.example` outside git.
 3. Start staging with `docker compose --env-file .env.staging -f docker-compose.staging.yml up -d`.
 4. Before migration rehearsal, create a PostgreSQL backup with `scripts/backup-postgres.ps1` and verify it with `scripts/verify-postgres-backup.ps1`.
-5. Confirm `/health` and `/ready`; readiness should include Redis when Redis-backed rate limit or cache is enabled.
+5. Confirm `/health`, `/ready` and `/metrics`; readiness should include Redis when Redis-backed rate limit or cache is enabled.
 6. Run `scripts/staging-smoke.ps1`.
-7. Record image tags, backup evidence, migration result, smoke result and observed request id in release evidence.
+7. Record image tags, backup evidence, migration result, smoke result, metrics availability and observed request id in release evidence.
 8. Only after staging evidence is complete should production approval be considered.
 
 ## Troubleshooting After Release
@@ -184,6 +184,7 @@ The evidence must include:
 - For 500 errors, inspect `http_request_exception`.
 - For auth failures, inspect masked `auth.login` and `auth.request_code` events.
 - For LLM cost or failure anomalies, inspect `llm_usage_records` and `GET /api/me/usage/summary`.
+- For aggregate symptoms, inspect `/metrics` for HTTP 5xx/latency, rate-limit/quota refusals, dependency readiness and LLM failure or token spikes.
 - Never paste tokens, secrets, full phone numbers, prompt text, or user answer text into release notes.
 
 ## Current Non-Goals

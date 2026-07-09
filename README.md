@@ -32,6 +32,7 @@
 - 答题 Session：支持单题训练和模拟面试，展示题号、状态、倒计时、作答区、评分反馈和下一步操作。
 - AI 追问与评分：后端通过 LLM 抽象层生成追问和评分；未配置真实模型时使用本地 fallback 便于跑通闭环。
 - LLM usage metering v1: records provider, model, feature, tokens, estimated cost, latency, status, request_id, user_id and session_id, with a current-user usage summary API; no payment, plans or quotas.
+- Prometheus metrics foundation: exposes aggregate `/metrics` for HTTP traffic, training events, rate-limit/quota refusals, LLM calls/tokens/cost/latency, and dependency readiness; no Grafana or external monitoring SaaS is included.
 - Redis-backed rate limit foundation: local/test uses memory buckets; staging/production can use Redis shared counters with `/ready` Redis checks. This is not payment, subscription or billing.
 - Backup and restore foundation: PostgreSQL backup, restore, checksum verification, staging rehearsal SOP, and release evidence templates. It does not automate production backup or commit database dumps.
 - 报告复盘：展示综合得分、能力诊断、题目复盘、参考答案和下一步训练建议。
@@ -126,6 +127,7 @@ docker compose -p interview-agent up --build
 - Frontend: http://localhost:3000
 - API health: http://localhost:8000/health
 - API readiness: http://localhost:8000/ready
+- API metrics: http://localhost:8000/metrics
 - API docs: http://localhost:8000/docs
 
 默认说明：
@@ -179,6 +181,7 @@ GitHub Actions 当前包含：
 - Backend isolation: 单元测试覆盖 Session、Report、WrongBook、Radar、PracticePlan 的 `user_id` 数据隔离回归场景。
 - Ability Profile: 后端测试覆盖当前用户画像聚合、空画像、优势/薄弱规则和跨用户隔离。
 - Observability: 后端测试覆盖 `X-Request-ID`、统一 500 响应、`/health`、`/ready` 和日志敏感信息保护。
+- Metrics: backend tests cover `/metrics`, HTTP counters/duration, readiness gauges, rate-limit/quota counters, LLM usage counters and sensitive-label exclusion.
 - Frontend: `lint`、`typecheck`、`build`、Playwright E2E
 - Migrations: PostgreSQL 服务下执行 `alembic upgrade head`
 - Compose Config: `docker compose config --quiet`
@@ -188,6 +191,7 @@ GitHub Actions 当前包含：
 
 更多视觉验收标准见 [Frontend Visual QA](docs/frontend-visual-qa.md)。
 可观测性排障说明见 [Observability Foundation](docs/observability.md)。
+Prometheus-compatible metrics are documented in [Metrics Foundation](docs/metrics.md).
 Production configuration governance is documented in [Configuration](docs/configuration.md).
 Release/CD management is documented in [Release Management](docs/release-management.md), with evidence template in [Release Evidence Template](docs/release-evidence-template.md).
 Staging deployment foundation is documented in [Staging Deployment](docs/staging-deployment.md), with `.env.staging.example`, `docker-compose.staging.yml`, and `scripts/staging-smoke.ps1`.
@@ -208,6 +212,7 @@ Admin Console v1 adds frontend pages at `/admin`, `/admin/questions`, and `/admi
 - 前后端分离：Next.js 前端通过 API client 调用 FastAPI 后端。
 - LLM 抽象层：支持真实 LLM 配置，也支持本地 fallback 保证演示和测试稳定。
 - LLM cost metering foundation: `llm_usage_records` stores only call metadata, token estimates, estimated cost, latency and status; it does not store prompt, completion or answer text.
+- Prometheus metrics foundation: `/metrics` exposes aggregate low-cardinality operational metrics for HTTP traffic, training events, LLM usage, quota/rate-limit refusals and dependency readiness without request_id/user/session labels.
 - Production config governance: startup validation rejects unsafe production defaults, and `config.loaded` logs only a sanitized configuration summary.
 - Release/CD management v1: manual release candidate workflow, release evidence template, migration gate, immutable image tag policy, and rollback SOP; it does not deploy production directly.
 - Staging deployment foundation: staging compose topology, environment template, smoke script and release evidence flow for release-candidate rehearsal; it does not deploy production.
@@ -275,6 +280,7 @@ docs                   产品设计、视觉验收和演示文档
 - 训练历史中心 v1：当前用户历史 Session、报告入口和继续训练入口。
 - 能力画像 v1：当前用户标签平均分、优势项、薄弱项、训练次数和错题次数。
 - LLM usage metering v1: records current-user LLM call metadata and estimated cost, with aggregation through `/api/me/usage/summary`.
+- Metrics foundation v1: Prometheus-compatible `/metrics` endpoint for low-cardinality aggregate runtime and LLM usage metrics.
 - Redis-backed rate limit/cache foundation v1: configurable memory/Redis limiter backend, production fail-fast for unsafe memory limits, and `/ready` Redis checks.
 - Staging deployment foundation: `.env.staging.example`, `docker-compose.staging.yml`, staging smoke script and release evidence workflow.
 - Backup and restore foundation v1: PostgreSQL backup/restore scripts, checksum verification, restore drill process, and migration pre-backup evidence.

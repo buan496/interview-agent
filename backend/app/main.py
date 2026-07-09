@@ -3,11 +3,13 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from fastapi import Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import admin, admin_questions, admin_rubrics, audio, auth, practice_plan, questions, sessions, stats, submissions
 from app.db import get_db
+from app.metrics import CONTENT_TYPE_LATEST, metrics_content, set_dependency_ready
 from app.observability import install_observability, log_event
 from app.redis_client import ping_redis
 from app.settings import get_settings
@@ -47,7 +49,14 @@ async def health() -> dict[str, str]:
 
 @app.get("/ready")
 async def ready(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
-    await db.execute(text("SELECT 1"))
+    try:
+        await db.execute(text("SELECT 1"))
+        if getattr(settings, "metrics_include_ready_gauges", True):
+            set_dependency_ready("db", True)
+    except Exception:
+        if getattr(settings, "metrics_include_ready_gauges", True):
+            set_dependency_ready("db", False)
+        raise
     redis_status = "skipped"
     if settings.redis_required:
         try:
@@ -55,6 +64,19 @@ async def ready(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
         except Exception as exc:
             redis_status = "failed"
             log_event("readiness.redis", status="error", error_type=exc.__class__.__name__)
+        if getattr(settings, "metrics_include_ready_gauges", True):
+            set_dependency_ready("redis", redis_status == "ok")
         if redis_status != "ok":
             raise HTTPException(status_code=503, detail={"message": "Redis is not ready", "redis": redis_status})
+    elif getattr(settings, "metrics_include_ready_gauges", True):
+        set_dependency_ready("redis", True)
     return {"service": settings.app_name, "status": "ready", "environment": settings.environment, "db": "ok", "redis": redis_status}
+
+
+@app.get(settings.metrics_path, include_in_schema=False)
+async def metrics() -> Response:
+    if not getattr(settings, "metrics_enabled", True):
+        raise HTTPException(status_code=404, detail="Metrics endpoint is disabled")
+    if getattr(settings, "is_production", False) and getattr(settings, "metrics_protect_in_production", True):
+        raise HTTPException(status_code=403, detail="Metrics endpoint must be protected in production")
+    return Response(content=metrics_content(), media_type=CONTENT_TYPE_LATEST)
