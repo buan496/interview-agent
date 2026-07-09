@@ -244,3 +244,40 @@ Redis limiter keys hash request identities before writing them to Redis. Logs an
 PR #45 adds `scripts/staging-smoke.ps1` for release-candidate validation. The script checks `/health`, `/ready`, `X-Request-ID`, the frontend login page, and the staging auth code path.
 
 When staging uses `RATE_LIMIT_BACKEND=redis` or `CACHE_BACKEND=redis`, `/ready` should return Redis readiness. Record the smoke request id in release evidence so staging failures can be traced through structured logs.
+
+## Agent Memory Events
+
+PR #48 adds backend Agent Memory v1 events. Memory refresh is best-effort and is correlated through the same `request_id` as report generation when it is triggered by answer completion.
+
+Structured events:
+
+- `memory.refresh`: emitted when a rule-based memory refresh succeeds.
+- `memory.refresh_failed`: emitted when refresh fails after the report flow has already committed.
+- `memory.list`: emitted when the current user lists memories.
+- `memory.archive`: emitted when the current user archives a memory or when a memory is not found for that user.
+
+Audit events:
+
+- `memory_created`
+- `memory_updated`
+- `memory_archived`
+
+Metrics:
+
+- `interview_agent_memories_created_total{memory_type}`
+- `interview_agent_memory_refresh_total{status,trigger}`
+
+Sensitive data rules:
+
+- Do not log or store raw answer text.
+- Do not log or store prompt text or model completion text.
+- Do not log or store tokens, secrets, verification codes or full phone numbers.
+- Metrics labels must not include `request_id`, `user_id`, `memory_id`, `session_id` or dynamic tag values.
+
+Troubleshooting:
+
+1. For a completed answer/report flow, collect `X-Request-ID` from the response.
+2. Search structured logs for `report.generate`, then `memory.refresh` or `memory.refresh_failed`.
+3. Check aggregate refresh counters in `/metrics`.
+4. Inspect `agent_memories` only by the current user's scope or with explicit operational approval in database tooling.
+5. Treat missing memory refresh as a recommendation-quality issue, not as proof that answer submission failed.

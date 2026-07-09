@@ -30,6 +30,8 @@ Training business metrics:
 - `interview_agent_sessions_created_total{mode}`
 - `interview_agent_answers_submitted_total{mode}`
 - `interview_agent_reports_generated_total{status}`
+- `interview_agent_memories_created_total{memory_type}`
+- `interview_agent_memory_refresh_total{status,trigger}`
 
 Abuse-protection metrics:
 
@@ -57,7 +59,7 @@ Dependency gauges are updated by `/ready` when `METRICS_INCLUDE_READY_GAUGES=tru
 Metrics labels must stay low-cardinality and non-sensitive. The current implementation allows only stable operational labels:
 
 - HTTP: `method`, normalized `route`, `status_class`
-- Training: `mode`, `status`
+- Training: `mode`, `status`, `memory_type`, `trigger`
 - Rate limit: normalized `scope`
 - Quota: normalized `quota_type`
 - LLM: `provider`, `model`, `feature`, `status`, `token_type`, `currency`
@@ -98,6 +100,15 @@ Rate-limit and quota metrics are emitted at the exception boundary:
 
 The metrics use normalized scopes such as `login_ip`, `login_phone`, `answer_submit`, `daily_tokens`, `monthly_tokens` and `daily_calls`. They do not expose limiter keys, phone numbers, user identifiers or session identifiers.
 
+## Agent Memory Integration
+
+Agent Memory v1 emits aggregate counters from the rule-based backend refresh path:
+
+- `interview_agent_memories_created_total{memory_type}` increments only when a new memory row is created.
+- `interview_agent_memory_refresh_total{status,trigger}` records refresh attempts such as report-triggered refreshes, manual refreshes, skipped refreshes and failed refreshes.
+
+These metrics are operational counters only. They do not expose `user_id`, `memory_id`, `session_id`, `request_id`, tag names, answer text, prompt text, completion text, tokens or secrets.
+
 ## Prometheus Scrape Example
 
 Example staging scrape configuration:
@@ -121,6 +132,7 @@ For production, do not expose `/metrics` publicly. Place it behind an internal n
 4. Use `X-Request-ID` and structured logs for request-level debugging.
 5. Use `audit_events` for security/admin event reconstruction.
 6. Use `llm_usage_records` for per-user usage summary and cost estimation.
+7. Use `agent_memories` only for current-user training memory inspection and rule debugging; metrics remain aggregate.
 
 Metrics are intentionally aggregate telemetry. They are not a replacement for request logs, audit logs or the LLM usage ledger.
 
@@ -130,4 +142,5 @@ Metrics are intentionally aggregate telemetry. They are not a replacement for re
 - No alert rules are included.
 - No OpenTelemetry tracing is included.
 - No external monitoring SaaS is integrated.
+- No vector-memory, RAG-memory or Multi-Agent telemetry is included.
 - Production scrape authentication must be implemented by the deployment environment or gateway.

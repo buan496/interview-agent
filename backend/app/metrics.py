@@ -52,6 +52,18 @@ REPORTS_GENERATED = Counter(
     ("status",),
     registry=REGISTRY,
 )
+MEMORIES_CREATED = Counter(
+    "interview_agent_memories_created",
+    "Agent memories created by low-cardinality memory type.",
+    ("memory_type",),
+    registry=REGISTRY,
+)
+MEMORY_REFRESH = Counter(
+    "interview_agent_memory_refresh",
+    "Agent memory refresh attempts by status and trigger.",
+    ("status", "trigger"),
+    registry=REGISTRY,
+)
 RATE_LIMIT_EXCEEDED = Counter(
     "interview_agent_rate_limit_exceeded",
     "Rate limit denials by low-cardinality scope.",
@@ -165,6 +177,14 @@ def record_answer_submitted(mode: str | None) -> None:
 
 def record_report_generated(status: str) -> None:
     REPORTS_GENERATED.labels(safe_label(status)).inc()
+
+
+def record_memory_created(memory_type: str) -> None:
+    MEMORIES_CREATED.labels(safe_label(memory_type)).inc()
+
+
+def record_memory_refresh(status: str, trigger: str) -> None:
+    MEMORY_REFRESH.labels(safe_label(status), safe_label(trigger)).inc()
 
 
 def record_llm_usage_metrics(

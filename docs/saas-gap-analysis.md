@@ -735,3 +735,37 @@ Suggested follow-up PRs:
 - Grafana dashboard templates after metric names stabilize.
 - Trace propagation once async worker and LLM spans are designed.
 - Production monitoring runbook after deployment target selection.
+
+## PR #48 Update: Agent Memory v1 Backend Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added `agent_memories` as a relational, user-scoped memory ledger.
+- Added current-user APIs for memory list, archive and deterministic refresh.
+- Added rule-based generation from report question scores, `WrongBook` recurrence and `UserTagStat` aggregates.
+- Added duplicate control by user, memory type and primary tag, with confidence updates instead of unlimited inserts.
+- Connected report completion to best-effort memory refresh without failing the answer/report path.
+- Connected active weakness and recurring-issue memories to PracticePlan weak-tag recommendations.
+- Added audit events for memory creation, update and archive.
+- Added aggregate metrics for memories created and refresh status.
+- Added tests for generation, duplicate updates, cross-user isolation, archive behavior, PracticePlan exclusion and refresh failure isolation.
+
+Still missing:
+
+- No vector database or embedding memory.
+- No RAG memory retrieval.
+- No Multi-Agent memory workflow.
+- No LLM-based memory extraction or summarization.
+- No frontend memory workbench.
+- No admin global memory view.
+- No tenant or organization-level memory governance.
+- No retention or privacy deletion workflow specific to memories.
+
+Suggested follow-up PRs:
+
+- Memory retention and privacy deletion policy after data privacy requirements are finalized.
+- LLM-assisted memory extraction with strict redaction and evaluation tests.
+- Vector/RAG memory only after tenant/user boundaries and retrieval auditing are designed.
+- Frontend current-user memory workbench if user-facing control becomes part of the product experience.

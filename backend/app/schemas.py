@@ -346,6 +346,36 @@ class AbilityProfileOut(BaseModel):
     tag_profiles: list[AbilityTagProfileOut] = Field(default_factory=list)
 
 
+class AgentMemoryOut(BaseModel):
+    id: int
+    memory_type: str
+    title: str
+    summary: str
+    tags_json: list[dict[str, Any]] = Field(default_factory=list)
+    evidence_json: list[dict[str, Any]] = Field(default_factory=list)
+    confidence: Decimal
+    status: str
+    source_type: str
+    source_id: int | None = None
+    first_seen_at: datetime | None = None
+    last_seen_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AgentMemoryListOut(BaseModel):
+    items: list[AgentMemoryOut]
+    total: int
+
+
+class AgentMemoryRefreshOut(BaseModel):
+    created: int
+    updated: int
+    total_active: int
+
+
 class LLMUsageBreakdownOut(BaseModel):
     key: str
     call_count: int

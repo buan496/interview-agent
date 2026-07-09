@@ -350,3 +350,34 @@ Still out of scope:
 - No external monitoring SaaS.
 - No OpenTelemetry tracing.
 - No public production metrics exposure.
+
+## PR #48 Update: Agent Memory v1 Backend Foundation
+
+PR #48 adds the first backend Agent Memory layer to the target architecture.
+
+Completed in v1:
+
+- Added `agent_memories`, scoped by `user_id`, for long-term training signals.
+- Added memory types for `weakness`, `strength`, `preference`, `training_goal`, `recurring_issue` and `recommendation`.
+- Added current-user APIs for listing, archiving and manually refreshing memories.
+- Refreshes memories from existing reports, wrong-book records and tag statistics with deterministic rules.
+- Connects report completion to best-effort memory refresh after the main report transaction is committed.
+- Feeds active weakness and recurring-issue memories into PracticePlan as a lightweight recommendation signal.
+- Adds audit events for memory creation, update and archive.
+- Adds aggregate memory metrics without high-cardinality or sensitive labels.
+- Keeps raw answers, prompts, completions, tokens, secrets, verification codes and full phone numbers out of memory records.
+
+Still out of scope:
+
+- No vector database.
+- No RAG memory retrieval.
+- No Multi-Agent memory workflow.
+- No LLM-based memory extraction or summarization.
+- No frontend memory workbench.
+- No tenant-level memory governance.
+
+Target-state implications:
+
+- Future personalization can combine Agent Memory with ability profiles and training history.
+- A later memory extraction PR can introduce LLM summarization only after privacy, evaluation and retention rules are designed.
+- Vector/RAG memory should remain separate from this relational memory ledger and must preserve user or tenant boundaries.
