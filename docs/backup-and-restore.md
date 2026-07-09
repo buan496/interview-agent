@@ -161,6 +161,18 @@ Suggested non-production retention:
 
 Production retention must be defined outside this repository and should include encryption, access control, retention expiry, and deletion evidence.
 
+## Privacy Deletion and Backup Residue
+
+PR #52 adds current-user training-data deletion from the live database. That operation does not immediately remove matching historical rows from PostgreSQL backups that were created before deletion.
+
+Operational rules:
+
+- Backup artifacts must remain encrypted and access-controlled in production.
+- Backup retention windows must be documented before real-user trials.
+- A production restore can reintroduce data as of the backup timestamp, so any restore after a privacy deletion needs explicit review.
+- Deletion evidence should record the live-database deletion time and the backup retention window that governs older copies.
+- Do not manually edit SQL backup files to remove one user's rows unless a reviewed incident/privacy procedure requires it.
+
 ## Production Requirements
 
 Production backup and restore are not automated by this PR.

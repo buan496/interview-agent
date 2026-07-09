@@ -858,3 +858,36 @@ Suggested follow-up PRs:
 - Add protected staging Prometheus scrape once staging runtime exists.
 - Add low-cardinality queue depth and fallback spike metrics if operationally needed.
 - Tune thresholds from real staging and production traffic.
+
+## PR #52 Update: Privacy and Data Lifecycle v1
+
+Status: partially complete.
+
+Completed:
+
+- Added current-user data summary API.
+- Added current-user JSON data export API.
+- Added deletion request and confirmation APIs for current-user `training_data`.
+- Export/deletion paths are scoped by `current_user.id` and do not accept arbitrary user ids.
+- Export redacts raw answers, prompt text, completion text, full phone numbers, tokens, secrets, verification codes and raw model output.
+- Training-data deletion removes current-user sessions, session questions, messages, evaluations, reports, wrong-book records, tag stats, practice plans, Agent Memory, async jobs and LLM usage records.
+- User account rows, audit events, question bank content, rubric data and shared dictionaries are retained.
+- Added audit events for export, deletion request, deletion denial and deletion success.
+- Added aggregate Prometheus counters for data export and deletion operations.
+- Added privacy/data lifecycle documentation and connected it to backup, Memory, Async Jobs, metrics and observability docs.
+
+Still missing:
+
+- No full GDPR/DSR workflow.
+- No account deletion or `users.deleted_at` login-blocking flow.
+- No frontend privacy center.
+- No automated retention or scheduled purge job.
+- No production backup purge automation or encrypted offsite retention evidence.
+- No tenant-level data lifecycle controls.
+
+Suggested follow-up PRs:
+
+- Account closure and deleted-user login blocking.
+- Automated retention jobs for stale async jobs, old usage rows and archived memories.
+- Encrypted export artifact generation with expiring links if product UX needs downloadable files.
+- Tenant-aware privacy operations after organization boundaries exist.

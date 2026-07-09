@@ -100,6 +100,18 @@ QUOTA_EXCEEDED = Counter(
     ("quota_type",),
     registry=REGISTRY,
 )
+DATA_EXPORTS = Counter(
+    "interview_agent_data_exports",
+    "Current-user data export attempts by status.",
+    ("status",),
+    registry=REGISTRY,
+)
+DATA_DELETIONS = Counter(
+    "interview_agent_data_deletions",
+    "Current-user data deletion attempts by status and low-cardinality scope.",
+    ("status", "scope"),
+    registry=REGISTRY,
+)
 
 LLM_CALLS = Counter(
     "interview_agent_llm_calls",
@@ -189,6 +201,14 @@ def record_rate_limit_exceeded(scope: str) -> None:
 
 def record_quota_exceeded(quota_name: str) -> None:
     QUOTA_EXCEEDED.labels(normalize_quota_type(quota_name)).inc()
+
+
+def record_data_export(status: str) -> None:
+    DATA_EXPORTS.labels(safe_label(status)).inc()
+
+
+def record_data_deletion(status: str, scope: str = "training_data") -> None:
+    DATA_DELETIONS.labels(safe_label(status), safe_label(scope)).inc()
 
 
 def record_session_created(mode: str) -> None:

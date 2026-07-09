@@ -61,6 +61,10 @@ X-Request-ID: support-case-20260707-001
 - `async_job.succeeded`
 - `async_job.failed`
 - `async_job.retry_scheduled`
+- `user_data_exported`
+- `user_data_deletion_requested`
+- `user_data_delete_denied`
+- `user_data_deleted`
 
 这些事件只记录排障必要字段，不记录用户回答正文、验证码、token、secret 或完整手机号。
 
@@ -124,6 +128,7 @@ Current metrics cover:
 - HTTP request count, duration and exception count with normalized route labels.
 - Training events: sessions created, answers submitted and reports generated.
 - Rate-limit and quota refusals.
+- Privacy lifecycle export and deletion counters.
 - LLM calls, token counts, estimated cost and latency.
 - Dependency readiness gauges for database and Redis after `/ready` checks.
 
@@ -264,6 +269,24 @@ Audit events follow the same sensitive data rules as runtime logs. They do not s
 See [Audit Log](audit-log.md) for event fields, API filters and troubleshooting flow.
 
 Release notes and incident records must not include tokens, secrets, verification codes, full phone numbers, prompt text or user answer text.
+
+## Privacy and Data Lifecycle Events
+
+PR #52 adds current-user privacy lifecycle APIs for data summary, JSON export and training-data deletion. Runtime logs, audit logs and metrics have distinct roles:
+
+- Runtime logs show request-level success or failure with `request_id`.
+- `audit_events` persist `user_data_exported`, `user_data_deletion_requested`, `user_data_delete_denied` and `user_data_deleted`.
+- Metrics expose only aggregate counters: `interview_agent_data_exports_total{status}` and `interview_agent_data_deletions_total{status,scope}`.
+
+Privacy audit metadata stores record counts, deletion scope and denial reason only. It must not store export payloads, raw answers, prompt text, completion text, tokens, secrets, verification codes or full phone numbers.
+
+Troubleshooting:
+
+1. Collect `X-Request-ID` from the API response.
+2. Search structured logs for the request.
+3. Query `audit_events` by `request_id` or action.
+4. Use metrics only for aggregate export/delete trend checks.
+5. If a restore is involved, review backup evidence because historical backups can contain data from their backup timestamp.
 
 ## Rate Limit and Quota Events
 
