@@ -100,6 +100,13 @@ class Settings(BaseSettings):
     cache_backend: str = Field(default="memory", validation_alias="CACHE_BACKEND")
     cache_prefix: str = Field(default="interview-agent:cache", validation_alias="CACHE_PREFIX")
 
+    # Async job queue config
+    async_jobs_enabled: bool = Field(default=True, validation_alias="ASYNC_JOBS_ENABLED")
+    async_job_backend: str = Field(default="memory", validation_alias="ASYNC_JOB_BACKEND")
+    async_job_queue_name: str = Field(default="interview-agent:async-jobs", validation_alias="ASYNC_JOB_QUEUE_NAME")
+    async_job_max_attempts: int = Field(default=3, validation_alias="ASYNC_JOB_MAX_ATTEMPTS")
+    async_job_worker_poll_seconds: float = Field(default=2.0, validation_alias="ASYNC_JOB_WORKER_POLL_SECONDS")
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", populate_by_name=True)
 
     @field_validator("access_token_expire_minutes")
@@ -130,7 +137,7 @@ class Settings(BaseSettings):
             raise ValueError("Redis timeout values must be positive")
         return value
 
-    @field_validator("rate_limit_backend", "cache_backend")
+    @field_validator("rate_limit_backend", "cache_backend", "async_job_backend")
     @classmethod
     def _validate_backend_name(cls, value: str) -> str:
         normalized = value.strip().lower()
@@ -158,6 +165,20 @@ class Settings(BaseSettings):
     def _validate_positive_limits(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("Rate limit and quota values must be positive")
+        return value
+
+    @field_validator("async_job_max_attempts")
+    @classmethod
+    def _validate_async_job_max_attempts(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("ASYNC_JOB_MAX_ATTEMPTS must be positive")
+        return value
+
+    @field_validator("async_job_worker_poll_seconds")
+    @classmethod
+    def _validate_async_job_poll_seconds(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("ASYNC_JOB_WORKER_POLL_SECONDS must be positive")
         return value
 
     @property
@@ -210,8 +231,16 @@ class Settings(BaseSettings):
         return self.cache_backend.strip().lower() or "memory"
 
     @property
+    def normalized_async_job_backend(self) -> str:
+        return self.async_job_backend.strip().lower() or "memory"
+
+    @property
     def redis_required(self) -> bool:
-        return (self.rate_limit_enabled and self.normalized_rate_limit_backend == "redis") or self.normalized_cache_backend == "redis"
+        return (
+            (self.rate_limit_enabled and self.normalized_rate_limit_backend == "redis")
+            or self.normalized_cache_backend == "redis"
+            or (self.async_jobs_enabled and self.normalized_async_job_backend == "redis")
+        )
 
     def validate_production_config(self) -> None:
         errors: list[str] = []
@@ -231,6 +260,10 @@ class Settings(BaseSettings):
                 errors.append("REDIS_URL is required when production rate limiting uses Redis")
             if self.normalized_cache_backend == "redis" and not self.redis_url.strip():
                 errors.append("REDIS_URL is required when CACHE_BACKEND=redis")
+            if self.async_jobs_enabled and self.normalized_async_job_backend == "memory":
+                errors.append("ASYNC_JOB_BACKEND=redis is required in production when async jobs are enabled")
+            if self.async_jobs_enabled and self.normalized_async_job_backend == "redis" and not self.redis_url.strip():
+                errors.append("REDIS_URL is required when production async jobs use Redis")
             if self.jwt_secret == DEFAULT_JWT_SECRET:
                 errors.append("JWT_SECRET_KEY/TOKEN_SECRET/JWT_SECRET must be configured for production")
             if self.auth_dev_code == DEFAULT_DEV_CODE:
@@ -314,6 +347,13 @@ class Settings(BaseSettings):
             "cache": {
                 "backend": self.normalized_cache_backend,
                 "prefix": self.cache_prefix,
+            },
+            "async_jobs": {
+                "enabled": self.async_jobs_enabled,
+                "backend": self.normalized_async_job_backend,
+                "queue_name": self.async_job_queue_name,
+                "max_attempts": self.async_job_max_attempts,
+                "worker_poll_seconds": self.async_job_worker_poll_seconds,
             },
         }
 

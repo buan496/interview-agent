@@ -409,3 +409,34 @@ Target-state implications:
 - Future model governance can move from environment-variable routes to a managed model registry.
 - Tenant-specific model policy should wait until organization boundaries exist.
 - Cost-aware routing can build on `llm_usage_records` and Gateway attempt telemetry.
+
+## PR #50 Update: Async Job Queue Foundation
+
+PR #50 adds the first asynchronous worker layer to the target architecture.
+
+Completed in v1:
+
+- Added `async_jobs` as a durable job ledger scoped by `user_id`.
+- Added job states: `queued`, `running`, `succeeded`, `failed` and `canceled`.
+- Added a configurable queue backend with memory for local/test and Redis for staging/production.
+- Added `python -m app.worker` as the lightweight worker entrypoint.
+- Added current-user job APIs: `GET /api/me/jobs` and `GET /api/me/jobs/{job_id}`.
+- Added `POST /api/me/memories/refresh-async` for async Agent Memory refresh.
+- Added aggregate async job metrics and audit events.
+- Added Docker Compose worker services for local and staging.
+- Kept job payloads free of raw answers, prompts, completions, tokens and secrets.
+
+Still out of scope:
+
+- No Celery.
+- No workflow engine.
+- No WebSocket status push.
+- No frontend task center.
+- No distributed lock or delayed queue.
+- No tenant-specific job policy.
+
+Target-state implications:
+
+- Long-running AI operations now have a place to move out of synchronous request paths.
+- Future report generation, question import and rubric validation can reuse the same job ledger and worker.
+- Production multi-instance deployments should use `ASYNC_JOB_BACKEND=redis`.

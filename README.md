@@ -34,6 +34,7 @@
 - LLM usage metering v1: records provider, model, feature, tokens, estimated cost, latency, status, request_id, user_id and session_id, with a current-user usage summary API; no payment, plans or quotas.
 - LLM Gateway v1: routes model calls by feature, supports primary/fallback providers, and keeps usage/metrics aligned without storing prompts, completions or answers.
 - Agent Memory v1: stores rule-based, current-user memories for weaknesses, strengths, recurring issues and recommendations from reports, wrong-book data and tag stats; no raw answers, prompts, completions, vector DB, RAG or Multi-Agent workflows.
+- Async Job Queue v1: adds a durable `async_jobs` ledger, memory/Redis queue backend, worker entrypoint, memory refresh async API, metrics and audit events; no Celery, WebSocket or frontend job center.
 - Prometheus metrics foundation: exposes aggregate `/metrics` for HTTP traffic, training events, rate-limit/quota refusals, LLM calls/tokens/cost/latency, and dependency readiness; no Grafana or external monitoring SaaS is included.
 - Redis-backed rate limit foundation: local/test uses memory buckets; staging/production can use Redis shared counters with `/ready` Redis checks. This is not payment, subscription or billing.
 - Backup and restore foundation: PostgreSQL backup, restore, checksum verification, staging rehearsal SOP, and release evidence templates. It does not automate production backup or commit database dumps.
@@ -207,6 +208,7 @@ Scoring rubric versioning backend v1 adds admin/content-operator rubric APIs and
 Admin Console v1 adds frontend pages at `/admin`, `/admin/questions`, and `/admin/rubrics` for admin/content-operator question bank and rubric operations. It does not add user management, tenant management, billing, or Agent Memory.
 Agent Memory v1 is documented in [Agent Memory](docs/agent-memory.md). It is a backend foundation for user-scoped long-term training signals and intentionally does not include vector memory, RAG, Multi-Agent workflows or a frontend memory workbench.
 LLM Gateway v1 is documented in [LLM Gateway](docs/llm-gateway.md). It is a backend model-router foundation and does not add a model-management frontend or tenant-specific policy.
+Async Job Queue v1 is documented in [Async Jobs](docs/async-jobs.md). It adds a lightweight worker foundation for retryable backend tasks and currently supports async Agent Memory refresh.
 
 ## 工程亮点
 
@@ -218,6 +220,7 @@ LLM Gateway v1 is documented in [LLM Gateway](docs/llm-gateway.md). It is a back
 - LLM cost metering foundation: `llm_usage_records` stores only call metadata, token estimates, estimated cost, latency and status; it does not store prompt, completion or answer text.
 - LLM Gateway foundation: model calls route through feature-based primary/fallback policies before usage and metrics are recorded.
 - Agent Memory foundation: `agent_memories` stores deterministic, user-scoped long-term training signals and feeds active weak memories into PracticePlan without storing raw answers or prompts.
+- Async worker foundation: `async_jobs` tracks user-scoped retryable backend jobs, with memory/Redis queue backends and low-cardinality metrics.
 - Prometheus metrics foundation: `/metrics` exposes aggregate low-cardinality operational metrics for HTTP traffic, training events, LLM usage, quota/rate-limit refusals and dependency readiness without request_id/user/session labels.
 - Production config governance: startup validation rejects unsafe production defaults, and `config.loaded` logs only a sanitized configuration summary.
 - Release/CD management v1: manual release candidate workflow, release evidence template, migration gate, immutable image tag policy, and rollback SOP; it does not deploy production directly.
@@ -288,6 +291,7 @@ docs                   产品设计、视觉验收和演示文档
 - LLM usage metering v1: records current-user LLM call metadata and estimated cost, with aggregation through `/api/me/usage/summary`.
 - LLM Gateway v1: feature-based model router for interview scoring with primary/fallback provider attempts.
 - Agent Memory v1: backend-only user memory ledger with list/archive/refresh APIs and rule-based refresh from reports, wrong-book records and tag stats.
+- Async Job Queue v1: backend job ledger, worker entrypoint, Redis-capable queue backend and async memory refresh API.
 - Metrics foundation v1: Prometheus-compatible `/metrics` endpoint for low-cardinality aggregate runtime and LLM usage metrics.
 - Redis-backed rate limit/cache foundation v1: configurable memory/Redis limiter backend, production fail-fast for unsafe memory limits, and `/ready` Redis checks.
 - Staging deployment foundation: `.env.staging.example`, `docker-compose.staging.yml`, staging smoke script and release evidence workflow.

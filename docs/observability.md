@@ -55,6 +55,12 @@ X-Request-ID: support-case-20260707-001
 - `practice_plan.read`
 - `practice_plan.complete`
 - `admin.*`
+- `async_job.created`
+- `async_job.enqueued`
+- `async_job.running`
+- `async_job.succeeded`
+- `async_job.failed`
+- `async_job.retry_scheduled`
 
 这些事件只记录排障必要字段，不记录用户回答正文、验证码、token、secret 或完整手机号。
 
@@ -158,6 +164,27 @@ Cost notes:
 
 - `estimated_cost` is for internal estimation and engineering decisions only; it is not a bill.
 - The current `pricing_version` is `llm-pricing-v1-2026-07`.
+
+## Async Jobs
+
+PR #50 adds a lightweight async job worker. Logs use stable fields:
+
+- `event_name`
+- `status`
+- `job_id`
+- `job_type`
+- `attempts`
+- `backend`
+- `error_type`
+
+Job logs may include `job_id` because logs are for request and operation debugging. Metrics do not use `job_id` or `user_id` labels. Job payloads and errors must not contain raw answers, prompts, completions, tokens, secrets, verification codes or full phone numbers.
+
+Troubleshooting:
+
+1. Read `async_jobs.status`, `attempts`, `error_type` and `updated_at`.
+2. Search structured logs by `job_id`.
+3. Check `interview_agent_async_jobs_completed_total` and `interview_agent_async_jobs_in_progress`.
+4. If Redis backend is enabled, check `/ready` and Redis container health.
 - Unknown models still record tokens, but estimated cost is 0.
 
 ## LLM Gateway Events

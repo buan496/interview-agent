@@ -20,6 +20,7 @@ def _production_settings(**overrides):
         "admin_phones": "",
         "rate_limit_backend": "redis",
         "redis_url": "redis://redis.example.com:6379/0",
+        "async_job_backend": "redis",
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)
@@ -85,6 +86,14 @@ class SettingsGovernanceTest(unittest.TestCase):
         with self.assertRaises(ValidationError):
             Settings(_env_file=None, llm_max_retries=0)
 
+    def test_invalid_async_job_config_fails(self) -> None:
+        with self.assertRaises(ValidationError):
+            Settings(_env_file=None, async_job_backend="invalid")
+        with self.assertRaises(ValidationError):
+            Settings(_env_file=None, async_job_max_attempts=0)
+        with self.assertRaises(ValidationError):
+            Settings(_env_file=None, async_job_worker_poll_seconds=0)
+
     def test_production_requires_rate_limit_enabled(self) -> None:
         settings = _production_settings(rate_limit_enabled=False)
 
@@ -103,6 +112,22 @@ class SettingsGovernanceTest(unittest.TestCase):
 
     def test_production_requires_redis_url_for_redis_rate_limit_backend(self) -> None:
         settings = _production_settings(redis_url="")
+
+        with self.assertRaises(ConfigValidationError) as ctx:
+            settings.validate_production_config()
+
+        self.assertIn("REDIS_URL", str(ctx.exception))
+
+    def test_production_rejects_memory_async_job_backend(self) -> None:
+        settings = _production_settings(async_job_backend="memory")
+
+        with self.assertRaises(ConfigValidationError) as ctx:
+            settings.validate_production_config()
+
+        self.assertIn("ASYNC_JOB_BACKEND", str(ctx.exception))
+
+    def test_production_requires_redis_url_for_async_jobs(self) -> None:
+        settings = _production_settings(rate_limit_enabled=False, async_job_backend="redis", redis_url="")
 
         with self.assertRaises(ConfigValidationError) as ctx:
             settings.validate_production_config()
@@ -153,6 +178,8 @@ class SettingsGovernanceTest(unittest.TestCase):
         self.assertEqual(summary["database"]["database_url"], "postgresql+asyncpg://interview:****@db.example.com:5432/interview_agent")
         self.assertTrue(summary["rate_limit"]["enabled"])
         self.assertGreater(summary["rate_limit"]["llm_daily_token_quota"], 0)
+        self.assertTrue(summary["async_jobs"]["enabled"])
+        self.assertEqual(summary["async_jobs"]["backend"], "redis")
 
     def test_production_rejects_real_gateway_route_without_api_key(self) -> None:
         settings = _production_settings(

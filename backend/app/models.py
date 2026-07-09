@@ -120,6 +120,7 @@ class User(Base):
     evaluation_results: Mapped[list[EvaluationResult]] = relationship(back_populates="user")
     llm_usage_records: Mapped[list[LLMUsageRecord]] = relationship(back_populates="user")
     agent_memories: Mapped[list[AgentMemory]] = relationship(back_populates="user")
+    async_jobs: Mapped[list[AsyncJob]] = relationship(back_populates="user")
     created_rubrics: Mapped[list[ScoringRubric]] = relationship(
         back_populates="created_by",
         foreign_keys="ScoringRubric.created_by_user_id",
@@ -315,6 +316,34 @@ class AuditEvent(Base):
     user_agent: Mapped[str | None] = mapped_column(String(300))
     metadata_json: Mapped[dict[str, Any]] = mapped_column(jsonb_type, default=dict)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class AsyncJob(Base):
+    __tablename__ = "async_jobs"
+    __table_args__ = (
+        Index("idx_async_jobs_user_created", "user_id", "created_at"),
+        Index("idx_async_jobs_status_created", "status", "created_at"),
+        Index("idx_async_jobs_type_status", "job_type", "status"),
+        Index("idx_async_jobs_idempotency_key", "idempotency_key"),
+    )
+
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
+    job_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    user_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("users.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="queued")
+    payload_json: Mapped[dict[str, Any]] = mapped_column(jsonb_type, default=dict)
+    result_json: Mapped[dict[str, Any] | None] = mapped_column(jsonb_type)
+    error_type: Mapped[str | None] = mapped_column(String(120))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    idempotency_key: Mapped[str | None] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    started_at: Mapped[datetime | None]
+    finished_at: Mapped[datetime | None]
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+    user: Mapped[User] = relationship(back_populates="async_jobs")
 
 
 class AgentMemory(Base):

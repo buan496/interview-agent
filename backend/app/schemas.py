@@ -376,6 +376,36 @@ class AgentMemoryRefreshOut(BaseModel):
     total_active: int
 
 
+class AsyncJobOut(BaseModel):
+    id: int
+    job_type: str
+    status: str
+    payload_json: dict[str, Any] = Field(default_factory=dict)
+    result_json: dict[str, Any] | None = None
+    error_type: str | None = None
+    error_message: str | None = None
+    attempts: int
+    max_attempts: int
+    idempotency_key: str | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AsyncJobListOut(BaseModel):
+    items: list[AsyncJobOut]
+    total: int
+
+
+class AsyncJobCreateOut(BaseModel):
+    job_id: int
+    status: str
+    job: AsyncJobOut
+
+
 class LLMUsageBreakdownOut(BaseModel):
     key: str
     call_count: int
