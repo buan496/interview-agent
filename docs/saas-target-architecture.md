@@ -496,3 +496,29 @@ Target-state implications:
 
 - The product now has a baseline current-user data rights story before small real-user trials.
 - Production privacy maturity still needs account closure, automated retention, encrypted export delivery, tenant-level governance and backup purge evidence.
+
+## PR #53 Update: Public Beta Readiness Checklist
+
+PR #53 adds a release and operations gate for a small invited beta.
+
+Completed in v1:
+
+- Added `docs/public-beta-readiness.md` with admission criteria, forbidden items, operations SOP, exit criteria and Go / No-Go checklist.
+- Added `docs/public-beta-evidence-template.md` for beta environment, release, smoke, backup, alert, privacy, LLM and cost evidence.
+- Added `scripts/beta-readiness-check.ps1` for local readiness checks against required docs, scripts and staging env placeholders.
+- Connected release, staging, privacy and incident documents to the beta checklist.
+- Explicitly separates local, test, staging, beta and production.
+
+Still out of scope:
+
+- No real production deployment.
+- No payment or subscription launch.
+- No external alerting integration.
+- No enterprise tenancy.
+- No formal compliance certification.
+- No automated production operations.
+
+Target-state implications:
+
+- The project now has a practical gate for a 5 to 10 user trial.
+- Moving beyond beta still requires production deployment, external monitoring/alerting, retention automation, tenant governance and product support workflows.

@@ -168,6 +168,8 @@ The evidence must include:
 - known risks
 - post-release smoke results
 
+For an invited beta, also complete [Public Beta Evidence Template](public-beta-evidence-template.md) and review [Public Beta Readiness Checklist](public-beta-readiness.md). A release candidate is not beta-ready until the beta Go / No-Go decision, incident owner, privacy checks, backup evidence and LLM quota/cost checks are recorded.
+
 ## Staging Deployment Flow
 
 1. Run the manual release workflow with `target_environment=staging`.
@@ -176,8 +178,21 @@ The evidence must include:
 4. Before migration rehearsal, create a PostgreSQL backup with `scripts/backup-postgres.ps1` and verify it with `scripts/verify-postgres-backup.ps1`.
 5. Confirm `/health`, `/ready` and `/metrics`; readiness should include Redis when Redis-backed rate limit or cache is enabled.
 6. Run `scripts/staging-smoke.ps1`.
-7. Record image tags, backup evidence, migration result, smoke result, metrics availability and observed request id in release evidence.
-8. Only after staging evidence is complete should production approval be considered.
+7. Run `scripts/beta-readiness-check.ps1` when the release candidate is intended for invited beta.
+8. Record image tags, backup evidence, migration result, smoke result, metrics availability and observed request id in release evidence.
+9. Only after staging evidence is complete should production approval be considered.
+
+## Public Beta Gate
+
+Before inviting beta users:
+
+1. Complete `docs/public-beta-readiness.md`.
+2. Fill `docs/public-beta-evidence-template.md` for the target environment.
+3. Confirm no beta forbidden item applies.
+4. Confirm the release candidate has staging smoke evidence and backup evidence.
+5. Confirm privacy export/delete, LLM Gateway fallback, quotas, rate limits, Redis readiness and incident ownership.
+
+This gate does not deploy production, does not enable payment, and does not integrate external alerting services.
 
 ## Troubleshooting After Release
 

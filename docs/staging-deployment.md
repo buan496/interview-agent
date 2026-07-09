@@ -203,6 +203,20 @@ The smoke test checks:
 
 Record the observed request id in release evidence.
 
+For a release candidate that will be used by invited beta users, run the local beta readiness check after staging smoke:
+
+```powershell
+.\scripts\beta-readiness-check.ps1
+```
+
+If a staging endpoint is already running, optional URL checks can be added:
+
+```powershell
+.\scripts\beta-readiness-check.ps1 `
+  -ApiBaseUrl https://staging.example.com `
+  -FrontendBaseUrl https://staging.example.com
+```
+
 ## Release Evidence
 
 After staging validation, update `docs/release-evidence-template.md` fields in the actual release record:
@@ -218,6 +232,8 @@ After staging validation, update `docs/release-evidence-template.md` fields in t
 - rollback plan
 
 Production approval should not happen until staging evidence is complete.
+
+Public beta approval should not happen until `docs/public-beta-evidence-template.md` is filled and the Go / No-Go decision in `docs/public-beta-readiness.md` is explicitly recorded.
 
 ## Logs and Troubleshooting
 
@@ -266,6 +282,7 @@ docker compose --env-file .env.staging -f docker-compose.staging.yml down
 - auth request-code returns `development_code`: staging env is using development auth and must be fixed.
 - migrations fail: stop release and review Alembic revision history.
 - backup verification fails: discard the artifact and create a new backup before migration.
+- beta readiness check fails: stop the invite process and fix the missing document, script, config placeholder or forbidden-item evidence.
 
 ## Production Boundary
 

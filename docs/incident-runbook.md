@@ -137,3 +137,16 @@ Close only after:
 - rollback or fix is recorded
 - backup/restore evidence is attached when used
 - follow-up tasks are created for prevention
+
+## Public Beta Incident Handling
+
+During an invited beta:
+
+- Treat any data safety, privacy deletion/export failure, auth bypass, public secret exposure, or database/Redis exposure as P0 until triaged.
+- Pause new user invitations while a P0/P1 incident is active.
+- Record the beta id, release commit, request ids, affected flow and current Go / No-Go status in incident evidence.
+- Review `docs/public-beta-evidence-template.md` before rollback or data restore decisions.
+- If user data deletion or export is involved, follow `docs/privacy-and-data-lifecycle.md` and record the backup-retention boundary.
+- Do not paste raw answers, prompts, completions, tokens, secrets, verification codes or full phone numbers into incident notes.
+
+After a beta P0/P1, resume invitations only after the incident owner updates the beta evidence and explicitly records a new Go decision.

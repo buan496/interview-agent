@@ -39,6 +39,7 @@
 - Redis-backed rate limit foundation: local/test uses memory buckets; staging/production can use Redis shared counters with `/ready` Redis checks. This is not payment, subscription or billing.
 - Backup and restore foundation: PostgreSQL backup, restore, checksum verification, staging rehearsal SOP, and release evidence templates. It does not automate production backup or commit database dumps.
 - Privacy and data lifecycle v1: current-user data summary, JSON export and training-data deletion APIs with audit and metrics. It does not add a frontend privacy center, account deletion, DSR workflow or compliance certification.
+- Public beta readiness v1: checklist, evidence template and local readiness script for a 5-10 user invited beta; it does not deploy production, add payment, or connect external alerting.
 - 报告复盘：展示综合得分、能力诊断、题目复盘、参考答案和下一步训练建议。
 - 训练历史中心：按当前登录用户汇总历史 Session、状态、分数、报告入口和继续训练入口。
 - 能力画像：按当前登录用户聚合长期标签表现、优势项、薄弱项、训练次数和错题次数。
@@ -212,6 +213,7 @@ Agent Memory v1 is documented in [Agent Memory](docs/agent-memory.md). It is a b
 LLM Gateway v1 is documented in [LLM Gateway](docs/llm-gateway.md). It is a backend model-router foundation and does not add a model-management frontend or tenant-specific policy.
 Async Job Queue v1 is documented in [Async Jobs](docs/async-jobs.md). It adds a lightweight worker foundation for retryable backend tasks and currently supports async Agent Memory refresh.
 Privacy and data lifecycle v1 is documented in [Privacy and Data Lifecycle](docs/privacy-and-data-lifecycle.md). It supports current-user data summary, export and training-data deletion without exposing raw answers, prompts, completions, secrets, verification codes or full phone numbers.
+Public beta readiness is documented in [Public Beta Readiness](docs/public-beta-readiness.md), with evidence captured through [Public Beta Evidence Template](docs/public-beta-evidence-template.md). Run `.\scripts\beta-readiness-check.ps1` before inviting real beta users.
 
 ## 工程亮点
 
@@ -225,6 +227,7 @@ Privacy and data lifecycle v1 is documented in [Privacy and Data Lifecycle](docs
 - Agent Memory foundation: `agent_memories` stores deterministic, user-scoped long-term training signals and feeds active weak memories into PracticePlan without storing raw answers or prompts.
 - Async worker foundation: `async_jobs` tracks user-scoped retryable backend jobs, with memory/Redis queue backends and low-cardinality metrics.
 - Privacy lifecycle foundation: `/api/me/data-summary`, `/api/me/data-export`, `/api/me/data-deletion-request` and `/api/me/data-delete-confirm` operate only on `current_user.id` and record audit/metrics evidence.
+- Public beta readiness foundation: checklist and evidence flow connect staging smoke, backup, privacy, LLM cost, incident ownership and Go/No-Go approval before inviting users.
 - Prometheus metrics foundation: `/metrics` exposes aggregate low-cardinality operational metrics for HTTP traffic, training events, LLM usage, quota/rate-limit refusals and dependency readiness without request_id/user/session labels.
 - Alerting and incident foundation: example Prometheus rules, severity model, incident runbook and evidence template turn metrics into an operator workflow without external alerting services or Grafana.
 - Production config governance: startup validation rejects unsafe production defaults, and `config.loaded` logs only a sanitized configuration summary.
@@ -300,6 +303,7 @@ docs                   产品设计、视觉验收和演示文档
 - Metrics foundation v1: Prometheus-compatible `/metrics` endpoint for low-cardinality aggregate runtime and LLM usage metrics.
 - Alerting and incident foundation v1: Prometheus alert rule examples, incident severity, runbook and evidence templates. No external alerting integration or Prometheus deployment is included.
 - Privacy and data lifecycle v1: current-user data summary, export and training-data deletion APIs with audit and metrics. No frontend privacy center, account closure, automatic retention job or formal compliance workflow is included.
+- Public beta readiness v1: invited-user beta checklist, evidence template and local readiness script. Real production deployment, payment, enterprise tenancy and external alerting remain out of scope.
 - Redis-backed rate limit/cache foundation v1: configurable memory/Redis limiter backend, production fail-fast for unsafe memory limits, and `/ready` Redis checks.
 - Staging deployment foundation: `.env.staging.example`, `docker-compose.staging.yml`, staging smoke script and release evidence workflow.
 - Backup and restore foundation v1: PostgreSQL backup/restore scripts, checksum verification, restore drill process, and migration pre-backup evidence.
