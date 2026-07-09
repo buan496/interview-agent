@@ -83,6 +83,14 @@ Metrics continue to use:
 
 The metrics and usage ledger do not store prompt, completion or answer bodies.
 
+## Offline Evaluation Harness
+
+PR #55 adds an offline evaluation harness that calls model routes through LLM Gateway. The harness defaults to `mock/local-eval` and does not call external providers in CI.
+
+Evaluation reports include provider, model, feature, fallback usage, latency and estimated cost. They do not store prompt text, completion text or real user answer text.
+
+Use [Evaluation Harness](evaluation-harness.md) before changing feature routes such as `LLM_ROUTE_INTERVIEW_SCORING`.
+
 ## Security and Redaction
 
 Do not log or persist:

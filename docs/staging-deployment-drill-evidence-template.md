@@ -72,6 +72,8 @@ Do not paste secrets, tokens, verification codes, full phone numbers, prompt tex
 - primary_route:
 - fallback_enabled:
 - fallback_route:
+- mock_eval_result:
+- model_comparison_result:
 - timeout_seconds:
 - max_retries:
 - usage_metering_check:

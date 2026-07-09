@@ -16,6 +16,7 @@ dist/
 coverage/
 frontend/playwright-report/
 frontend/test-results/
+evals/results/
 backups/
 *.dump
 *.sql.gz

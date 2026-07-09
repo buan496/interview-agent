@@ -170,6 +170,12 @@ For production, do not expose `/metrics` publicly. Place it behind an internal n
 
 Metrics are intentionally aggregate telemetry. They are not a replacement for request logs, audit logs or the LLM usage ledger.
 
+## Evaluation Harness Boundary
+
+Offline evaluation reports latency and estimated cost in generated JSON/Markdown files under `evals/results/`, not as production usage records. Default CI eval uses the mock provider and does not call external LLMs.
+
+If an operator manually runs a real-provider eval, treat the result as release evidence and do not paste prompts, completions, raw answers or API keys into reports.
+
 ## Alert Rules
 
 PR #51 adds example Prometheus alert rules in `observability/prometheus/alerts/interview-agent-alerts.yml`.

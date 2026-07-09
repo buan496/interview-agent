@@ -14,6 +14,7 @@ The drill must not include real production deployment, production secrets, commi
 - Verify that `/metrics` is reachable only through a trusted operator path.
 - Verify that privacy data summary, export and deletion APIs can be exercised with a test user.
 - Verify that LLM Gateway route and fallback configuration are known.
+- Verify that the mock Evaluation Harness has run before changing model routes for beta.
 - Verify that incident evidence can be filled if the drill exposes a P0/P1 symptom.
 
 ## Prerequisites
@@ -92,9 +93,15 @@ docker compose --env-file .env.staging -f docker-compose.staging.yml ps
 16. Rehearse restore only into a disposable local database or an explicitly prepared temporary staging database. Do not overwrite the active staging database unless a separate restore approval exists.
 17. Verify privacy data summary, export and delete APIs with a test user.
 18. Verify LLM Gateway primary and fallback route configuration. Do not paste API keys or prompt text into evidence.
-19. Check worker behavior for queued async jobs if `ASYNC_JOB_BACKEND=redis`.
-20. Fill `docs/staging-deployment-drill-evidence-template.md` outside the repository with the real values.
-21. Fill or update `docs/public-beta-evidence-template.md` if this drill is a public beta gate input.
+19. Run the mock Evaluation Harness when the release candidate changes model routing, scoring prompts or rubric behavior:
+
+```powershell
+.\scripts\run-eval.ps1
+```
+
+20. Check worker behavior for queued async jobs if `ASYNC_JOB_BACKEND=redis`.
+21. Fill `docs/staging-deployment-drill-evidence-template.md` outside the repository with the real values.
+22. Fill or update `docs/public-beta-evidence-template.md` if this drill is a public beta gate input.
 
 ## Semi-Automated Drill Check
 

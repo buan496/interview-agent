@@ -33,6 +33,7 @@
 - AI 追问与评分：后端通过 LLM 抽象层生成追问和评分；未配置真实模型时使用本地 fallback 便于跑通闭环。
 - LLM usage metering v1: records provider, model, feature, tokens, estimated cost, latency, status, request_id, user_id and session_id, with a current-user usage summary API; no payment, plans or quotas.
 - LLM Gateway v1: routes model calls by feature, supports primary/fallback providers, and keeps usage/metrics aligned without storing prompts, completions or answers.
+- Evaluation Harness v1: offline model comparison using sanitized eval datasets through LLM Gateway; default CI uses mock provider only and does not call external LLMs.
 - Agent Memory v1: stores rule-based, current-user memories for weaknesses, strengths, recurring issues and recommendations from reports, wrong-book data and tag stats; no raw answers, prompts, completions, vector DB, RAG or Multi-Agent workflows.
 - Async Job Queue v1: adds a durable `async_jobs` ledger, memory/Redis queue backend, worker entrypoint, memory refresh async API, metrics and audit events; no Celery, WebSocket or frontend job center.
 - Prometheus metrics foundation: exposes aggregate `/metrics` for HTTP traffic, training events, rate-limit/quota refusals, LLM calls/tokens/cost/latency, and dependency readiness; no Grafana or external monitoring SaaS is included.
@@ -213,6 +214,7 @@ Scoring rubric versioning backend v1 adds admin/content-operator rubric APIs and
 Admin Console v1 adds frontend pages at `/admin`, `/admin/questions`, and `/admin/rubrics` for admin/content-operator question bank and rubric operations. It does not add user management, tenant management, billing, or Agent Memory.
 Agent Memory v1 is documented in [Agent Memory](docs/agent-memory.md). It is a backend foundation for user-scoped long-term training signals and intentionally does not include vector memory, RAG, Multi-Agent workflows or a frontend memory workbench.
 LLM Gateway v1 is documented in [LLM Gateway](docs/llm-gateway.md). It is a backend model-router foundation and does not add a model-management frontend or tenant-specific policy.
+Evaluation Harness v1 is documented in [Evaluation Harness](docs/evaluation-harness.md). It provides sanitized offline datasets, mock eval smoke, report generation and baseline/candidate comparison without calling real providers in default CI.
 Async Job Queue v1 is documented in [Async Jobs](docs/async-jobs.md). It adds a lightweight worker foundation for retryable backend tasks and currently supports async Agent Memory refresh.
 Privacy and data lifecycle v1 is documented in [Privacy and Data Lifecycle](docs/privacy-and-data-lifecycle.md). It supports current-user data summary, export and training-data deletion without exposing raw answers, prompts, completions, secrets, verification codes or full phone numbers.
 Public beta readiness is documented in [Public Beta Readiness](docs/public-beta-readiness.md), with evidence captured through [Public Beta Evidence Template](docs/public-beta-evidence-template.md). Run `.\scripts\beta-readiness-check.ps1` before inviting real beta users.
@@ -303,6 +305,7 @@ docs                   产品设计、视觉验收和演示文档
 - Agent Memory v1: backend-only user memory ledger with list/archive/refresh APIs and rule-based refresh from reports, wrong-book records and tag stats.
 - Async Job Queue v1: backend job ledger, worker entrypoint, Redis-capable queue backend and async memory refresh API.
 - Metrics foundation v1: Prometheus-compatible `/metrics` endpoint for low-cardinality aggregate runtime and LLM usage metrics.
+- Evaluation Harness v1: offline mock-provider evals and model-comparison reports for model route/rubric regression checks before wider beta.
 - Alerting and incident foundation v1: Prometheus alert rule examples, incident severity, runbook and evidence templates. No external alerting integration or Prometheus deployment is included.
 - Privacy and data lifecycle v1: current-user data summary, export and training-data deletion APIs with audit and metrics. No frontend privacy center, account closure, automatic retention job or formal compliance workflow is included.
 - Public beta readiness v1: invited-user beta checklist, evidence template and local readiness script. Real production deployment, payment, enterprise tenancy and external alerting remain out of scope.

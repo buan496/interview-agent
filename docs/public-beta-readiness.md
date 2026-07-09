@@ -56,6 +56,7 @@ AI/LLM readiness:
 
 - [ ] LLM Gateway routes are documented.
 - [ ] Fallback model/provider behavior is verified.
+- [ ] Mock Evaluation Harness smoke has passed for the candidate scoring route.
 - [ ] Timeout and retry settings are reviewed.
 - [ ] LLM usage metering is enabled.
 - [ ] Token/call quotas are configured for beta.

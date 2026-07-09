@@ -682,3 +682,26 @@ Still pending:
 - Real host provisioning.
 - Registry-backed immutable image publishing.
 - Protected external metrics scrape and alert delivery.
+
+## PR #55 Update: Evaluation Harness and Model Comparison v1
+
+Status: partially complete.
+
+Delivered:
+
+- Added offline evaluation harness and model comparison.
+- Added sanitized smoke dataset and mock eval runner.
+- Added CI-safe mock eval smoke.
+- Added docs that connect evaluation to LLM Gateway, rubric versioning, metrics and beta readiness.
+
+Phase impact:
+
+- Phase 4 scoring/rubric changes now have a regression-check foundation.
+- Phase 6 beta readiness now has a model-quality gate before changing scoring routes.
+
+Still pending:
+
+- Golden dataset expansion.
+- Human review workflow.
+- LLM-as-judge with privacy controls.
+- Online A/B and canary rollout after production readiness.

@@ -68,6 +68,7 @@ Assert-PathExists "docs/incident-runbook.md" "incident runbook"
 Assert-PathExists "docs/incident-evidence-template.md" "incident evidence template"
 Assert-PathExists "docs/privacy-and-data-lifecycle.md" "privacy lifecycle document"
 Assert-PathExists "docs/llm-gateway.md" "LLM gateway document"
+Assert-PathExists "docs/evaluation-harness.md" "evaluation harness document"
 Assert-PathExists "docs/async-jobs.md" "async jobs document"
 Assert-PathExists "docs/metrics.md" "metrics document"
 Assert-PathExists "docs/observability.md" "observability document"
@@ -82,6 +83,8 @@ Assert-PathExists "scripts/backup-postgres.ps1" "PostgreSQL backup script"
 Assert-PathExists "scripts/restore-postgres.ps1" "PostgreSQL restore script"
 Assert-PathExists "scripts/verify-postgres-backup.ps1" "PostgreSQL backup verification script"
 Assert-PathExists "scripts/staging-deployment-drill.ps1" "staging deployment drill script"
+Assert-PathExists "scripts/run-eval.ps1" "evaluation runner script"
+Assert-PathExists "evals/datasets/interview_scoring_smoke.jsonl" "sanitized interview scoring eval dataset"
 
 Assert-FileContains ".env.staging.example" "^APP_ENV=staging" "staging APP_ENV"
 Assert-FileContains ".env.staging.example" "^AUTH_DEV_CODE_ENABLED=false" "staging dev auth disabled"
@@ -102,7 +105,9 @@ Assert-FileContains "docs/public-beta-readiness.md" "Beta Operation SOP" "beta o
 Assert-FileContains "docs/public-beta-readiness.md" "AUTH_DEV_CODE_ENABLED=false" "dev auth disabled checklist item"
 Assert-FileContains "docs/public-beta-readiness.md" "DELETE_MY_DATA" "privacy deletion confirmation reference"
 Assert-FileContains "docs/public-beta-readiness.md" "Real staging deployment drill" "real staging drill gate"
+Assert-FileContains "docs/public-beta-readiness.md" "Mock Evaluation Harness" "mock eval gate"
 Assert-FileContains "docs/public-beta-evidence-template.md" "staging deployment drill evidence" "staging drill evidence field"
+Assert-FileContains "docs/public-beta-evidence-template.md" "mock evaluation harness result" "mock eval evidence field"
 
 if (-not [string]::IsNullOrWhiteSpace($ApiBaseUrl)) {
   $apiRoot = $ApiBaseUrl.TrimEnd("/")
