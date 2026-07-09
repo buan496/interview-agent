@@ -536,3 +536,25 @@ Next roadmap implications:
 - Alert rules, dashboards and trace propagation remain future operational maturity work.
 - Production metrics access still needs deployment-level protection through internal networking or a gateway.
 - No Grafana, external monitoring SaaS or OpenTelemetry tracing was introduced.
+
+## PR #48 Update: Agent Memory v1 Backend Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added a relational `agent_memories` ledger scoped by `user_id`.
+- Added current-user memory APIs for list, archive and refresh.
+- Added deterministic memory generation from reports, wrong-book recurrence and tag statistics.
+- Added confidence updates so repeated weak or strong tags update existing memories.
+- Added best-effort report-completion refresh that does not break the main answer/report flow.
+- Added lightweight PracticePlan integration for active weakness and recurring-issue memories.
+- Added memory audit events and aggregate Prometheus metrics.
+- Added backend regression tests for memory generation, isolation, archive behavior, PracticePlan interaction and failure isolation.
+
+Next roadmap implications:
+
+- Phase 3 now has a safe Agent Memory foundation without vector DB, RAG or Multi-Agent complexity.
+- Personalization can now build on training history, ability profile and Agent Memory together.
+- LLM extraction, vector retrieval, memory evaluation and memory retention policies remain future PRs.
+- Tenant-level memory governance should wait until organization boundaries are designed.

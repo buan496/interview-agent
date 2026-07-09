@@ -25,9 +25,10 @@ from app.llm_usage import (
     record_llm_usage,
     usage_metering_enabled,
 )
-from app.metrics import record_answer_submitted, record_report_generated, record_session_created
+from app.memory import refresh_memories_from_session_report
+from app.metrics import record_answer_submitted, record_memory_refresh, record_report_generated, record_session_created
 from app.models import EvaluationResult, Message, Question, QuestionTag, ScoringRubricVersion, Session, SessionQuestion, User, UserTagStat, WrongBook
-from app.observability import get_request_id, log_event
+from app.observability import get_request_id, log_event, log_exception
 from app.audit import record_audit_event
 from app.question_bank import PUBLISHED_QUESTION_STATUSES
 from app.rate_limit import (
@@ -613,6 +614,7 @@ def _estimate_answer_prompt_tokens(sq: SessionQuestion, answer: str) -> int:
 
 async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) -> AsyncIterator[str]:
     yield _sse("eval_start", {"sq_id": request.sq_id})
+    finished_session_id: int | None = None
     async with SessionLocal() as db:
         sq = await db.get(
             SessionQuestion,
@@ -780,7 +782,18 @@ async def _answer_stream(session_id: int, user_id: int, request: AnswerRequest) 
                 overall_score=refreshed.report.get("overall_score") if isinstance(refreshed.report, dict) else None,
             )
             record_report_generated("success")
+            finished_session_id = refreshed.id
         await db.commit()
+        if finished_session_id is not None:
+            try:
+                await refresh_memories_from_session_report(db, user_id=user_id, session_id=finished_session_id, trigger="report")
+            except Exception:
+                try:
+                    await db.rollback()
+                except Exception:
+                    pass
+                record_memory_refresh("failed", "report")
+                log_exception("memory.refresh_failed", session_id=finished_session_id)
 
     for char in content:
         yield _sse("token", {"text": char})

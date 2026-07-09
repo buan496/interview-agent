@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
 from app.db import get_db
-from app.models import EvaluationResult, PracticePlan, Question, Session, Tag, User, UserTagStat, WrongBook
+from app.models import AgentMemory, EvaluationResult, PracticePlan, Question, Session, Tag, User, UserTagStat, WrongBook
 from app.observability import log_event
 from app.schemas import PracticePlanOut, PracticePlanTaskOut
 
@@ -106,6 +106,60 @@ async def _weak_tags(db: AsyncSession, user_id: int) -> list[dict[str, Any]]:
         }
         for stat, tag in rows
     ]
+
+
+async def _memory_weak_tags(db: AsyncSession, user_id: int) -> list[dict[str, Any]]:
+    rows = (
+        await db.execute(
+            select(AgentMemory)
+            .where(
+                AgentMemory.user_id == user_id,
+                AgentMemory.status == "active",
+                AgentMemory.memory_type.in_(["weakness", "recurring_issue"]),
+            )
+            .order_by(AgentMemory.confidence.desc(), AgentMemory.last_seen_at.desc())
+            .limit(5)
+        )
+    ).scalars().all()
+    items: list[dict[str, Any]] = []
+    seen: set[int | str] = set()
+    for memory in rows:
+        for tag in list(memory.tags_json or [])[:1]:
+            tag_id = tag.get("tag_id")
+            if tag_id is None:
+                continue
+            tag_name = tag.get("tag")
+            key = tag_id
+            if key in seen:
+                continue
+            seen.add(key)
+            evidence = (memory.evidence_json or [{}])[-1] if isinstance(memory.evidence_json, list) else {}
+            avg_score = evidence.get("avg_score") or evidence.get("score") or 0
+            items.append(
+                {
+                    "tag_id": tag_id,
+                    "tag": tag_name,
+                    "category": tag.get("category"),
+                    "avg_score": _score_value(avg_score),
+                    "attempts": evidence.get("attempts") or 0,
+                    "memory_id": memory.id,
+                    "memory_type": memory.memory_type,
+                    "confidence": _score_value(memory.confidence),
+                }
+            )
+    return items
+
+
+def _merge_weak_tags(memory_tags: list[dict[str, Any]], stat_tags: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
+    seen: set[int | str] = set()
+    for item in [*memory_tags, *stat_tags]:
+        key = item.get("tag_id") if item.get("tag_id") is not None else str(item.get("tag", "")).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(item)
+    return merged[:3]
 
 
 def _weak_tag_task(weak_tags: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -284,7 +338,7 @@ async def _recent_report_reason(db: AsyncSession, user_id: int) -> str | None:
 
 
 async def _build_plan(db: AsyncSession, current_user: User, plan_date: date) -> PracticePlan:
-    weak_tags = await _weak_tags(db, current_user.id)
+    weak_tags = _merge_weak_tags(await _memory_weak_tags(db, current_user.id), await _weak_tags(db, current_user.id))
 
     resume_session = await _latest_active_session(db, current_user.id)
     resume_task = _resume_session_task(resume_session) if resume_session else None

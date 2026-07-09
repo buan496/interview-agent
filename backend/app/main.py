@@ -7,7 +7,7 @@ from fastapi.responses import Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import admin, admin_questions, admin_rubrics, audio, auth, practice_plan, questions, sessions, stats, submissions
+from app.api import admin, admin_questions, admin_rubrics, audio, auth, memories, practice_plan, questions, sessions, stats, submissions
 from app.db import get_db
 from app.metrics import CONTENT_TYPE_LATEST, metrics_content, set_dependency_ready
 from app.observability import install_observability, log_event
@@ -33,6 +33,7 @@ app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(questions.router, prefix=settings.api_prefix)
 app.include_router(sessions.router, prefix=settings.api_prefix)
 app.include_router(stats.router, prefix=settings.api_prefix)
+app.include_router(memories.router, prefix=settings.api_prefix)
 app.include_router(practice_plan.router, prefix=settings.api_prefix)
 app.include_router(admin_questions.router, prefix=settings.api_prefix)
 app.include_router(admin_rubrics.router, prefix=settings.api_prefix)

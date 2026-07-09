@@ -119,6 +119,7 @@ class User(Base):
     practice_plans: Mapped[list[PracticePlan]] = relationship(back_populates="user")
     evaluation_results: Mapped[list[EvaluationResult]] = relationship(back_populates="user")
     llm_usage_records: Mapped[list[LLMUsageRecord]] = relationship(back_populates="user")
+    agent_memories: Mapped[list[AgentMemory]] = relationship(back_populates="user")
     created_rubrics: Mapped[list[ScoringRubric]] = relationship(
         back_populates="created_by",
         foreign_keys="ScoringRubric.created_by_user_id",
@@ -314,6 +315,33 @@ class AuditEvent(Base):
     user_agent: Mapped[str | None] = mapped_column(String(300))
     metadata_json: Mapped[dict[str, Any]] = mapped_column(jsonb_type, default=dict)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class AgentMemory(Base):
+    __tablename__ = "agent_memories"
+    __table_args__ = (
+        Index("idx_agent_memories_user_status", "user_id", "status"),
+        Index("idx_agent_memories_user_type", "user_id", "memory_type"),
+        Index("idx_agent_memories_user_last_seen", "user_id", "last_seen_at"),
+    )
+
+    id: Mapped[int] = mapped_column(bigint_type, primary_key=True)
+    user_id: Mapped[int] = mapped_column(bigint_type, ForeignKey("users.id"), nullable=False)
+    memory_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    tags_json: Mapped[list[dict[str, Any]]] = mapped_column(jsonb_type, default=list)
+    evidence_json: Mapped[list[dict[str, Any]]] = mapped_column(jsonb_type, default=list)
+    confidence: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False, default=Decimal("0.50"))
+    status: Mapped[str] = mapped_column(String(15), nullable=False, default="active")
+    source_type: Mapped[str] = mapped_column(String(30), nullable=False, default="system_rule")
+    source_id: Mapped[int | None] = mapped_column(bigint_type)
+    first_seen_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    last_seen_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+    user: Mapped[User] = relationship(back_populates="agent_memories")
 
 
 class Message(Base):
