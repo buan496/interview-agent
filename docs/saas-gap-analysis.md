@@ -945,3 +945,30 @@ Suggested follow-up PRs:
 - Add registry-backed immutable image publishing.
 - Add a protected staging Prometheus scrape path.
 - Add external alert delivery after the staging runtime endpoint exists.
+
+## PR #55 Update: Evaluation Harness and Model Comparison v1
+
+Status: partially complete.
+
+Completed:
+
+- Added offline eval harness for fixed sanitized datasets.
+- Added model route comparison with pass rate, latency, estimated cost, failure count and fallback count.
+- Added mock-provider CLI smoke suitable for local CI.
+- Added sanitized interview-scoring smoke dataset.
+- Added documentation for real-provider manual eval opt-in and sensitive-content boundaries.
+
+Remaining gaps:
+
+- Dataset is intentionally small and smoke-level only.
+- No human review workflow.
+- No LLM-as-judge.
+- No online A/B test or canary rollout.
+- No persisted eval run database.
+
+Suggested follow-up PRs:
+
+- Expand golden datasets by role, topic and difficulty.
+- Add human review rubric for eval failures.
+- Add rubric-specific eval suites.
+- Add canary/online experiment framework only after production deployment and consent boundaries exist.

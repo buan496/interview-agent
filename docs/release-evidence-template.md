@@ -46,6 +46,7 @@ Use this template for every staging or production release candidate.
 | Docker build |  |  |
 | Secret scan |  |  |
 | Public beta readiness check |  |  |
+| Mock evaluation harness |  |  |
 
 ## Migration Status
 
@@ -104,6 +105,7 @@ Use this template for every staging or production release candidate.
 - Beta known risks:
 - Beta privacy export/delete check:
 - Beta LLM quota and budget check:
+- Beta mock eval result:
 - Beta backup evidence:
 - Beta forbidden items reviewed:
 

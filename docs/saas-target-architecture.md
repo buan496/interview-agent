@@ -540,3 +540,22 @@ Still out of scope:
 - No committed server IP, domain or secret.
 - No CI access to a real staging host.
 - No automated restore against active staging data.
+
+## PR #55 Update: Evaluation Harness and Model Comparison v1
+
+PR #55 adds an offline quality gate for model-routing and scoring changes.
+
+Completed in v1:
+
+- Added `backend/app/evaluation_harness.py` for dataset loading, mock eval execution, summary calculation and baseline/candidate comparison.
+- Added `backend/app/eval_runner.py` and `scripts/run-eval.ps1` for offline eval CLI usage.
+- Added a sanitized smoke dataset under `evals/datasets/`.
+- Connected eval documentation to LLM Gateway, metrics, staging drill and public beta readiness.
+- Added local CI mock eval smoke without external LLM calls.
+
+Still out of scope:
+
+- No online A/B testing.
+- No model-management frontend.
+- No real provider eval in default CI.
+- No storage of prompt text, completion text or real user answer text in eval reports.

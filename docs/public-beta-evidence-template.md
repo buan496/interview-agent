@@ -95,6 +95,8 @@ Do not paste secrets, tokens, verification codes, full phone numbers, prompt tex
 
 - LLM Gateway primary route:
 - LLM Gateway fallback route:
+- mock evaluation harness result:
+- model comparison result:
 - timeout/retry settings:
 - usage metering enabled:
 - daily token quota:

@@ -113,7 +113,8 @@ Invoke-Step "PowerShell script syntax" {
       "scripts\restore-postgres.ps1",
       "scripts\verify-postgres-backup.ps1",
       "scripts\beta-readiness-check.ps1",
-      "scripts\staging-deployment-drill.ps1"
+      "scripts\staging-deployment-drill.ps1",
+      "scripts\run-eval.ps1"
     )
     foreach ($script in $scripts) {
       $errors = $null
@@ -131,6 +132,15 @@ Invoke-Step "Staging deployment drill static check" {
   Push-Location $root
   try {
     .\scripts\staging-deployment-drill.ps1 -SkipExternalChecks -SkipBackup
+  } finally {
+    Pop-Location
+  }
+}
+
+Invoke-Step "Mock evaluation harness smoke" {
+  Push-Location $root
+  try {
+    .\scripts\run-eval.ps1 -Provider mock -Model local-eval -OutputDir evals\results\ci
   } finally {
     Pop-Location
   }
