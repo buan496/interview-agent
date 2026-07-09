@@ -623,3 +623,21 @@ Still future work:
 - Grafana dashboards.
 - External notification integration.
 - Threshold tuning from production data.
+
+## PR #52 Update: Privacy and Data Lifecycle v1
+
+Status: partially complete.
+
+Completed:
+
+- Added current-user data summary, export and deletion APIs.
+- Added confirmation-phrase protection for destructive training-data deletion.
+- Added export redaction for raw answers, prompts, completions, full phone numbers, tokens, secrets, verification codes and raw model output.
+- Added audit events and aggregate metrics for privacy lifecycle operations.
+- Documented backup residue, Agent Memory lifecycle, Async Job lifecycle, admin access boundaries and beta privacy checklist.
+
+Next roadmap implications:
+
+- Phase 5 now has a current-user privacy baseline for small real-user trials.
+- Phase 6 release and backup governance must treat privacy deletion and backup retention as linked operational evidence.
+- Account closure, automated retention jobs, encrypted exports and tenant-level privacy governance remain future work.

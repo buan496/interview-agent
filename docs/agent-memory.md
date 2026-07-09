@@ -121,6 +121,17 @@ Report generation commits before memory refresh. If memory refresh fails, the an
 
 The async memory refresh worker has its own retry path. A worker failure marks the job failed or re-queues it when attempts remain; it does not affect the synchronous answer/report flow or the existing sync refresh API.
 
+## Privacy and Data Lifecycle
+
+PR #52 treats Agent Memory as current-user training data:
+
+- Memory records are included in `/api/me/data-export` with only stored titles, summaries, tags, evidence summaries, confidence and source metadata.
+- Memory records are deleted by `/api/me/data-delete-confirm` when the user confirms the `training_data` deletion scope.
+- Memory audit events remain in `audit_events` as sanitized security records.
+- Existing PostgreSQL backups can retain memory rows until the backup retention window expires.
+
+Memory exports and deletion audit metadata must not include raw answer text, prompt text, model completion text, tokens, secrets, verification codes or full phone numbers.
+
 ## Future Work
 
 Out of scope for v1:
@@ -132,4 +143,4 @@ Out of scope for v1:
 - Admin global memory browsing.
 - Tenant-scoped memory governance.
 
-Future PRs can add controlled LLM extraction, vector retrieval, memory evaluation, retention policies and tenant-aware admin tooling after the privacy and governance boundaries are designed.
+Future PRs can add controlled LLM extraction, vector retrieval, memory evaluation, automated retention policies and tenant-aware admin tooling after the privacy and governance boundaries are designed.

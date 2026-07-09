@@ -42,6 +42,11 @@ Abuse-protection metrics:
 - `interview_agent_rate_limit_exceeded_total{scope}`
 - `interview_agent_quota_exceeded_total{quota_type}`
 
+Privacy and lifecycle metrics:
+
+- `interview_agent_data_exports_total{status}`
+- `interview_agent_data_deletions_total{status,scope}`
+
 LLM usage metrics:
 
 - `interview_agent_llm_calls_total{provider,model,feature,status}`
@@ -67,6 +72,7 @@ Metrics labels must stay low-cardinality and non-sensitive. The current implemen
 - Async jobs: `job_type`, `status`
 - Rate limit: normalized `scope`
 - Quota: normalized `quota_type`
+- Privacy lifecycle: `status`, `scope`
 - LLM: `provider`, `model`, `feature`, `status`, `token_type`, `currency`
 - Ready gauge: `dependency`
 
@@ -126,6 +132,15 @@ Async Job Queue v1 emits aggregate worker metrics:
 
 Async job metrics intentionally do not label by `job_id`, `user_id`, `request_id`, phone number, idempotency key, prompt text, completion text or answer text.
 
+## Privacy and Data Lifecycle Integration
+
+PR #52 emits aggregate counters for current-user data export and deletion operations:
+
+- `interview_agent_data_exports_total{status}` increments when `/api/me/data-export` succeeds.
+- `interview_agent_data_deletions_total{status,scope}` increments when `/api/me/data-delete-confirm` succeeds or is denied by an invalid confirmation phrase.
+
+The only current deletion scope is `training_data`. These counters intentionally do not expose `user_id`, phone numbers, request ids, session ids, report ids, export payloads, raw answers, prompts or completions.
+
 ## Prometheus Scrape Example
 
 Example staging scrape configuration:
@@ -151,6 +166,7 @@ For production, do not expose `/metrics` publicly. Place it behind an internal n
 6. Use `llm_usage_records` for per-user usage summary and cost estimation.
 7. Use `agent_memories` only for current-user training memory inspection and rule debugging; metrics remain aggregate.
 8. Use `async_jobs` and worker logs for asynchronous task status and retry debugging; metrics remain aggregate.
+9. Use privacy lifecycle counters for aggregate export/delete activity only; use `audit_events` for authorized security reconstruction.
 
 Metrics are intentionally aggregate telemetry. They are not a replacement for request logs, audit logs or the LLM usage ledger.
 

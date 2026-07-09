@@ -447,6 +447,43 @@ class LLMUsageSummaryOut(BaseModel):
     recent_records: list[LLMUsageRecordOut] = Field(default_factory=list)
 
 
+class DataSummaryOut(BaseModel):
+    scope: str
+    counts: dict[str, int] = Field(default_factory=dict)
+
+
+class DataExportOut(BaseModel):
+    export_version: str
+    user: dict[str, Any] = Field(default_factory=dict)
+    summary: DataSummaryOut
+    sessions: list[dict[str, Any]] = Field(default_factory=list)
+    session_questions: list[dict[str, Any]] = Field(default_factory=list)
+    evaluation_results: list[dict[str, Any]] = Field(default_factory=list)
+    reports: list[dict[str, Any]] = Field(default_factory=list)
+    wrong_book: list[dict[str, Any]] = Field(default_factory=list)
+    user_tag_stats: list[dict[str, Any]] = Field(default_factory=list)
+    practice_plans: list[dict[str, Any]] = Field(default_factory=list)
+    agent_memories: list[dict[str, Any]] = Field(default_factory=list)
+    async_jobs: list[dict[str, Any]] = Field(default_factory=list)
+    llm_usage_records: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class DataDeletionRequestOut(BaseModel):
+    scope: str
+    confirmation_phrase: str
+    impact: dict[str, int] = Field(default_factory=dict)
+    warning: str
+
+
+class DataDeletionConfirmRequest(BaseModel):
+    confirmation_phrase: str = Field(min_length=1, max_length=80)
+
+
+class DataDeletionOut(BaseModel):
+    scope: str
+    deleted_counts: dict[str, int] = Field(default_factory=dict)
+
+
 class AuditEventOut(BaseModel):
     id: int
     actor_user_id: int | None = None

@@ -34,12 +34,19 @@ Extended in PR #42:
 - `rubric_version_archived`: an admin or content operator archives a rubric version so it is no longer selected for new scoring.
 - `rubric_denied`: a non-operator attempts to call a rubric management API.
 
+Extended in PR #52:
+
+- `user_data_exported`: the current user exports their own sanitized data.
+- `user_data_deletion_requested`: the current user requests the impact summary and confirmation phrase for training-data deletion.
+- `user_data_delete_denied`: a training-data deletion confirmation is rejected, for example because the confirmation phrase is wrong.
+- `user_data_deleted`: the current user's training data is deleted after confirmation.
+
 Not covered in v1:
 
 - Organization or tenant-level audit scopes.
 - Frontend admin audit console.
 - Full report access audit.
-- Bulk data export or privacy request audit.
+- Enterprise DSR workflow audit.
 
 ## Table
 
@@ -98,6 +105,8 @@ Audit metadata must not store:
 Question bank audit metadata stores only field summaries such as question id, status, difficulty, qtype, tag count, title length, prompt length, answer reference length, and changed field names. It does not store full prompt or answer reference text.
 
 Rubric audit metadata stores only rubric ids, version ids, status, dimension count, scoring scale and prompt template length. It does not store full prompt templates, user answers, model prompts or completions.
+
+Privacy lifecycle audit metadata stores only record counts, deletion scope and denial reason. It does not store export payloads, raw answers, prompts, completions, tokens, secrets, verification codes or full phone numbers.
 
 The audit helper masks metadata keys that contain sensitive terms such as `token`, `secret`, `code`, `authorization`, `phone`, `prompt`, `completion`, and `answer`.
 

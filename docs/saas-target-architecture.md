@@ -466,3 +466,33 @@ Out of scope:
 - No Grafana.
 - No production Prometheus deployment.
 - No business logic or frontend UI changes.
+
+## PR #52 Update: Privacy and Data Lifecycle v1
+
+PR #52 adds the first privacy and data lifecycle layer to the target architecture.
+
+Completed in v1:
+
+- Added current-user data summary through `GET /api/me/data-summary`.
+- Added current-user JSON export through `GET /api/me/data-export`.
+- Added deletion request and confirmation through `POST /api/me/data-deletion-request` and `POST /api/me/data-delete-confirm`.
+- Scoped export and deletion strictly by `current_user.id`.
+- Deletes current-user training data including sessions, evaluations, reports, wrong-book records, tag stats, practice plans, Agent Memory, async jobs and LLM usage records.
+- Retains the user account row, audit events, question bank, rubrics and shared content data.
+- Redacts raw answers, prompts, completions, full phone numbers, tokens, secrets, verification codes and raw model output from exports.
+- Adds audit events and aggregate metrics for export and deletion operations.
+- Documents backup residue, Memory lifecycle, Async Job lifecycle and beta privacy checklist.
+
+Still out of scope:
+
+- No full GDPR/DSR workflow.
+- No account closure or login blocking for deleted accounts.
+- No frontend privacy center.
+- No automatic retention jobs.
+- No production backup purge automation.
+- No organization or tenant-level privacy controls.
+
+Target-state implications:
+
+- The product now has a baseline current-user data rights story before small real-user trials.
+- Production privacy maturity still needs account closure, automated retention, encrypted export delivery, tenant-level governance and backup purge evidence.

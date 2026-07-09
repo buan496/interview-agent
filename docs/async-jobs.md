@@ -160,6 +160,17 @@ Async jobs must not store:
 
 Payload sanitization redacts sensitive key names such as `answer_text`, `prompt`, `completion`, `token`, `secret` and `verification_code`.
 
+## Privacy and Data Lifecycle
+
+PR #52 treats `async_jobs` as current-user operational data:
+
+- `/api/me/data-export` includes only job type, status, attempts, timestamps and sanitized payload/result summaries.
+- `/api/me/data-delete-confirm` deletes the current user's async job rows as part of the `training_data` deletion scope.
+- Worker audit events remain in `audit_events` as sanitized operational records.
+- Existing PostgreSQL backups can retain historical job rows until the backup retention window expires.
+
+Job payloads and results must stay small and safe. They must not contain raw answers, prompts, completions, tokens, secrets, verification codes or full phone numbers.
+
 ## Staging Notes
 
 Staging uses:
