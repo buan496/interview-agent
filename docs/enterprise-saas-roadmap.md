@@ -641,3 +641,21 @@ Next roadmap implications:
 - Phase 5 now has a current-user privacy baseline for small real-user trials.
 - Phase 6 release and backup governance must treat privacy deletion and backup retention as linked operational evidence.
 - Account closure, automated retention jobs, encrypted exports and tenant-level privacy governance remain future work.
+
+## PR #53 Update: Public Beta Readiness Checklist
+
+Status: partially complete.
+
+Completed:
+
+- Added public beta readiness checklist for a small invited trial.
+- Added public beta evidence template.
+- Added local beta readiness check script.
+- Connected beta readiness to release, staging, privacy and incident documentation.
+- Defined beta Go / No-Go criteria, forbidden items, operating SOP and exit criteria.
+
+Next roadmap implications:
+
+- Phase 6 now has a practical beta gate before inviting 5 to 10 real users.
+- The project can run a controlled trial with manual operations, but it is not a public production launch.
+- Production deployment, external alerting, payment, enterprise tenancy, evaluation harness and automated support workflows remain future work.

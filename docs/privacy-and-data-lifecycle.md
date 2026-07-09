@@ -226,6 +226,8 @@ Before a small real-user trial:
 - [ ] Confirm backup retention and restore approval are documented for the trial environment.
 - [ ] Confirm support scripts and incident notes do not paste sensitive data.
 
+Use [Public Beta Readiness Checklist](public-beta-readiness.md) and [Public Beta Evidence Template](public-beta-evidence-template.md) before inviting real users. The beta evidence should record data export, deletion, backup residue and support-note handling results.
+
 ## Future Work
 
 - Account closure with `users.deleted_at` and login blocking.

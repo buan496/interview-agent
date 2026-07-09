@@ -93,6 +93,15 @@ Every P0/P1 incident should record:
 
 Use `docs/incident-evidence-template.md` for the record.
 
+## Public Beta Gate
+
+During an invited beta:
+
+- Check active P0/P1 alerts before inviting users and before extending the beta window.
+- Pause new invitations while P0/P1 is active.
+- Record alert-rule check evidence in `docs/public-beta-evidence-template.md`.
+- Treat privacy export/delete failures, auth bypass, public secret exposure, public DB/Redis exposure and public `/metrics` exposure as beta-blocking until triaged.
+
 ## Sensitive Information
 
 Alert labels, annotations and evidence must not contain:

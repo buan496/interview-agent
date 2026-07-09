@@ -239,6 +239,29 @@ PostgreSQL backup and restore parameters can be overridden through script argume
 
 Backup artifacts belong in `backups/`, which is ignored by git.
 
+## Public Beta Configuration Gate
+
+Before inviting beta users, use `docs/public-beta-readiness.md` and run:
+
+```powershell
+.\scripts\beta-readiness-check.ps1
+```
+
+Beta should use production-shaped staging settings:
+
+- `APP_ENV=staging` or a clearly documented beta environment.
+- `AUTH_DEV_CODE_ENABLED=false`.
+- no default `AUTH_DEV_CODE=000000`.
+- non-default `JWT_SECRET_KEY` or equivalent token secret.
+- `RATE_LIMIT_ENABLED=true`.
+- `RATE_LIMIT_BACKEND=redis`.
+- `CACHE_BACKEND=redis`.
+- `LLM_USAGE_METERING_ENABLED=true`.
+- explicit LLM Gateway primary/fallback route.
+- `/metrics` reachable only from trusted operator or scrape paths.
+
+The beta gate does not introduce production deployment, external alerting, payment, enterprise tenancy or formal compliance certification.
+
 ## Troubleshooting Startup Failures
 
 If the app fails during production startup:

@@ -44,6 +44,7 @@ Use this template for every staging or production release candidate.
 | Staging Docker Compose config |  |  |
 | Docker build |  |  |
 | Secret scan |  |  |
+| Public beta readiness check |  |  |
 
 ## Migration Status
 
@@ -88,6 +89,20 @@ Use this template for every staging or production release candidate.
 - P0/P1 incident freeze approved if applicable:
 - Incident runbook link:
 - Incident evidence record if release is related to an incident:
+
+## Public Beta Readiness
+
+- Public beta checklist reviewed:
+- Public beta evidence link:
+- Beta target users count:
+- Beta operator:
+- Beta incident owner:
+- Beta Go / No-Go decision:
+- Beta known risks:
+- Beta privacy export/delete check:
+- Beta LLM quota and budget check:
+- Beta backup evidence:
+- Beta forbidden items reviewed:
 
 ## Rollback Plan
 

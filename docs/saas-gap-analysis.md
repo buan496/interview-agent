@@ -891,3 +891,32 @@ Suggested follow-up PRs:
 - Automated retention jobs for stale async jobs, old usage rows and archived memories.
 - Encrypted export artifact generation with expiring links if product UX needs downloadable files.
 - Tenant-aware privacy operations after organization boundaries exist.
+
+## PR #53 Update: Public Beta Readiness Checklist
+
+Status: partially complete.
+
+Completed:
+
+- Added public beta readiness checklist for a 5 to 10 user invited beta.
+- Added beta evidence template covering environment, release, smoke, backup, alert, privacy, LLM, quota, cost and Go / No-Go decision fields.
+- Added local beta readiness script for required docs, scripts, alert rules and staging env placeholder checks.
+- Connected release management, staging deployment, privacy lifecycle and incident runbook docs to the beta gate.
+- Documented beta forbidden items such as default JWT secrets, default verification code, public DB/Redis exposure, public `/metrics`, skipped backup and disabled rate limits.
+- Explicitly documented that real production deployment, payment, external alerting, enterprise tenancy and compliance certification remain incomplete.
+
+Still missing:
+
+- No real staging host or production host is provisioned by this repository.
+- No external alert delivery service.
+- No payment, subscription or commercial plan workflow.
+- No enterprise multi-tenant onboarding.
+- No automated beta support workflow.
+- No evaluation harness or quality benchmark gate for model output.
+
+Suggested follow-up PRs:
+
+- Add model evaluation harness before broad beta expansion.
+- Add protected staging metrics scrape and external alert delivery after deployment target exists.
+- Add production deployment runbook and secret rotation process.
+- Add user support workflow and beta feedback triage templates.
