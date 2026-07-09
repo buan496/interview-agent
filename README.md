@@ -195,6 +195,7 @@ GitHub Actions 当前包含：
 更多视觉验收标准见 [Frontend Visual QA](docs/frontend-visual-qa.md)。
 可观测性排障说明见 [Observability Foundation](docs/observability.md)。
 Prometheus-compatible metrics are documented in [Metrics Foundation](docs/metrics.md).
+Alerting rules and incident response are documented in [Alerting Rules](docs/alerting.md), [Incident Runbook](docs/incident-runbook.md), and [Incident Evidence Template](docs/incident-evidence-template.md). This repository provides rules and SOPs only; it does not deploy Prometheus, Grafana or external alerting services.
 Production configuration governance is documented in [Configuration](docs/configuration.md).
 Release/CD management is documented in [Release Management](docs/release-management.md), with evidence template in [Release Evidence Template](docs/release-evidence-template.md).
 Staging deployment foundation is documented in [Staging Deployment](docs/staging-deployment.md), with `.env.staging.example`, `docker-compose.staging.yml`, and `scripts/staging-smoke.ps1`.
@@ -222,6 +223,7 @@ Async Job Queue v1 is documented in [Async Jobs](docs/async-jobs.md). It adds a 
 - Agent Memory foundation: `agent_memories` stores deterministic, user-scoped long-term training signals and feeds active weak memories into PracticePlan without storing raw answers or prompts.
 - Async worker foundation: `async_jobs` tracks user-scoped retryable backend jobs, with memory/Redis queue backends and low-cardinality metrics.
 - Prometheus metrics foundation: `/metrics` exposes aggregate low-cardinality operational metrics for HTTP traffic, training events, LLM usage, quota/rate-limit refusals and dependency readiness without request_id/user/session labels.
+- Alerting and incident foundation: example Prometheus rules, severity model, incident runbook and evidence template turn metrics into an operator workflow without external alerting services or Grafana.
 - Production config governance: startup validation rejects unsafe production defaults, and `config.loaded` logs only a sanitized configuration summary.
 - Release/CD management v1: manual release candidate workflow, release evidence template, migration gate, immutable image tag policy, and rollback SOP; it does not deploy production directly.
 - Staging deployment foundation: staging compose topology, environment template, smoke script and release evidence flow for release-candidate rehearsal; it does not deploy production.
@@ -293,6 +295,7 @@ docs                   产品设计、视觉验收和演示文档
 - Agent Memory v1: backend-only user memory ledger with list/archive/refresh APIs and rule-based refresh from reports, wrong-book records and tag stats.
 - Async Job Queue v1: backend job ledger, worker entrypoint, Redis-capable queue backend and async memory refresh API.
 - Metrics foundation v1: Prometheus-compatible `/metrics` endpoint for low-cardinality aggregate runtime and LLM usage metrics.
+- Alerting and incident foundation v1: Prometheus alert rule examples, incident severity, runbook and evidence templates. No external alerting integration or Prometheus deployment is included.
 - Redis-backed rate limit/cache foundation v1: configurable memory/Redis limiter backend, production fail-fast for unsafe memory limits, and `/ready` Redis checks.
 - Staging deployment foundation: `.env.staging.example`, `docker-compose.staging.yml`, staging smoke script and release evidence workflow.
 - Backup and restore foundation v1: PostgreSQL backup/restore scripts, checksum verification, restore drill process, and migration pre-backup evidence.

@@ -832,3 +832,29 @@ Suggested follow-up PRs:
 - Add question import jobs for content-operator workflows.
 - Add dead-letter and retry inspection once staging worker traffic exists.
 - Add admin/operator job dashboard only after API and audit needs stabilize.
+
+## PR #51 Update: Alerting Rules and Incident Runbook
+
+Status: partially complete.
+
+Completed:
+
+- Added `observability/prometheus/alerts/interview-agent-alerts.yml` with example alert rules based on current metrics for API, DB/Redis, LLM, rate limit, quota and async job symptoms.
+- Added `docs/alerting.md` with P0/P1/P2/P3 severity, response targets, silence principles and sensitive-data rules.
+- Added `docs/incident-runbook.md` for API 5xx, DB/Redis, LLM, cost, async job and release-regression triage and recovery.
+- Added `docs/incident-evidence-template.md` for incident evidence and follow-up tracking.
+- Added `scripts/check-alert-rules.ps1` for basic local rule-file validation without requiring Prometheus or promtool.
+- Updated release, staging, backup, metrics and observability docs so active P0/P1 incidents, backup evidence, rollback and follow-up tasks are part of the operations loop.
+
+Still missing:
+
+- No production Prometheus or Alertmanager deployment.
+- No PagerDuty, Feishu, DingTalk, Slack or other external alert integration.
+- No Grafana dashboard.
+- No async queue depth, explicit LLM fallback spike or backup freshness metric yet.
+
+Suggested follow-up PRs:
+
+- Add protected staging Prometheus scrape once staging runtime exists.
+- Add low-cardinality queue depth and fallback spike metrics if operationally needed.
+- Tune thresholds from real staging and production traffic.

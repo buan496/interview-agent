@@ -131,9 +131,12 @@ Before any staging or production migration:
 4. Record backup evidence.
 5. Apply migration.
 6. Run health/readiness and smoke checks.
-7. Record migration result and rollback strategy.
+7. Check metrics and active incidents before and after migration.
+8. Record migration result and rollback strategy.
 
 If backup or verification fails, stop the release candidate and do not run the migration.
+
+If a migration or restore is part of an active incident, use `docs/incident-evidence-template.md` in addition to backup evidence. Database restore is a separate approval path from code rollback.
 
 ## Release Checklist
 
@@ -145,6 +148,8 @@ If backup or verification fails, stop the release candidate and do not run the m
 - [ ] Staging migration rehearsed before production approval.
 - [ ] Production backup evidence reviewed before production migration.
 - [ ] Production backup stored encrypted outside the repository.
+- [ ] No P0/P1 incident is active for the target environment before migration.
+- [ ] Incident evidence is linked if backup or restore is used during recovery.
 
 ## Retention Guidance
 

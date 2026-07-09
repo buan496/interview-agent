@@ -154,10 +154,32 @@ For production, do not expose `/metrics` publicly. Place it behind an internal n
 
 Metrics are intentionally aggregate telemetry. They are not a replacement for request logs, audit logs or the LLM usage ledger.
 
+## Alert Rules
+
+PR #51 adds example Prometheus alert rules in `observability/prometheus/alerts/interview-agent-alerts.yml`.
+
+The rules cover:
+
+- API 5xx rate, p95 latency and missing traffic symptoms.
+- Database and Redis readiness gauges.
+- LLM failure rate, p95 latency and estimated-cost spike.
+- Rate-limit and quota denial spikes.
+- Async job failure and stuck-running symptoms.
+
+The alert expressions intentionally use only current metric names. Future signals such as explicit fallback spike counters or queue depth are left as TODO comments until the application exposes low-cardinality metrics for them.
+
+Run a local basic file check with:
+
+```powershell
+.\scripts\check-alert-rules.ps1
+```
+
+Promtool validation can be added by an operator environment later, but this repository does not require Prometheus or promtool in CI.
+
 ## Current Limitations
 
 - No Grafana dashboard is included.
-- No alert rules are included.
+- Alert rules are examples only; no production Prometheus or Alertmanager deployment is included.
 - No OpenTelemetry tracing is included.
 - No external monitoring SaaS is integrated.
 - No vector-memory, RAG-memory or Multi-Agent telemetry is included.

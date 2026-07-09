@@ -165,6 +165,14 @@ Invoke-WebRequest http://localhost:8000/metrics
 
 Expected staging metrics include HTTP counters, request duration histograms, dependency readiness gauges, rate-limit/quota counters and LLM usage counters. Do not expose `/metrics` to the public internet.
 
+Before approving a release candidate, also check that no P0/P1 incident is active for the candidate environment. Use `docs/alerting.md` for severity definitions and `docs/incident-runbook.md` if staging metrics show 5xx, dependency, LLM, quota or worker symptoms.
+
+If alert rules are being reviewed locally, run:
+
+```powershell
+.\scripts\check-alert-rules.ps1
+```
+
 ## Smoke Test
 
 Async job smoke can be exercised after login by calling:
@@ -205,6 +213,7 @@ After staging validation, update `docs/release-evidence-template.md` fields in t
 - migration result
 - smoke test result
 - observed request id
+- metrics and active incident check
 - known risks
 - rollback plan
 
@@ -229,6 +238,7 @@ Troubleshooting flow:
 4. If auth smoke exposes a development code, stop the release and fix config.
 5. If migration fails, stop the release and do not proceed to production.
 6. If LLM failures spike, inspect `llm_usage_records` and provider config.
+7. If P0/P1 alerts are active, pause release approval and open an incident record.
 
 Never paste secrets, full phone numbers, prompt text, answer text, database passwords or provider keys into release evidence.
 
