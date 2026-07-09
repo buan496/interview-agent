@@ -128,7 +128,13 @@ PR #47 adds a Prometheus-compatible metrics foundation. The backend exposes `/me
 
 Metrics are designed for low-cardinality operational monitoring. Labels intentionally exclude `request_id`, `user_id`, `session_id`, phone numbers, tokens, secrets, verification codes, prompt text, completion text and user answer text. Request-level debugging still uses `X-Request-ID` and structured logs, while security reconstruction uses `audit_events`.
 
-This layer does not add Grafana, alert rules, external monitoring SaaS or OpenTelemetry tracing. Production metrics access should be protected by internal networking, a gateway allowlist or equivalent deployment controls.
+This layer does not add Grafana, external monitoring SaaS or OpenTelemetry tracing. Production metrics access should be protected by internal networking, a gateway allowlist or equivalent deployment controls.
+
+### Alerting and Incident Response Layer
+
+PR #51 adds alerting rules and incident response governance on top of the metrics foundation. The repository now includes example Prometheus alert rules, a P0/P1/P2/P3 severity model, an incident runbook, an incident evidence template and documentation links from release, staging, backup and observability docs.
+
+This layer is still governance and rule-as-code only. It does not deploy Prometheus, does not add Grafana, does not integrate external alerting services, and does not page operators automatically. The rules intentionally use existing low-cardinality metrics and leave unsupported future signals as TODOs.
 
 ### Abuse Protection and Quota Layer
 
@@ -440,3 +446,23 @@ Target-state implications:
 - Long-running AI operations now have a place to move out of synchronous request paths.
 - Future report generation, question import and rubric validation can reuse the same job ledger and worker.
 - Production multi-instance deployments should use `ASYNC_JOB_BACKEND=redis`.
+
+## PR #51 Update: Alerting Rules and Incident Runbook
+
+PR #51 turns the existing observability signals into an operational response baseline.
+
+Completed:
+
+- Added example Prometheus alert rules at `observability/prometheus/alerts/interview-agent-alerts.yml`.
+- Added alert severity and evidence guidance in `docs/alerting.md`.
+- Added triage and recovery procedures in `docs/incident-runbook.md`.
+- Added `docs/incident-evidence-template.md` for incident records.
+- Added `scripts/check-alert-rules.ps1` for lightweight local rule-file validation without requiring Prometheus.
+- Updated staging, release, backup, metrics, observability and README documentation to connect alerts, release freezes, backup evidence and rollback decisions.
+
+Out of scope:
+
+- No external alerting service integration.
+- No Grafana.
+- No production Prometheus deployment.
+- No business logic or frontend UI changes.

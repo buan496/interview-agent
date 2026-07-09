@@ -1,0 +1,165 @@
+groups:
+  - name: interview-agent-api
+    rules:
+      - alert: High5xxErrorRate
+        expr: |
+          (
+            sum(rate(interview_agent_http_requests_total{status_class="5xx"}[5m]))
+            /
+            clamp_min(sum(rate(interview_agent_http_requests_total[5m])), 1)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: p1
+          service: interview-agent-api
+        annotations:
+          summary: "API 5xx error rate is above 5%"
+          description: "More than 5% of API requests returned 5xx over 5 minutes. Check /ready, request logs and the latest release evidence."
+
+      - alert: HighRequestLatency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, route) (rate(interview_agent_http_request_duration_seconds_bucket[5m]))
+          ) > 2
+        for: 10m
+        labels:
+          severity: p2
+          service: interview-agent-api
+        annotations:
+          summary: "API p95 latency is above 2 seconds"
+          description: "p95 latency is elevated for at least one normalized route. Inspect route-level latency, dependency readiness and LLM gateway metrics."
+
+      - alert: ApiNoTraffic
+        expr: absent(rate(interview_agent_http_requests_total[10m]))
+        for: 10m
+        labels:
+          severity: p2
+          service: interview-agent-api
+        annotations:
+          summary: "No API traffic metrics observed"
+          description: "Prometheus has not observed HTTP request metrics for 10 minutes. This may indicate scrape failure, deployment failure, or genuinely idle traffic."
+
+  - name: interview-agent-dependencies
+    rules:
+      - alert: DatabaseNotReady
+        expr: absent(interview_agent_dependency_ready{dependency="db"}) or max(interview_agent_dependency_ready{dependency="db"}) < 1
+        for: 2m
+        labels:
+          severity: p0
+          service: interview-agent-api
+        annotations:
+          summary: "Database readiness check is failing"
+          description: "The /ready dependency gauge reports db=not ready. Stop releases, inspect database connectivity and migration status."
+
+      - alert: RedisNotReady
+        expr: absent(interview_agent_dependency_ready{dependency="redis"}) or max(interview_agent_dependency_ready{dependency="redis"}) < 1
+        for: 2m
+        labels:
+          severity: p1
+          service: interview-agent-api
+        annotations:
+          summary: "Redis readiness check is failing"
+          description: "Redis is required for production rate limits, cache foundation and async job queue when Redis backends are enabled."
+
+  - name: interview-agent-llm
+    rules:
+      - alert: HighLLMFailureRate
+        expr: |
+          (
+            sum(rate(interview_agent_llm_calls_total{status="failed"}[10m]))
+            /
+            clamp_min(sum(rate(interview_agent_llm_calls_total[10m])), 1)
+          ) > 0.20
+        for: 10m
+        labels:
+          severity: p1
+          service: interview-agent-api
+        annotations:
+          summary: "LLM failure rate is above 20%"
+          description: "LLM calls are failing at a high rate. Check provider config, network, model route, fallback behavior and llm_usage_records."
+
+      - alert: HighLLMLatency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, provider, model, feature) (rate(interview_agent_llm_latency_seconds_bucket[10m]))
+          ) > 10
+        for: 15m
+        labels:
+          severity: p2
+          service: interview-agent-api
+        annotations:
+          summary: "LLM p95 latency is above 10 seconds"
+          description: "LLM latency is elevated for at least one provider/model/feature route. Check provider status and gateway timeout/retry settings."
+
+      - alert: LLMTokenCostSpike
+        expr: sum(increase(interview_agent_llm_estimated_cost_total[1h])) > 5
+        for: 5m
+        labels:
+          severity: p2
+          service: interview-agent-api
+        annotations:
+          summary: "Estimated LLM cost increased rapidly"
+          description: "Estimated LLM cost increased by more than 5 USD in one hour. This is an estimate, not billing. Check usage summary, quotas and model routes."
+
+      # TODO: Add LLMFallbackSpike when a low-cardinality fallback metric or label exists.
+
+  - name: interview-agent-abuse-protection
+    rules:
+      - alert: RateLimitSpike
+        expr: sum(increase(interview_agent_rate_limit_exceeded_total[10m])) > 50
+        for: 5m
+        labels:
+          severity: p2
+          service: interview-agent-api
+        annotations:
+          summary: "Rate-limit denials spiked"
+          description: "Rate-limit denials exceeded 50 in 10 minutes. Check auth abuse, answer-submit bursts and Redis limiter readiness."
+
+      - alert: QuotaExceededSpike
+        expr: sum(increase(interview_agent_quota_exceeded_total[30m])) > 10
+        for: 5m
+        labels:
+          severity: p2
+          service: interview-agent-api
+        annotations:
+          summary: "Quota denials spiked"
+          description: "LLM quota denials exceeded 10 in 30 minutes. Check per-user usage, quotas and unexpected token growth."
+
+  - name: interview-agent-async-jobs
+    rules:
+      - alert: AsyncJobFailureSpike
+        expr: sum(increase(interview_agent_async_jobs_completed_total{status="failed"}[15m])) > 5
+        for: 5m
+        labels:
+          severity: p1
+          service: interview-agent-worker
+        annotations:
+          summary: "Async job failures spiked"
+          description: "More than 5 async jobs reached terminal failed status in 15 minutes. Check worker logs, job status and Redis queue health."
+
+      - alert: AsyncJobStuckRunning
+        expr: sum(interview_agent_async_jobs_in_progress) > 0
+        for: 30m
+        labels:
+          severity: p2
+          service: interview-agent-worker
+        annotations:
+          summary: "Async jobs have been in progress for too long"
+          description: "At least one async job has been in progress for 30 minutes. Check worker logs and async_jobs rows for stuck attempts."
+
+      - alert: WorkerNoCompletions
+        expr: |
+          sum(increase(interview_agent_async_jobs_created_total[30m])) > 0
+          and
+          sum(increase(interview_agent_async_jobs_completed_total[30m])) == 0
+        for: 30m
+        labels:
+          severity: p2
+          service: interview-agent-worker
+        annotations:
+          summary: "Async jobs are created but not completed"
+          description: "Jobs were created in the last 30 minutes but no job completion was observed. Check whether workers are running and consuming the queue."
+
+      # TODO: Add AsyncJobQueueBacklog when a queue depth metric exists.

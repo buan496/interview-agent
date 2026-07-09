@@ -52,6 +52,8 @@ For staging release candidates, use `docs/staging-deployment.md` after this work
 - `docs/configuration.md` has been checked for the target environment.
 - The release candidate workflow has completed successfully.
 - For production approval, staging deployment evidence and smoke test results are complete.
+- No P0/P1 incident is active for the target environment.
+- Alerting rules and incident runbook are reviewed when the release changes metrics, worker behavior, Redis, LLM routing or database migrations.
 - The release evidence template has been filled in.
 - Database backup evidence is complete when a migration is planned.
 - Known risks and rollback plan are documented.
@@ -185,6 +187,8 @@ The evidence must include:
 - For auth failures, inspect masked `auth.login` and `auth.request_code` events.
 - For LLM cost or failure anomalies, inspect `llm_usage_records` and `GET /api/me/usage/summary`.
 - For aggregate symptoms, inspect `/metrics` for HTTP 5xx/latency, rate-limit/quota refusals, dependency readiness and LLM failure or token spikes.
+- For P0/P1 symptoms, open `docs/incident-evidence-template.md` and follow `docs/incident-runbook.md`.
+- For migrations, confirm backup evidence before any restore decision.
 - Never paste tokens, secrets, full phone numbers, prompt text, or user answer text into release notes.
 
 ## Current Non-Goals

@@ -142,6 +142,19 @@ Production notes:
 
 See [Metrics Foundation](metrics.md) for the full metric list, label policy and Prometheus scrape example.
 
+## Alerting and Incidents
+
+PR #51 adds an alerting and incident response foundation on top of the existing aggregate metrics:
+
+- Example alert rules: `observability/prometheus/alerts/interview-agent-alerts.yml`
+- Alert severity model: [Alerting Rules](alerting.md)
+- Incident triage and recovery flow: [Incident Runbook](incident-runbook.md)
+- Incident evidence template: [Incident Evidence Template](incident-evidence-template.md)
+
+Alerting remains deployment-neutral. The repository does not integrate PagerDuty, Feishu, DingTalk, Slack, Grafana, Alertmanager or a production Prometheus instance. Operators should treat `/metrics` as aggregate symptoms, then use `X-Request-ID`, structured logs, `audit_events`, `llm_usage_records`, `async_jobs`, release evidence and backup evidence for root-cause analysis.
+
+Incident records must not include tokens, secrets, verification codes, full phone numbers, prompt text, completion text or user answer text.
+
 ## LLM Usage Metering
 
 PR #35 adds an internal LLM usage ledger that links model calls with `request_id` for troubleshooting and cost estimation. This is metering, not billing.

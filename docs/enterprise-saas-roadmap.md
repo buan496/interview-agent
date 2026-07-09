@@ -600,3 +600,26 @@ Next roadmap implications:
 - Phase 4 content operations can later add async question import and rubric validation jobs.
 - Phase 5 operations now have a worker foundation but still need dead-letter handling, worker concurrency limits and runbook hardening.
 - Frontend job status UI remains future work and should wait until more than one user-facing async job exists.
+
+## PR #51 Update: Alerting Rules and Incident Runbook
+
+Completed:
+
+- Added example Prometheus alert rules for API, dependencies, LLM, abuse-protection and async job symptoms.
+- Added P0/P1/P2/P3 alert severity guidance.
+- Added incident triage and recovery runbook.
+- Added incident evidence template.
+- Added a lightweight alert-rule file check script.
+- Integrated alert and incident checks into staging, release, backup, metrics and observability documentation.
+
+Impact:
+
+- Phase 5 now has a usable operations loop: metrics -> alert symptom -> runbook -> evidence -> recovery -> follow-up.
+- Phase 6 release governance now requires checking active P0/P1 incidents and backup evidence before risky migration or rollback decisions.
+
+Still future work:
+
+- Real Prometheus and Alertmanager deployment.
+- Grafana dashboards.
+- External notification integration.
+- Threshold tuning from production data.

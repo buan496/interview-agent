@@ -80,6 +80,15 @@ Use this template for every staging or production release candidate.
 - Database changes:
 - Known risks:
 
+## Alerting and Incident Readiness
+
+- Alert rules reviewed:
+- Active P0/P1 incidents before release:
+- Staging metrics checked:
+- P0/P1 incident freeze approved if applicable:
+- Incident runbook link:
+- Incident evidence record if release is related to an incident:
+
 ## Rollback Plan
 
 - Previous API image:
