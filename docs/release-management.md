@@ -45,6 +45,8 @@ It does not:
 
 For staging release candidates, use `docs/staging-deployment.md` after this workflow succeeds. The workflow validates the staging compose configuration, but it does not SSH into a host and does not start staging services.
 
+For the first real staging host and every release candidate intended for invited beta users, use `docs/staging-deployment-drill.md` and record evidence with `docs/staging-deployment-drill-evidence-template.md`. The drill is manually run by an operator and must not be executed by CI against a real server.
+
 ## Pre-Release Checklist
 
 - The target commit is on `main` or a reviewed release branch.
@@ -52,6 +54,7 @@ For staging release candidates, use `docs/staging-deployment.md` after this work
 - `docs/configuration.md` has been checked for the target environment.
 - The release candidate workflow has completed successfully.
 - For production approval, staging deployment evidence and smoke test results are complete.
+- For public beta approval, real staging deployment drill evidence is complete.
 - No P0/P1 incident is active for the target environment.
 - Alerting rules and incident runbook are reviewed when the release changes metrics, worker behavior, Redis, LLM routing or database migrations.
 - The release evidence template has been filled in.
@@ -170,6 +173,8 @@ The evidence must include:
 
 For an invited beta, also complete [Public Beta Evidence Template](public-beta-evidence-template.md) and review [Public Beta Readiness Checklist](public-beta-readiness.md). A release candidate is not beta-ready until the beta Go / No-Go decision, incident owner, privacy checks, backup evidence and LLM quota/cost checks are recorded.
 
+If the beta uses a real staging host, also complete [Staging Deployment Drill Evidence Template](staging-deployment-drill-evidence-template.md). The drill evidence is an input to the beta Go / No-Go decision.
+
 ## Staging Deployment Flow
 
 1. Run the manual release workflow with `target_environment=staging`.
@@ -178,9 +183,11 @@ For an invited beta, also complete [Public Beta Evidence Template](public-beta-e
 4. Before migration rehearsal, create a PostgreSQL backup with `scripts/backup-postgres.ps1` and verify it with `scripts/verify-postgres-backup.ps1`.
 5. Confirm `/health`, `/ready` and `/metrics`; readiness should include Redis when Redis-backed rate limit or cache is enabled.
 6. Run `scripts/staging-smoke.ps1`.
-7. Run `scripts/beta-readiness-check.ps1` when the release candidate is intended for invited beta.
-8. Record image tags, backup evidence, migration result, smoke result, metrics availability and observed request id in release evidence.
-9. Only after staging evidence is complete should production approval be considered.
+7. Run `scripts/staging-deployment-drill.ps1 -SkipExternalChecks -SkipBackup` locally or in CI for static validation.
+8. Run the real staging deployment drill from `docs/staging-deployment-drill.md` on the staging host when the release candidate is intended for invited beta.
+9. Run `scripts/beta-readiness-check.ps1` when the release candidate is intended for invited beta.
+10. Record image tags, backup evidence, migration result, smoke result, metrics availability and observed request id in release evidence.
+11. Only after staging evidence is complete should production approval be considered.
 
 ## Public Beta Gate
 

@@ -121,6 +121,8 @@ Recommended staging drill:
 5. Record smoke result and observed request id.
 6. Delete test backup artifacts when the retention window ends.
 
+For a real staging deployment drill, use `docs/staging-deployment-drill.md` and record the restore result in `docs/staging-deployment-drill-evidence-template.md`. The preferred restore target is a disposable local database or a temporary staging database. Do not overwrite the active staging database unless a separate restore approval exists.
+
 ## Migration Pre-Backup Flow
 
 Before any staging or production migration:
@@ -145,6 +147,7 @@ If a migration or restore is part of an active incident, use `docs/incident-evid
 - [ ] Backup file size recorded.
 - [ ] Backup storage location recorded.
 - [ ] Restore strategy reviewed.
+- [ ] Restore drill target is safe and does not overwrite active staging data without approval.
 - [ ] Staging migration rehearsed before production approval.
 - [ ] Production backup evidence reviewed before production migration.
 - [ ] Production backup stored encrypted outside the repository.

@@ -522,3 +522,21 @@ Target-state implications:
 
 - The project now has a practical gate for a 5 to 10 user trial.
 - Moving beyond beta still requires production deployment, external monitoring/alerting, retention automation, tenant governance and product support workflows.
+
+## PR #54 Update: Real Staging Deployment Drill
+
+PR #54 turns the staging deployment foundation into a repeatable real-server drill.
+
+Completed in v1:
+
+- Added `docs/staging-deployment-drill.md` for a VPS/cloud staging exercise covering checkout, env prep, Compose, migration, health, readiness, smoke, metrics, backup, restore safety, privacy, LLM Gateway, worker and incident evidence.
+- Added `docs/staging-deployment-drill-evidence-template.md` for operator evidence.
+- Added `scripts/staging-deployment-drill.ps1` for CI-safe static checks and optional live checks when URLs are provided.
+- Connected public beta readiness, release management, staging deployment, backup and incident docs to the drill gate.
+
+Still out of scope:
+
+- No real production deploy.
+- No committed server IP, domain or secret.
+- No CI access to a real staging host.
+- No automated restore against active staging data.

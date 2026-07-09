@@ -41,6 +41,8 @@ Do not paste secrets, tokens, verification codes, full phone numbers, prompt tex
 - release PR:
 - release workflow run:
 - release evidence link:
+- staging deployment drill evidence link:
+- staging deployment drill result:
 - migration status:
 - migration revision:
 - docker image tag:
@@ -50,6 +52,7 @@ Do not paste secrets, tokens, verification codes, full phone numbers, prompt tex
 ## Smoke Test Evidence
 
 - beta readiness check result:
+- staging deployment drill static check result:
 - staging smoke test result:
 - `/health` result:
 - `/ready` result:
