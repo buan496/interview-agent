@@ -88,8 +88,9 @@ LLM usage metrics are emitted from the same path that writes `llm_usage_records`
 - Prompt, completion and total tokens increment `interview_agent_llm_tokens_total`.
 - Estimated cost increments `interview_agent_llm_estimated_cost_total`.
 - Latency is recorded in `interview_agent_llm_latency_seconds`.
+- LLM Gateway primary and fallback attempts are recorded with the actual provider/model/feature/status attempted.
 
-Cost values are estimates using the current pricing version. They are not billing records. Prompt, completion and user answer bodies are never stored in the metrics endpoint.
+Cost values are estimates using the current pricing version. They are not billing records. Prompt, completion and user answer bodies are never stored in the metrics endpoint. Gateway metrics do not include fallback booleans, request ids, user ids, session ids or raw route keys beyond low-cardinality provider/model/feature labels.
 
 ## Rate Limit and Quota Integration
 

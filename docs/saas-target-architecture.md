@@ -381,3 +381,31 @@ Target-state implications:
 - Future personalization can combine Agent Memory with ability profiles and training history.
 - A later memory extraction PR can introduce LLM summarization only after privacy, evaluation and retention rules are designed.
 - Vector/RAG memory should remain separate from this relational memory ledger and must preserve user or tenant boundaries.
+
+## PR #49 Update: LLM Gateway and Model Router v1
+
+PR #49 adds the first backend LLM Gateway layer.
+
+Completed in v1:
+
+- Added a gateway module with provider abstraction for `mock`, `deepseek` and an OpenAI-compatible shape.
+- Added feature-based routing for `interview_scoring`, `report_generation`, `memory_refresh`, `rubric_validation` and `admin_operation`.
+- Added primary/fallback model route policy through settings.
+- Added bounded timeout/retry configuration.
+- Migrated the interview scoring path to the gateway while keeping the existing answer/session/report business flow intact.
+- Records primary/fallback attempts through the existing `llm_usage_records` ledger and Prometheus LLM metrics.
+- Keeps prompt text, completion text, answer text and API keys out of records and logs.
+
+Still out of scope:
+
+- No frontend model management console.
+- No tenant-specific routing policy.
+- No external LLM gateway service.
+- No database-backed model registry.
+- No canary, A/B testing or cost-aware routing yet.
+
+Target-state implications:
+
+- Future model governance can move from environment-variable routes to a managed model registry.
+- Tenant-specific model policy should wait until organization boundaries exist.
+- Cost-aware routing can build on `llm_usage_records` and Gateway attempt telemetry.

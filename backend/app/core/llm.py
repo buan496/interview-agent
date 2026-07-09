@@ -62,12 +62,14 @@ class DeepSeekLLM:
         base_url: str | None = None,
         model: str | None = None,
         timeout_seconds: float | None = None,
+        max_retries: int | None = None,
     ) -> None:
         settings = get_settings()
         self.api_key = api_key if api_key is not None else settings.deepseek_api_key
         self.base_url = (base_url or settings.deepseek_base_url).rstrip("/")
         self.model = model or settings.deepseek_model
         self.timeout_seconds = timeout_seconds or settings.llm_timeout_seconds
+        self.max_retries = max(max_retries if max_retries is not None else 3, 1)
 
     def _headers(self) -> dict[str, str]:
         if not self.api_key:
@@ -82,7 +84,7 @@ class DeepSeekLLM:
             "response_format": {"type": "json_object"},
         }
         last_error: Exception | None = None
-        for attempt in range(3):
+        for attempt in range(self.max_retries):
             try:
                 async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
                     response = await client.post(

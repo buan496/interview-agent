@@ -81,6 +81,10 @@ class SettingsGovernanceTest(unittest.TestCase):
         with self.assertRaises(ValidationError):
             Settings(_env_file=None, login_rate_limit_per_minute=0)
 
+    def test_invalid_llm_gateway_retry_value_fails(self) -> None:
+        with self.assertRaises(ValidationError):
+            Settings(_env_file=None, llm_max_retries=0)
+
     def test_production_requires_rate_limit_enabled(self) -> None:
         settings = _production_settings(rate_limit_enabled=False)
 
@@ -144,9 +148,24 @@ class SettingsGovernanceTest(unittest.TestCase):
         self.assertIn("138****0000", text)
         self.assertTrue(summary["auth"]["jwt_secret_configured"])
         self.assertTrue(summary["llm"]["deepseek_api_key_configured"])
+        self.assertTrue(summary["llm"]["gateway_enabled"])
+        self.assertEqual(summary["llm"]["fallback_provider"], "mock")
         self.assertEqual(summary["database"]["database_url"], "postgresql+asyncpg://interview:****@db.example.com:5432/interview_agent")
         self.assertTrue(summary["rate_limit"]["enabled"])
         self.assertGreater(summary["rate_limit"]["llm_daily_token_quota"], 0)
+
+    def test_production_rejects_real_gateway_route_without_api_key(self) -> None:
+        settings = _production_settings(
+            deepseek_api_key="",
+            llm_provider="mock",
+            llm_default_provider="mock",
+            llm_route_interview_scoring="deepseek/deepseek-chat",
+        )
+
+        with self.assertRaises(ConfigValidationError) as ctx:
+            settings.validate_production_config()
+
+        self.assertIn("DEEPSEEK_API_KEY", str(ctx.exception))
 
 
 if __name__ == "__main__":
