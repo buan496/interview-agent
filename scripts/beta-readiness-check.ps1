@@ -57,6 +57,8 @@ function Invoke-OptionalHttpCheck {
 Assert-PathExists "docs/public-beta-readiness.md" "public beta readiness document"
 Assert-PathExists "docs/public-beta-evidence-template.md" "public beta evidence template"
 Assert-PathExists "docs/staging-deployment.md" "staging deployment document"
+Assert-PathExists "docs/staging-deployment-drill.md" "staging deployment drill document"
+Assert-PathExists "docs/staging-deployment-drill-evidence-template.md" "staging deployment drill evidence template"
 Assert-PathExists "docs/release-management.md" "release management document"
 Assert-PathExists "docs/release-evidence-template.md" "release evidence template"
 Assert-PathExists "docs/backup-and-restore.md" "backup and restore document"
@@ -79,6 +81,7 @@ Assert-PathExists "scripts/check-alert-rules.ps1" "alert rules check script"
 Assert-PathExists "scripts/backup-postgres.ps1" "PostgreSQL backup script"
 Assert-PathExists "scripts/restore-postgres.ps1" "PostgreSQL restore script"
 Assert-PathExists "scripts/verify-postgres-backup.ps1" "PostgreSQL backup verification script"
+Assert-PathExists "scripts/staging-deployment-drill.ps1" "staging deployment drill script"
 
 Assert-FileContains ".env.staging.example" "^APP_ENV=staging" "staging APP_ENV"
 Assert-FileContains ".env.staging.example" "^AUTH_DEV_CODE_ENABLED=false" "staging dev auth disabled"
@@ -98,6 +101,8 @@ Assert-FileContains "docs/public-beta-readiness.md" "Beta Forbidden Items" "beta
 Assert-FileContains "docs/public-beta-readiness.md" "Beta Operation SOP" "beta operation SOP section"
 Assert-FileContains "docs/public-beta-readiness.md" "AUTH_DEV_CODE_ENABLED=false" "dev auth disabled checklist item"
 Assert-FileContains "docs/public-beta-readiness.md" "DELETE_MY_DATA" "privacy deletion confirmation reference"
+Assert-FileContains "docs/public-beta-readiness.md" "Real staging deployment drill" "real staging drill gate"
+Assert-FileContains "docs/public-beta-evidence-template.md" "staging deployment drill evidence" "staging drill evidence field"
 
 if (-not [string]::IsNullOrWhiteSpace($ApiBaseUrl)) {
   $apiRoot = $ApiBaseUrl.TrimEnd("/")

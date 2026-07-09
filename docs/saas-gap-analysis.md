@@ -920,3 +920,28 @@ Suggested follow-up PRs:
 - Add protected staging metrics scrape and external alert delivery after deployment target exists.
 - Add production deployment runbook and secret rotation process.
 - Add user support workflow and beta feedback triage templates.
+
+## PR #54 Update: Real Staging Deployment Drill
+
+Status: partially complete.
+
+Completed:
+
+- Added a real staging drill SOP that ties together deployment, migration, smoke, metrics, backup, restore-safety, privacy, LLM Gateway, worker and incident evidence.
+- Added a staging drill evidence template for Go/No-Go review.
+- Added a semi-automated PowerShell drill script. CI runs it in static mode without contacting a real staging host.
+- Updated public beta, release, staging, backup and incident docs so public beta requires real staging drill evidence.
+- Updated local CI to syntax-check and statically run the drill script.
+
+Still missing:
+
+- A real staging host still must be provisioned outside this repository.
+- Real staging secrets, domain, firewall and access control remain manual operator responsibilities.
+- `/metrics` protection still depends on deployment-layer network or gateway controls.
+- Restore rehearsal should use a disposable or temporary database before any active staging restore.
+
+Suggested follow-up PRs:
+
+- Add registry-backed immutable image publishing.
+- Add a protected staging Prometheus scrape path.
+- Add external alert delivery after the staging runtime endpoint exists.

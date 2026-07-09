@@ -145,6 +145,7 @@ During an invited beta:
 - Treat any data safety, privacy deletion/export failure, auth bypass, public secret exposure, or database/Redis exposure as P0 until triaged.
 - Pause new user invitations while a P0/P1 incident is active.
 - Record the beta id, release commit, request ids, affected flow and current Go / No-Go status in incident evidence.
+- Attach the latest real staging deployment drill evidence when the incident may be caused by deployment, migration, backup, Redis, metrics, LLM Gateway or worker configuration.
 - Review `docs/public-beta-evidence-template.md` before rollback or data restore decisions.
 - If user data deletion or export is involved, follow `docs/privacy-and-data-lifecycle.md` and record the backup-retention boundary.
 - Do not paste raw answers, prompts, completions, tokens, secrets, verification codes or full phone numbers into incident notes.

@@ -102,6 +102,8 @@ Release readiness:
 - [ ] Immutable image tag or build identifier is recorded.
 - [ ] Release evidence is filled in.
 - [ ] Staging smoke test passes.
+- [ ] Real staging deployment drill has completed at least once for the candidate environment.
+- [ ] Staging drill evidence is linked or attached outside git.
 - [ ] Active P0/P1 incidents are checked before beta start.
 
 Incident readiness:
@@ -124,6 +126,8 @@ Cost readiness:
 Before inviting users:
 
 - [ ] Run `scripts/beta-readiness-check.ps1`.
+- [ ] Run `scripts/staging-deployment-drill.ps1` in static mode locally or CI.
+- [ ] Run the real staging drill against the target staging host before inviting users.
 - [ ] Run `scripts/staging-smoke.ps1` against the target beta/staging endpoint.
 - [ ] Confirm `/health`, `/ready` and `/metrics`.
 - [ ] Run `scripts/check-alert-rules.ps1`.
@@ -153,6 +157,7 @@ Do not start beta if any of these are true:
 - Backend RBAC is bypassed.
 - Real secrets are committed to git.
 - Staging is treated as permanent production without evidence and retention policy.
+- Staging drill evidence is missing for the environment used by invited beta users.
 - Prompt text, completion text, raw answer text or full phone numbers are pasted into issues, incidents, release notes or support notes.
 - Production is deployed automatically from this repository.
 
@@ -239,6 +244,8 @@ Beta can be considered successful when:
 | Item | Owner | Status | Evidence | Notes |
 | --- | --- | --- | --- | --- |
 | Release candidate commit recorded |  |  |  |  |
+| Real staging drill completed |  |  |  |  |
+| Staging drill evidence attached |  |  |  |  |
 | Staging/beta smoke passed |  |  |  |  |
 | `/health` and `/ready` passed |  |  |  |  |
 | `/metrics` trusted scrape verified |  |  |  |  |

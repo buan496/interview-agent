@@ -40,6 +40,7 @@
 - Backup and restore foundation: PostgreSQL backup, restore, checksum verification, staging rehearsal SOP, and release evidence templates. It does not automate production backup or commit database dumps.
 - Privacy and data lifecycle v1: current-user data summary, JSON export and training-data deletion APIs with audit and metrics. It does not add a frontend privacy center, account deletion, DSR workflow or compliance certification.
 - Public beta readiness v1: checklist, evidence template and local readiness script for a 5-10 user invited beta; it does not deploy production, add payment, or connect external alerting.
+- Real staging deployment drill v1: operator-run staging rehearsal SOP, evidence template and static CI-safe drill script; it does not commit real IPs, domains or secrets.
 - 报告复盘：展示综合得分、能力诊断、题目复盘、参考答案和下一步训练建议。
 - 训练历史中心：按当前登录用户汇总历史 Session、状态、分数、报告入口和继续训练入口。
 - 能力画像：按当前登录用户聚合长期标签表现、优势项、薄弱项、训练次数和错题次数。
@@ -201,6 +202,7 @@ Alerting rules and incident response are documented in [Alerting Rules](docs/ale
 Production configuration governance is documented in [Configuration](docs/configuration.md).
 Release/CD management is documented in [Release Management](docs/release-management.md), with evidence template in [Release Evidence Template](docs/release-evidence-template.md).
 Staging deployment foundation is documented in [Staging Deployment](docs/staging-deployment.md), with `.env.staging.example`, `docker-compose.staging.yml`, and `scripts/staging-smoke.ps1`.
+Real staging deployment drill is documented in [Staging Deployment Drill](docs/staging-deployment-drill.md), with evidence captured through [Staging Drill Evidence Template](docs/staging-deployment-drill-evidence-template.md). It covers deployment, migration, smoke, backup, restore-safety, metrics, privacy, LLM Gateway and incident evidence.
 Backup and restore procedures are documented in [Backup and Restore Foundation](docs/backup-and-restore.md), with evidence captured through [Backup Evidence Template](docs/backup-evidence-template.md).
 Audit log v1 is documented in [Audit Log](docs/audit-log.md).
 Rate limit and quota v1 are documented in [Configuration](docs/configuration.md) and [Observability Foundation](docs/observability.md).
@@ -304,6 +306,7 @@ docs                   产品设计、视觉验收和演示文档
 - Alerting and incident foundation v1: Prometheus alert rule examples, incident severity, runbook and evidence templates. No external alerting integration or Prometheus deployment is included.
 - Privacy and data lifecycle v1: current-user data summary, export and training-data deletion APIs with audit and metrics. No frontend privacy center, account closure, automatic retention job or formal compliance workflow is included.
 - Public beta readiness v1: invited-user beta checklist, evidence template and local readiness script. Real production deployment, payment, enterprise tenancy and external alerting remain out of scope.
+- Real staging drill foundation: manual staging rehearsal evidence links deployment, migration, smoke, backup, metrics, privacy, LLM Gateway and incident readiness before beta.
 - Redis-backed rate limit/cache foundation v1: configurable memory/Redis limiter backend, production fail-fast for unsafe memory limits, and `/ready` Redis checks.
 - Staging deployment foundation: `.env.staging.example`, `docker-compose.staging.yml`, staging smoke script and release evidence workflow.
 - Backup and restore foundation v1: PostgreSQL backup/restore scripts, checksum verification, restore drill process, and migration pre-backup evidence.

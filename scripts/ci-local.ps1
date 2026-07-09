@@ -111,7 +111,9 @@ Invoke-Step "PowerShell script syntax" {
       "scripts\staging-smoke.ps1",
       "scripts\backup-postgres.ps1",
       "scripts\restore-postgres.ps1",
-      "scripts\verify-postgres-backup.ps1"
+      "scripts\verify-postgres-backup.ps1",
+      "scripts\beta-readiness-check.ps1",
+      "scripts\staging-deployment-drill.ps1"
     )
     foreach ($script in $scripts) {
       $errors = $null
@@ -120,6 +122,15 @@ Invoke-Step "PowerShell script syntax" {
         throw "PowerShell syntax check failed for ${script}: $($errors[0].Message)"
       }
     }
+  } finally {
+    Pop-Location
+  }
+}
+
+Invoke-Step "Staging deployment drill static check" {
+  Push-Location $root
+  try {
+    .\scripts\staging-deployment-drill.ps1 -SkipExternalChecks -SkipBackup
   } finally {
     Pop-Location
   }

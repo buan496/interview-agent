@@ -38,8 +38,11 @@ Staging deliberately excludes:
 - `scripts/backup-postgres.ps1`: staging PostgreSQL backup.
 - `scripts/restore-postgres.ps1`: staging/local PostgreSQL restore.
 - `scripts/verify-postgres-backup.ps1`: backup artifact verification.
+- `scripts/staging-deployment-drill.ps1`: static and optional live staging drill checks.
 - `docs/release-evidence-template.md`: evidence record after release candidate validation.
 - `docs/backup-evidence-template.md`: backup artifact evidence.
+- `docs/staging-deployment-drill.md`: real staging drill SOP.
+- `docs/staging-deployment-drill-evidence-template.md`: staging drill evidence template.
 
 ## Prepare Environment Variables
 
@@ -209,6 +212,23 @@ For a release candidate that will be used by invited beta users, run the local b
 .\scripts\beta-readiness-check.ps1
 ```
 
+For the first real staging host or any release candidate that may become a public beta candidate, also run the staging deployment drill:
+
+```powershell
+.\scripts\staging-deployment-drill.ps1 `
+  -EnvFile .env.staging `
+  -FrontendBaseUrl https://staging.example.com `
+  -ApiBaseUrl https://staging.example.com/api
+```
+
+CI should only run the static form:
+
+```powershell
+.\scripts\staging-deployment-drill.ps1 -SkipExternalChecks -SkipBackup
+```
+
+The drill links deployment, migration, smoke, backup, restore-safety, metrics, privacy, LLM Gateway and incident evidence checks. Restore is never executed by the drill script.
+
 If a staging endpoint is already running, optional URL checks can be added:
 
 ```powershell
@@ -234,6 +254,8 @@ After staging validation, update `docs/release-evidence-template.md` fields in t
 Production approval should not happen until staging evidence is complete.
 
 Public beta approval should not happen until `docs/public-beta-evidence-template.md` is filled and the Go / No-Go decision in `docs/public-beta-readiness.md` is explicitly recorded.
+
+Public beta approval also requires at least one completed real staging drill recorded with `docs/staging-deployment-drill-evidence-template.md`.
 
 ## Logs and Troubleshooting
 

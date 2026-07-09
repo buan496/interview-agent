@@ -42,6 +42,7 @@ Use this template for every staging or production release candidate.
 | Visual smoke |  |  |
 | Docker Compose config |  |  |
 | Staging Docker Compose config |  |  |
+| Staging deployment drill static check |  |  |
 | Docker build |  |  |
 | Secret scan |  |  |
 | Public beta readiness check |  |  |
@@ -57,6 +58,7 @@ Use this template for every staging or production release candidate.
 - Backup SHA256:
 - Staging migration result:
 - Staging smoke result:
+- Staging deployment drill evidence:
 - Staging metrics result:
 - Staging observed request_id:
 - Production backup completed:
@@ -94,6 +96,7 @@ Use this template for every staging or production release candidate.
 
 - Public beta checklist reviewed:
 - Public beta evidence link:
+- Real staging drill evidence link:
 - Beta target users count:
 - Beta operator:
 - Beta incident owner:

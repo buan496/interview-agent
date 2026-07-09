@@ -659,3 +659,26 @@ Next roadmap implications:
 - Phase 6 now has a practical beta gate before inviting 5 to 10 real users.
 - The project can run a controlled trial with manual operations, but it is not a public production launch.
 - Production deployment, external alerting, payment, enterprise tenancy, evaluation harness and automated support workflows remain future work.
+
+## PR #54 Update: Real Staging Deployment Drill
+
+Status: partially complete.
+
+Delivered:
+
+- Added a real staging deployment drill SOP.
+- Added a staging drill evidence template.
+- Added a semi-automated drill script that CI can run in static mode.
+- Connected public beta readiness to real staging drill evidence.
+- Connected release, backup and incident documentation to the drill workflow.
+
+Phase impact:
+
+- Phase 6 now has a repeatable staging rehearsal path for a real VPS/cloud host.
+- Phase 5 incident and observability checks are now part of staging evidence before beta.
+
+Still pending:
+
+- Real host provisioning.
+- Registry-backed immutable image publishing.
+- Protected external metrics scrape and alert delivery.
