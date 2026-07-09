@@ -1,22 +1,24 @@
 from __future__ import annotations
 
-from arq.connections import RedisSettings
+import asyncio
 
-from app.ingest.generator import generate_from_jd
+from app.async_jobs import worker_loop
+from app.observability import log_event
 from app.settings import get_settings
 
 
-async def generate_questions_job(
-    _ctx,
-    jd_text: str,
-    company: str,
-    position: str,
-    count: int = 5,
-) -> list[dict]:
-    items = await generate_from_jd(jd_text, company, position, count)
-    return [item.__dict__ for item in items]
+async def main() -> None:
+    settings = get_settings()
+    settings.validate_production_config()
+    log_event(
+        "async_worker.start",
+        status="success",
+        backend=settings.normalized_async_job_backend,
+        queue_name=settings.async_job_queue_name,
+        poll_seconds=settings.async_job_worker_poll_seconds,
+    )
+    await worker_loop(settings=settings)
 
 
-class WorkerSettings:
-    functions = [generate_questions_job]
-    redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
+if __name__ == "__main__":
+    asyncio.run(main())

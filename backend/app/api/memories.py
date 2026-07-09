@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
+from app.async_jobs import JOB_TYPE_MEMORY_REFRESH, create_async_job
 from app.db import get_db
 from app.memory import (
     ACTIVE,
@@ -16,7 +17,7 @@ from app.memory import (
 )
 from app.models import User
 from app.observability import log_event
-from app.schemas import AgentMemoryListOut, AgentMemoryOut, AgentMemoryRefreshOut
+from app.schemas import AgentMemoryListOut, AgentMemoryOut, AgentMemoryRefreshOut, AsyncJobCreateOut, AsyncJobOut
 
 
 router = APIRouter(prefix="/me/memories", tags=["memories"])
@@ -71,3 +72,18 @@ async def refresh_memories(
     stats = await refresh_user_memories(db, user_id=current_user.id, trigger="manual")
     total_active = await active_memory_count(db, current_user.id)
     return AgentMemoryRefreshOut(created=stats.created, updated=stats.updated, total_active=total_active)
+
+
+@router.post("/refresh-async", response_model=AsyncJobCreateOut)
+async def refresh_memories_async(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> AsyncJobCreateOut:
+    job = await create_async_job(
+        db,
+        job_type=JOB_TYPE_MEMORY_REFRESH,
+        user_id=current_user.id,
+        payload={"user_id": current_user.id, "trigger": "manual_async"},
+    )
+    log_event("memory.refresh_async", status="queued", job_id=job.id, job_type=job.job_type)
+    return AsyncJobCreateOut(job_id=job.id, status=job.status, job=AsyncJobOut.model_validate(job))

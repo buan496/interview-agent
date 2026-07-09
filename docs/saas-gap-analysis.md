@@ -799,3 +799,36 @@ Suggested follow-up PRs:
 - Cost-aware routing using `llm_usage_records`.
 - Provider health and circuit breaker once staging production traffic exists.
 - Tenant-specific model policy after organization/tenant boundaries are introduced.
+
+## PR #50 Update: Async Job Queue Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added a durable `async_jobs` table scoped by `user_id`.
+- Added async job creation, current-user listing and current-user detail APIs.
+- Added a lightweight worker entrypoint with memory and Redis queue backend options.
+- Added async Agent Memory refresh through `POST /api/me/memories/refresh-async`.
+- Added retry state handling with `attempts` and `max_attempts`.
+- Added async job audit events and aggregate Prometheus metrics.
+- Added local/staging Compose worker services and Redis-backed staging defaults.
+- Added tests for user isolation, worker success/failure, payload redaction, Redis backend behavior, metrics and audit.
+
+Still missing:
+
+- No async report generation yet.
+- No batch question import job yet.
+- No async rubric validation job yet.
+- No dead-letter queue.
+- No worker concurrency controls.
+- No frontend or admin job dashboard.
+- No WebSocket push.
+- No tenant-level job policy.
+
+Suggested follow-up PRs:
+
+- Move report generation to async job after UX requirements for polling/status are defined.
+- Add question import jobs for content-operator workflows.
+- Add dead-letter and retry inspection once staging worker traffic exists.
+- Add admin/operator job dashboard only after API and audit needs stabilize.

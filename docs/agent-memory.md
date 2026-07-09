@@ -79,6 +79,7 @@ Current-user APIs:
 GET  /api/me/memories
 POST /api/me/memories/{memory_id}/archive
 POST /api/me/memories/refresh
+POST /api/me/memories/refresh-async
 ```
 
 `GET /api/me/memories` supports:
@@ -90,6 +91,8 @@ POST /api/me/memories/refresh
 - `offset`
 
 All APIs use `get_current_user` and query with `current_user.id`. A user archiving another user's memory receives `404`.
+
+`POST /api/me/memories/refresh-async` creates a user-scoped `memory_refresh` job in `async_jobs` and returns `job_id` with `status=queued`. Job status can be queried through `GET /api/me/jobs/{job_id}` or `GET /api/me/jobs`. The async payload stores only safe metadata such as `user_id` and `trigger`; it does not store raw answers, prompts or completions.
 
 ## PracticePlan Integration
 
@@ -115,6 +118,8 @@ Metric labels intentionally exclude `user_id`, `memory_id`, `session_id`, `reque
 ## Failure Handling
 
 Report generation commits before memory refresh. If memory refresh fails, the answer/report flow remains successful, the refresh failure is logged through observability, and a failed refresh metric is incremented.
+
+The async memory refresh worker has its own retry path. A worker failure marks the job failed or re-queues it when attempts remain; it does not affect the synchronous answer/report flow or the existing sync refresh API.
 
 ## Future Work
 

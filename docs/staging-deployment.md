@@ -16,8 +16,9 @@ Staging contains:
 
 - `frontend`: Next.js production build.
 - `api`: FastAPI backend.
+- `worker`: lightweight async job worker using the same backend image.
 - `postgres`: PostgreSQL with pgvector.
-- `redis`: Redis for shared rate-limit counters and cache foundation.
+- `redis`: Redis for shared rate-limit counters, cache foundation and async job queue.
 - `/metrics`: Prometheus-compatible backend metrics endpoint for staging operator checks or internal scrape jobs.
 
 Staging deliberately excludes:
@@ -56,6 +57,8 @@ Required staging values:
 - `POSTGRES_PASSWORD`
 - `DATABASE_URL`
 - `JWT_SECRET_KEY`
+- `ASYNC_JOB_BACKEND=redis`
+- `ASYNC_JOB_QUEUE_NAME`
 - `NEXT_PUBLIC_API_BASE_URL`
 - `CORS_ORIGINS`
 
@@ -148,6 +151,12 @@ Expected readiness in staging:
 
 If `redis` is not `ok`, inspect Redis container health and backend logs before continuing.
 
+When `ASYNC_JOB_BACKEND=redis`, `/ready` depends on Redis because async jobs need the queue backend. Staging should run both `api` and `worker` services:
+
+```powershell
+docker compose --env-file .env.staging -f docker-compose.staging.yml ps api worker redis
+```
+
 Check metrics from a trusted operator path:
 
 ```powershell
@@ -157,6 +166,15 @@ Invoke-WebRequest http://localhost:8000/metrics
 Expected staging metrics include HTTP counters, request duration histograms, dependency readiness gauges, rate-limit/quota counters and LLM usage counters. Do not expose `/metrics` to the public internet.
 
 ## Smoke Test
+
+Async job smoke can be exercised after login by calling:
+
+```text
+POST /api/me/memories/refresh-async
+GET  /api/me/jobs/{job_id}
+```
+
+The expected initial response is `status=queued`. The worker should later move the job to `succeeded` or terminal `failed` after retries.
 
 Run:
 

@@ -32,6 +32,10 @@ Training business metrics:
 - `interview_agent_reports_generated_total{status}`
 - `interview_agent_memories_created_total{memory_type}`
 - `interview_agent_memory_refresh_total{status,trigger}`
+- `interview_agent_async_jobs_created_total{job_type}`
+- `interview_agent_async_jobs_completed_total{job_type,status}`
+- `interview_agent_async_job_duration_seconds_bucket{job_type,le}`
+- `interview_agent_async_jobs_in_progress{job_type}`
 
 Abuse-protection metrics:
 
@@ -60,6 +64,7 @@ Metrics labels must stay low-cardinality and non-sensitive. The current implemen
 
 - HTTP: `method`, normalized `route`, `status_class`
 - Training: `mode`, `status`, `memory_type`, `trigger`
+- Async jobs: `job_type`, `status`
 - Rate limit: normalized `scope`
 - Quota: normalized `quota_type`
 - LLM: `provider`, `model`, `feature`, `status`, `token_type`, `currency`
@@ -110,6 +115,17 @@ Agent Memory v1 emits aggregate counters from the rule-based backend refresh pat
 
 These metrics are operational counters only. They do not expose `user_id`, `memory_id`, `session_id`, `request_id`, tag names, answer text, prompt text, completion text, tokens or secrets.
 
+## Async Job Integration
+
+Async Job Queue v1 emits aggregate worker metrics:
+
+- `interview_agent_async_jobs_created_total{job_type}` increments when the API creates a job.
+- `interview_agent_async_jobs_completed_total{job_type,status}` increments when a job reaches `succeeded` or terminal `failed`.
+- `interview_agent_async_job_duration_seconds{job_type}` observes worker execution duration.
+- `interview_agent_async_jobs_in_progress{job_type}` tracks currently running jobs.
+
+Async job metrics intentionally do not label by `job_id`, `user_id`, `request_id`, phone number, idempotency key, prompt text, completion text or answer text.
+
 ## Prometheus Scrape Example
 
 Example staging scrape configuration:
@@ -134,6 +150,7 @@ For production, do not expose `/metrics` publicly. Place it behind an internal n
 5. Use `audit_events` for security/admin event reconstruction.
 6. Use `llm_usage_records` for per-user usage summary and cost estimation.
 7. Use `agent_memories` only for current-user training memory inspection and rule debugging; metrics remain aggregate.
+8. Use `async_jobs` and worker logs for asynchronous task status and retry debugging; metrics remain aggregate.
 
 Metrics are intentionally aggregate telemetry. They are not a replacement for request logs, audit logs or the LLM usage ledger.
 

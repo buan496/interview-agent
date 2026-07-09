@@ -78,6 +78,11 @@ services:
       LLM_DAILY_CALL_QUOTA: ${LLM_DAILY_CALL_QUOTA:-1000}
       CACHE_BACKEND: ${CACHE_BACKEND:-redis}
       CACHE_PREFIX: ${CACHE_PREFIX:-interview-agent:staging:cache}
+      ASYNC_JOBS_ENABLED: ${ASYNC_JOBS_ENABLED:-true}
+      ASYNC_JOB_BACKEND: ${ASYNC_JOB_BACKEND:-redis}
+      ASYNC_JOB_QUEUE_NAME: ${ASYNC_JOB_QUEUE_NAME:-interview-agent:staging:async-jobs}
+      ASYNC_JOB_MAX_ATTEMPTS: ${ASYNC_JOB_MAX_ATTEMPTS:-3}
+      ASYNC_JOB_WORKER_POLL_SECONDS: ${ASYNC_JOB_WORKER_POLL_SECONDS:-2}
       WHISPER_API_KEY: ${WHISPER_API_KEY:-}
       WHISPER_BASE_URL: ${WHISPER_BASE_URL:-https://api.siliconflow.cn/v1}
       WHISPER_MODEL: ${WHISPER_MODEL:-FunAudioLLM/SenseVoiceSmall}
@@ -93,6 +98,53 @@ services:
              python -m app.ingest.seed_loader app/ingest/questions_seed.jsonl &&
              python -m app.ingest.seed_loader app/ingest/questions_real.jsonl &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  worker:
+    image: ${API_IMAGE:-interview-agent-api:${IMAGE_TAG:-staging-local}}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      APP_ENV: staging
+      SERVICE_NAME: ${SERVICE_NAME:-Interview Agent Staging Worker}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://interview:__CHANGE_ME_STAGING_POSTGRES_PASSWORD__@postgres:5432/interview_agent_staging}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      REDIS_CONNECT_TIMEOUT_SECONDS: ${REDIS_CONNECT_TIMEOUT_SECONDS:-2}
+      REDIS_SOCKET_TIMEOUT_SECONDS: ${REDIS_SOCKET_TIMEOUT_SECONDS:-2}
+      AUTH_DEV_CODE_ENABLED: ${AUTH_DEV_CODE_ENABLED:-false}
+      AUTH_DEV_CODE: ${AUTH_DEV_CODE:-__DISABLED_IN_STAGING__}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-__CHANGE_ME_STAGING_JWT_SECRET__}
+      ADMIN_PHONES: ${ADMIN_PHONES:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-deepseek}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-45}
+      LLM_PRICING_VERSION: ${LLM_PRICING_VERSION:-llm-pricing-v1-2026-07}
+      LLM_GATEWAY_ENABLED: ${LLM_GATEWAY_ENABLED:-true}
+      LLM_DEFAULT_PROVIDER: ${LLM_DEFAULT_PROVIDER:-deepseek}
+      LLM_DEFAULT_MODEL: ${LLM_DEFAULT_MODEL:-deepseek-chat}
+      LLM_FALLBACK_ENABLED: ${LLM_FALLBACK_ENABLED:-true}
+      LLM_FALLBACK_PROVIDER: ${LLM_FALLBACK_PROVIDER:-mock}
+      LLM_FALLBACK_MODEL: ${LLM_FALLBACK_MODEL:-local-fallback}
+      LLM_USAGE_METERING_ENABLED: ${LLM_USAGE_METERING_ENABLED:-true}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_BACKEND: ${RATE_LIMIT_BACKEND:-redis}
+      REDIS_RATE_LIMIT_PREFIX: ${REDIS_RATE_LIMIT_PREFIX:-interview-agent:staging:rate-limit}
+      CACHE_BACKEND: ${CACHE_BACKEND:-redis}
+      CACHE_PREFIX: ${CACHE_PREFIX:-interview-agent:staging:cache}
+      ASYNC_JOBS_ENABLED: ${ASYNC_JOBS_ENABLED:-true}
+      ASYNC_JOB_BACKEND: ${ASYNC_JOB_BACKEND:-redis}
+      ASYNC_JOB_QUEUE_NAME: ${ASYNC_JOB_QUEUE_NAME:-interview-agent:staging:async-jobs}
+      ASYNC_JOB_MAX_ATTEMPTS: ${ASYNC_JOB_MAX_ATTEMPTS:-3}
+      ASYNC_JOB_WORKER_POLL_SECONDS: ${ASYNC_JOB_WORKER_POLL_SECONDS:-2}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: python -m app.worker
 
   frontend:
     image: ${FRONTEND_IMAGE:-interview-agent-frontend:${IMAGE_TAG:-staging-local}}

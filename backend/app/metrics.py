@@ -64,6 +64,30 @@ MEMORY_REFRESH = Counter(
     ("status", "trigger"),
     registry=REGISTRY,
 )
+ASYNC_JOBS_CREATED = Counter(
+    "interview_agent_async_jobs_created",
+    "Async jobs created by job type.",
+    ("job_type",),
+    registry=REGISTRY,
+)
+ASYNC_JOBS_COMPLETED = Counter(
+    "interview_agent_async_jobs_completed",
+    "Async jobs completed by job type and terminal status.",
+    ("job_type", "status"),
+    registry=REGISTRY,
+)
+ASYNC_JOB_DURATION = Histogram(
+    "interview_agent_async_job_duration_seconds",
+    "Async job execution duration by job type.",
+    ("job_type",),
+    registry=REGISTRY,
+)
+ASYNC_JOBS_IN_PROGRESS = Gauge(
+    "interview_agent_async_jobs_in_progress",
+    "Async jobs currently running by job type.",
+    ("job_type",),
+    registry=REGISTRY,
+)
 RATE_LIMIT_EXCEEDED = Counter(
     "interview_agent_rate_limit_exceeded",
     "Rate limit denials by low-cardinality scope.",
@@ -185,6 +209,26 @@ def record_memory_created(memory_type: str) -> None:
 
 def record_memory_refresh(status: str, trigger: str) -> None:
     MEMORY_REFRESH.labels(safe_label(status), safe_label(trigger)).inc()
+
+
+def record_async_job_created(job_type: str) -> None:
+    ASYNC_JOBS_CREATED.labels(safe_label(job_type)).inc()
+
+
+def record_async_job_completed(job_type: str, status: str) -> None:
+    ASYNC_JOBS_COMPLETED.labels(safe_label(job_type), safe_label(status)).inc()
+
+
+def observe_async_job_duration(job_type: str, duration_seconds: float) -> None:
+    ASYNC_JOB_DURATION.labels(safe_label(job_type)).observe(max(duration_seconds, 0.0))
+
+
+def inc_async_job_in_progress(job_type: str) -> None:
+    ASYNC_JOBS_IN_PROGRESS.labels(safe_label(job_type)).inc()
+
+
+def dec_async_job_in_progress(job_type: str) -> None:
+    ASYNC_JOBS_IN_PROGRESS.labels(safe_label(job_type)).dec()
 
 
 def record_llm_usage_metrics(

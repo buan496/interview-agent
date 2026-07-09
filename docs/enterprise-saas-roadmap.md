@@ -579,3 +579,24 @@ Next roadmap implications:
 - Model registry, canary routing, A/B testing and cost-aware routing remain future work.
 - Tenant-specific model policy should wait for organization/tenant modeling.
 - Gateway telemetry can now support later model quality and cost comparison.
+
+## PR #50 Update: Async Job Queue Foundation
+
+Status: partially complete.
+
+Completed:
+
+- Added user-scoped `async_jobs` as a durable backend job ledger.
+- Added memory and Redis queue backends.
+- Added `python -m app.worker` as the worker entrypoint.
+- Added async Agent Memory refresh as the first low-risk job type.
+- Added job status APIs for the current user.
+- Added aggregate metrics and audit events for async job lifecycle.
+- Added local/staging Compose worker configuration.
+
+Next roadmap implications:
+
+- Phase 3 Agent Memory can now refresh outside synchronous user requests.
+- Phase 4 content operations can later add async question import and rubric validation jobs.
+- Phase 5 operations now have a worker foundation but still need dead-letter handling, worker concurrency limits and runbook hardening.
+- Frontend job status UI remains future work and should wait until more than one user-facing async job exists.

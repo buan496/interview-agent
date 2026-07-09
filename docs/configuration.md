@@ -66,6 +66,14 @@ Rate limit / cache backend config:
 - `CACHE_BACKEND`
 - `CACHE_PREFIX`
 
+Async job queue config:
+
+- `ASYNC_JOBS_ENABLED`
+- `ASYNC_JOB_BACKEND`
+- `ASYNC_JOB_QUEUE_NAME`
+- `ASYNC_JOB_MAX_ATTEMPTS`
+- `ASYNC_JOB_WORKER_POLL_SECONDS`
+
 Observability config:
 
 - `LOG_LEVEL`
@@ -102,6 +110,7 @@ Staging should use production-shaped settings without production user data:
 - `AUTH_DEV_CODE_ENABLED=false`
 - `RATE_LIMIT_BACKEND=redis`
 - `CACHE_BACKEND=redis`
+- `ASYNC_JOB_BACKEND=redis`
 - `DATABASE_URL` points at the staging PostgreSQL service
 - `REDIS_URL` points at the staging Redis service
 - `JWT_SECRET_KEY` is supplied outside git
@@ -123,6 +132,8 @@ Production rejects:
 - `RATE_LIMIT_ENABLED=true` with `RATE_LIMIT_BACKEND=memory`
 - `RATE_LIMIT_BACKEND=redis` without `REDIS_URL`
 - `CACHE_BACKEND=redis` without `REDIS_URL`
+- `ASYNC_JOBS_ENABLED=true` with `ASYNC_JOB_BACKEND=memory`
+- `ASYNC_JOB_BACKEND=redis` without `REDIS_URL`
 - missing `DATABASE_URL`
 - non-positive `ACCESS_TOKEN_EXPIRE_MINUTES`
 - missing `LLM_PRICING_VERSION`
@@ -203,6 +214,19 @@ PR #44 also adds the cache backend switch:
 - `CACHE_PREFIX`
 
 This is only a foundation switch and prefix. The PR does not add a broad application cache, distributed lock, task queue or Agent Memory. If `CACHE_BACKEND=redis`, `/ready` checks Redis connectivity.
+
+## Async Job Queue Configuration
+
+PR #50 adds the async job backend switch:
+
+- `ASYNC_JOBS_ENABLED=true`
+- `ASYNC_JOB_BACKEND=memory`: local/test default. It is process-local and deterministic for tests.
+- `ASYNC_JOB_BACKEND=redis`: staging/production backend. It stores job ids in a Redis list so API and worker processes can communicate.
+- `ASYNC_JOB_QUEUE_NAME`: Redis list key for queued job ids.
+- `ASYNC_JOB_MAX_ATTEMPTS`: default retry limit for new jobs.
+- `ASYNC_JOB_WORKER_POLL_SECONDS`: worker loop sleep interval when no job is available.
+
+Production rejects `ASYNC_JOB_BACKEND=memory` when async jobs are enabled. If `ASYNC_JOB_BACKEND=redis`, `/ready` checks Redis connectivity. Job payloads must not contain raw answer text, prompt text, completion text, tokens, secrets, verification codes or full phone numbers.
 
 ## Backup and Restore Configuration
 
